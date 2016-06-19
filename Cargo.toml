@@ -1,0 +1,13 @@
+[package]
+name        = "ithos"
+description = "Modern directory services and credential management"
+homepage    = "https://github.com/cryptosphere/ithos"
+repository  = "https://github.com/cryptosphere/ithos"
+readme      = "README.md"
+keywords    = ["directory", "identity", "access control", "credentials"]
+license     = "MIT"
+version     = "0.1.0"
+authors     = ["Tony Arcieri <bascule@gmail.com>"]
+
+[dependencies]
+lmdb-rs = ">= 0.7.1"
