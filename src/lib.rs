@@ -252,7 +252,7 @@ impl LmdbAdapter {
 
             match child_node {
                 Some(node) => Ok(node),
-                None => return Err(Error::NotFoundError),
+                None => Err(Error::NotFoundError),
             }
         })
     }
