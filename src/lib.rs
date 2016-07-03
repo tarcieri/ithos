@@ -32,17 +32,15 @@ struct RwTransaction<'a> {
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 struct Id(u64);
 
-struct Entry<'a> {
-    id: Id,
-    parent_id: Id,
-    name: &'a str,
-    objectclass: &'a str,
-}
-
 struct Node<'a> {
     id: Id,
     parent_id: Id,
     name: &'a str,
+}
+
+struct Entry<'a> {
+    node: Node<'a>,
+    objectclass: &'a str,
 }
 
 impl Id {
@@ -109,7 +107,7 @@ impl<'a> Node<'a> {
 }
 
 impl LmdbAdapter {
-    pub fn create(path: &Path) -> Result<LmdbAdapter> {
+    pub fn create_database(path: &Path) -> Result<LmdbAdapter> {
         let env = match lmdb::Environment::new()
                             .set_max_dbs(8)
                             .open_with_permissions(&path, 0o600) {
@@ -134,7 +132,7 @@ impl LmdbAdapter {
         })
     }
 
-    pub fn open(path: &Path) -> Result<LmdbAdapter> {
+    pub fn open_database(path: &Path) -> Result<LmdbAdapter> {
         let env = match lmdb::Environment::new().open(&path) {
             Ok(e) => e,
             Err(_) => return Err(Error::DbOpenError),
@@ -210,9 +208,7 @@ impl LmdbAdapter {
         }
 
         Ok(Entry {
-            id: id,
-            parent_id: parent_id,
-            name: name,
+            node: node,
             objectclass: objectclass,
         })
     }
@@ -231,9 +227,7 @@ impl LmdbAdapter {
         };
 
         Ok(Entry {
-            id: node.id,
-            parent_id: node.parent_id,
-            name: node.name,
+            node: node,
             objectclass: objectclass,
         })
     }
@@ -297,7 +291,7 @@ impl<'a> RwTransaction<'a> {
 #[test]
 fn test_entry_lookup() {
     let path = Path::new("./tmp");
-    let adapter = LmdbAdapter::create(path).unwrap();
+    let adapter = LmdbAdapter::create_database(path).unwrap();
 
     {
         let mut txn = adapter.rw_transaction().unwrap();
@@ -307,7 +301,7 @@ fn test_entry_lookup() {
                             .unwrap();
 
         let hosts_id = domain_id.next();
-        let hosts = adapter.create_entry(&mut txn, hosts_id, domain.id, "hosts", "ou").unwrap();
+        let hosts = adapter.create_entry(&mut txn, hosts_id, domain_id, "hosts", "ou").unwrap();
 
         let host_id = hosts_id.next();
         let host = adapter.create_entry(&mut txn, host_id, hosts_id, "master.example.com", "host")
@@ -320,7 +314,7 @@ fn test_entry_lookup() {
         let mut txn = adapter.rw_transaction().unwrap();
         let entry = adapter.find_entry(&mut txn, "/example.com/hosts/master.example.com").unwrap();
 
-        assert_eq!(entry.name, "master.example.com");
+        assert_eq!(entry.node.name, "master.example.com");
         assert_eq!(entry.objectclass, "host");
     }
 }
