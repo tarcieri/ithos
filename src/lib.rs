@@ -39,6 +39,7 @@ struct Node<'a> {
 }
 
 struct Entry<'a> {
+    txn: &'a RwTransaction<'a>,
     node: Node<'a>,
     objectclass: &'a str,
 }
@@ -177,37 +178,40 @@ impl LmdbAdapter {
     }
 
     pub fn create_entry<'a>(&'a self,
-                            txn: &mut RwTransaction,
+                            txn: &'a mut RwTransaction,
                             id: Id,
                             parent_id: Id,
                             name: &'a str,
                             objectclass: &'a str)
                             -> Result<Entry> {
-        let ref mut lmdb_txn = txn.lmdb_txn;
-
         let node = Node {
             id: id,
             parent_id: parent_id,
             name: name,
         };
 
-        match lmdb_txn.put(self.nodes,
-                           &parent_id.as_bytes(),
-                           &node.to_bytes(),
-                           lmdb::WriteFlags::empty()) {
-            Ok(_) => (),
-            Err(_) => return Err(Error::DbWriteError),
-        }
+        {
+            let ref mut lmdb_txn = txn.lmdb_txn;
 
-        match lmdb_txn.put(self.entries,
-                           &id.as_bytes(),
-                           &objectclass,
-                           lmdb::WriteFlags::empty()) {
-            Ok(_) => (),
-            Err(_) => return Err(Error::DbWriteError),
+            match lmdb_txn.put(self.nodes,
+                               &parent_id.as_bytes(),
+                               &node.to_bytes(),
+                               lmdb::WriteFlags::empty()) {
+                Ok(_) => (),
+                Err(_) => return Err(Error::DbWriteError),
+            }
+
+            match lmdb_txn.put(self.entries,
+                               &id.as_bytes(),
+                               &objectclass,
+                               lmdb::WriteFlags::empty()) {
+                Ok(_) => (),
+                Err(_) => return Err(Error::DbWriteError),
+            }
         }
 
         Ok(Entry {
+            txn: txn,
             node: node,
             objectclass: objectclass,
         })
@@ -227,6 +231,7 @@ impl LmdbAdapter {
         };
 
         Ok(Entry {
+            txn: txn,
             node: node,
             objectclass: objectclass,
         })
@@ -297,24 +302,28 @@ fn test_entry_lookup() {
         let mut txn = adapter.rw_transaction().unwrap();
 
         let domain_id = adapter.next_available_id(&mut txn).unwrap();
-        let domain = adapter.create_entry(&mut txn, domain_id, Id::root(), "example.com", "domain")
-                            .unwrap();
+        adapter.create_entry(&mut txn, domain_id, Id::root(), "example.com", "domain").unwrap();
 
         let hosts_id = domain_id.next();
-        let hosts = adapter.create_entry(&mut txn, hosts_id, domain_id, "hosts", "ou").unwrap();
+        adapter.create_entry(&mut txn, hosts_id, domain_id, "hosts", "ou").unwrap();
 
         let host_id = hosts_id.next();
-        let host = adapter.create_entry(&mut txn, host_id, hosts_id, "master.example.com", "host")
-                          .unwrap();
+        adapter.create_entry(&mut txn, host_id, hosts_id, "master.example.com", "host").unwrap();
 
         txn.commit().unwrap();
     }
 
     {
         let mut txn = adapter.rw_transaction().unwrap();
-        let entry = adapter.find_entry(&mut txn, "/example.com/hosts/master.example.com").unwrap();
 
-        assert_eq!(entry.node.name, "master.example.com");
-        assert_eq!(entry.objectclass, "host");
+        {
+            let mut entry = adapter.find_entry(&mut txn, "/example.com/hosts/master.example.com")
+                                   .unwrap();
+
+            assert_eq!(entry.node.name, "master.example.com");
+            assert_eq!(entry.objectclass, "host");
+        }
+
+        txn.commit().unwrap();
     }
 }
