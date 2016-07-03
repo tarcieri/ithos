@@ -44,6 +44,8 @@ struct Entry<'a> {
     objectclass: &'a str,
 }
 
+// Ids are 64-bit integers in host-native byte order
+// LMDB has special optimizations for host-native integers as keys
 impl Id {
     fn root() -> Id {
         Id(0)
