@@ -11,6 +11,7 @@ pub enum Error {
     DbOpenError,
     DbWriteError,
     DbCorruptError,
+    ParseError,
     TransactionError,
     PathError,
     NotFoundError,
@@ -28,35 +29,64 @@ struct RwTransaction<'a> {
     lmdb_txn: lmdb::RwTransaction<'a>,
 }
 
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+struct Id(u64);
+
 struct Entry<'a> {
-    id: u64,
-    parent_id: u64,
+    id: Id,
+    parent_id: Id,
     name: &'a str,
     objectclass: &'a str,
 }
 
 struct Node<'a> {
-    id: u64,
-    parent_id: u64,
+    id: Id,
+    parent_id: Id,
     name: &'a str,
+}
+
+impl Id {
+    fn root() -> Id {
+        Id(0)
+    }
+
+    fn from_bytes(bytes: &[u8]) -> Result<Id> {
+        if bytes.len() != 8 {
+            return Err(Error::ParseError);
+        }
+
+        let mut id = [0u8; 8];
+        id.copy_from_slice(&bytes[0..8]);
+
+        Ok(Id(unsafe { std::mem::transmute(id) }))
+    }
+
+    fn as_bytes(self) -> [u8; 8] {
+        let Id(id) = self;
+        unsafe { std::mem::transmute(id) }
+    }
+
+    fn next(self) -> Id {
+        let Id(id) = self;
+        Id(id + 1)
+    }
 }
 
 impl<'a> Node<'a> {
     fn root() -> Node<'a> {
         Node {
-            id: 0,
-            parent_id: 0,
-            name: "/"
+            id: Id::root(),
+            parent_id: Id::root(),
+            name: "/",
         }
     }
 
-    fn from_bytes_and_parent_id(bytes: &[u8], parent_id: u64) -> Result<Node> {
+    fn from_bytes_and_parent_id(bytes: &[u8], parent_id: Id) -> Result<Node> {
         if bytes.len() < 8 {
             return Err(Error::DbCorruptError);
         }
 
-        let mut id = [0u8; 8];
-        id.copy_from_slice(&bytes[0..8]);
+        let id = try!(Id::from_bytes(&bytes[0..8]));
 
         let name = match std::str::from_utf8(&bytes[8..]) {
             Ok(string) => string,
@@ -64,7 +94,7 @@ impl<'a> Node<'a> {
         };
 
         Ok(Node {
-            id: LmdbAdapter::bytes_to_id(id),
+            id: id,
             parent_id: parent_id,
             name: name,
         })
@@ -72,7 +102,7 @@ impl<'a> Node<'a> {
 
     fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(8 + self.name.len());
-        bytes.extend_from_slice(&LmdbAdapter::id_to_bytes(self.id));
+        bytes.extend_from_slice(&self.id.as_bytes());
         bytes.extend_from_slice(self.name.as_bytes());
         bytes
     }
@@ -127,14 +157,6 @@ impl LmdbAdapter {
         })
     }
 
-    fn id_to_bytes(id: u64) -> [u8; 8] {
-        unsafe { std::mem::transmute(id) }
-    }
-
-    fn bytes_to_id(bytes: [u8; 8]) -> u64 {
-        unsafe { std::mem::transmute(bytes) }
-    }
-
     pub fn rw_transaction(&self) -> Result<RwTransaction> {
         match self.env.begin_rw_txn() {
             Ok(txn) => Ok(RwTransaction { lmdb_txn: txn }),
@@ -142,48 +164,45 @@ impl LmdbAdapter {
         }
     }
 
-    pub fn next_available_id(&self, txn: &mut RwTransaction) -> Result<u64> {
+    pub fn next_available_id(&self, txn: &mut RwTransaction) -> Result<Id> {
         let cursor = match txn.lmdb_txn.open_rw_cursor(self.nodes) {
             Ok(c) => c,
             Err(_) => return Err(Error::TransactionError),
         };
 
         let last_id = match cursor.get(None, None, lmdb_sys::MDB_LAST) {
-            Ok((id, _)) => {
-                let mut id_bytes = [0u8; 8];
-                id_bytes.copy_from_slice(id.unwrap()); // TODO: don't panic
-                LmdbAdapter::bytes_to_id(id_bytes)
-            }
-            Err(_) => 0, // 0 is reserved for root
+            Ok((id, _)) => Id::from_bytes(id.unwrap()).unwrap(),
+            Err(_) => Id::root(),
         };
 
-        Ok(last_id + 1)
+        Ok(last_id.next())
     }
 
     pub fn create_entry<'a>(&'a self,
                             txn: &mut RwTransaction,
-                            id: u64,
-                            parent_id: u64,
+                            id: Id,
+                            parent_id: Id,
                             name: &'a str,
                             objectclass: &'a str)
                             -> Result<Entry> {
         let ref mut lmdb_txn = txn.lmdb_txn;
-        let id_bytes = LmdbAdapter::id_to_bytes(id);
 
-        let mut path_info = Vec::with_capacity(8 + name.len());
-        path_info.extend_from_slice(&id_bytes);
-        path_info.extend_from_slice(name.as_bytes());
+        let node = Node {
+            id: id,
+            parent_id: parent_id,
+            name: name,
+        };
 
         match lmdb_txn.put(self.nodes,
-                           &LmdbAdapter::id_to_bytes(parent_id),
-                           &path_info,
+                           &parent_id.as_bytes(),
+                           &node.to_bytes(),
                            lmdb::WriteFlags::empty()) {
             Ok(_) => (),
             Err(_) => return Err(Error::DbWriteError),
         }
 
         match lmdb_txn.put(self.entries,
-                           &id_bytes,
+                           &id.as_bytes(),
                            &objectclass,
                            lmdb::WriteFlags::empty()) {
             Ok(_) => (),
@@ -201,7 +220,7 @@ impl LmdbAdapter {
     pub fn find_entry<'a>(&'a self, txn: &'a mut RwTransaction, path: &str) -> Result<Entry> {
         let node = try!(self.find_node(txn, path));
 
-        let entry_bytes = match txn.lmdb_txn.get(self.entries, &LmdbAdapter::id_to_bytes(node.id)) {
+        let entry_bytes = match txn.lmdb_txn.get(self.entries, &node.id.as_bytes()) {
             Ok(bytes) => bytes,
             Err(_) => return Err(Error::DbCorruptError),
         };
@@ -237,7 +256,6 @@ impl LmdbAdapter {
         // TODO: since LMDB is ordered, we could e.g. perform a binary search
         components.iter().fold(Ok(Node::root()), |parent_node, component| {
             let parent_id = try!(parent_node).id;
-            let parent_id_bytes = LmdbAdapter::id_to_bytes(parent_id);
 
             let mut cursor = match txn.lmdb_txn.open_rw_cursor(self.nodes) {
                 Ok(c) => c,
@@ -246,8 +264,8 @@ impl LmdbAdapter {
 
             let mut child_node = None;
 
-            for (id, node_bytes) in cursor.iter_from(parent_id_bytes) {
-                if id != parent_id_bytes {
+            for (id, node_bytes) in cursor.iter_from(parent_id.as_bytes()) {
+                if id != parent_id.as_bytes() {
                     return Err(Error::NotFoundError);
                 }
 
@@ -283,10 +301,16 @@ fn test_entry_lookup() {
 
     {
         let mut txn = adapter.rw_transaction().unwrap();
-        let id = adapter.next_available_id(&mut txn).unwrap();
-        let domain = adapter.create_entry(&mut txn, id, 0, "example.com", "domain").unwrap();
-        let hosts = adapter.create_entry(&mut txn, id + 1, domain.id, "hosts", "ou").unwrap();
-        let host = adapter.create_entry(&mut txn, id + 2, hosts.id, "master.example.com", "host")
+
+        let domain_id = adapter.next_available_id(&mut txn).unwrap();
+        let domain = adapter.create_entry(&mut txn, domain_id, Id::root(), "example.com", "domain")
+                            .unwrap();
+
+        let hosts_id = domain_id.next();
+        let hosts = adapter.create_entry(&mut txn, hosts_id, domain.id, "hosts", "ou").unwrap();
+
+        let host_id = hosts_id.next();
+        let host = adapter.create_entry(&mut txn, host_id, hosts_id, "master.example.com", "host")
                           .unwrap();
 
         txn.commit().unwrap();
