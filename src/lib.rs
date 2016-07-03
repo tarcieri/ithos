@@ -88,11 +88,7 @@ impl<'a> Node<'a> {
         }
 
         let id = try!(Id::from_bytes(&bytes[0..8]));
-
-        let name = match std::str::from_utf8(&bytes[8..]) {
-            Ok(string) => string,
-            _ => return Err(Error::DbCorruptError),
-        };
+        let name = try!(std::str::from_utf8(&bytes[8..]).map_err(|_err| Error::DbCorruptError));
 
         Ok(Node {
             id: id,
@@ -111,22 +107,16 @@ impl<'a> Node<'a> {
 
 impl LmdbAdapter {
     pub fn create_database(path: &Path) -> Result<LmdbAdapter> {
-        let env = match lmdb::Environment::new()
-                            .set_max_dbs(8)
-                            .open_with_permissions(&path, 0o600) {
-            Ok(e) => e,
-            Err(_) => return Err(Error::DbCreateError),
-        };
+        let env = try!(lmdb::Environment::new()
+                           .set_max_dbs(8)
+                           .open_with_permissions(&path, 0o600)
+                           .map_err(|_err| Error::DbCreateError));
 
-        let nodes = match env.create_db(Some("nodes"), INTEGER_KEY | DUP_SORT) {
-            Ok(db) => db,
-            Err(_) => return Err(Error::DbCreateError),
-        };
+        let nodes = try!(env.create_db(Some("nodes"), INTEGER_KEY | DUP_SORT)
+                            .map_err(|_err| Error::DbCreateError));
 
-        let entries = match env.create_db(Some("entries"), INTEGER_KEY) {
-            Ok(db) => db,
-            Err(_) => return Err(Error::DbCreateError),
-        };
+        let entries = try!(env.create_db(Some("entries"), INTEGER_KEY)
+                              .map_err(|_err| Error::DbCreateError));
 
         Ok(LmdbAdapter {
             env: env,
@@ -136,20 +126,11 @@ impl LmdbAdapter {
     }
 
     pub fn open_database(path: &Path) -> Result<LmdbAdapter> {
-        let env = match lmdb::Environment::new().open(&path) {
-            Ok(e) => e,
-            Err(_) => return Err(Error::DbOpenError),
-        };
+        let env = try!(lmdb::Environment::new().open(&path).map_err(|_err| Error::DbOpenError));
 
-        let nodes = match env.open_db(Some("nodes")) {
-            Ok(e) => e,
-            Err(_) => return Err(Error::DbOpenError),
-        };
+        let nodes = try!(env.open_db(Some("nodes")).map_err(|_err| Error::DbOpenError));
 
-        let entries = match env.open_db(Some("entries")) {
-            Ok(e) => e,
-            Err(_) => return Err(Error::DbOpenError),
-        };
+        let entries = try!(env.open_db(Some("entries")).map_err(|_err| Error::DbOpenError));
 
         Ok(LmdbAdapter {
             env: env,
@@ -166,10 +147,9 @@ impl LmdbAdapter {
     }
 
     pub fn next_available_id(&self, txn: &mut RwTransaction) -> Result<Id> {
-        let cursor = match txn.lmdb_txn.open_rw_cursor(self.nodes) {
-            Ok(c) => c,
-            Err(_) => return Err(Error::TransactionError),
-        };
+        let cursor = try!(txn.lmdb_txn
+                             .open_rw_cursor(self.nodes)
+                             .map_err(|_err| Error::TransactionError));
 
         let last_id = match cursor.get(None, None, lmdb_sys::MDB_LAST) {
             Ok((id, _)) => Id::from_bytes(id.unwrap()).unwrap(),
@@ -195,21 +175,17 @@ impl LmdbAdapter {
         {
             let ref mut lmdb_txn = txn.lmdb_txn;
 
-            match lmdb_txn.put(self.nodes,
-                               &parent_id.as_bytes(),
-                               &node.to_bytes(),
-                               lmdb::WriteFlags::empty()) {
-                Ok(_) => (),
-                Err(_) => return Err(Error::DbWriteError),
-            }
+            try!(lmdb_txn.put(self.nodes,
+                              &parent_id.as_bytes(),
+                              &node.to_bytes(),
+                              lmdb::WriteFlags::empty())
+                         .map_err(|_err| Error::DbWriteError));
 
-            match lmdb_txn.put(self.entries,
-                               &id.as_bytes(),
-                               &objectclass,
-                               lmdb::WriteFlags::empty()) {
-                Ok(_) => (),
-                Err(_) => return Err(Error::DbWriteError),
-            }
+            try!(lmdb_txn.put(self.entries,
+                              &id.as_bytes(),
+                              &objectclass,
+                              lmdb::WriteFlags::empty())
+                         .map_err(|_err| Error::DbWriteError));
         }
 
         Ok(Entry {
@@ -222,15 +198,12 @@ impl LmdbAdapter {
     pub fn find_entry<'a>(&'a self, txn: &'a mut RwTransaction, path: &str) -> Result<Entry> {
         let node = try!(self.find_node(txn, path));
 
-        let entry_bytes = match txn.lmdb_txn.get(self.entries, &node.id.as_bytes()) {
-            Ok(bytes) => bytes,
-            Err(_) => return Err(Error::DbCorruptError),
-        };
+        let entry_bytes = try!(txn.lmdb_txn
+                                  .get(self.entries, &node.id.as_bytes())
+                                  .map_err(|_err| Error::DbCorruptError));
 
-        let objectclass = match std::str::from_utf8(&entry_bytes) {
-            Ok(string) => string,
-            _ => return Err(Error::DbCorruptError),
-        };
+        let objectclass = try!(std::str::from_utf8(&entry_bytes)
+                                   .map_err(|_err| Error::DbCorruptError));
 
         Ok(Entry {
             txn: txn,
@@ -258,10 +231,9 @@ impl LmdbAdapter {
         components.iter().fold(Ok(Node::root()), |parent_node, component| {
             let parent_id = try!(parent_node).id;
 
-            let mut cursor = match txn.lmdb_txn.open_rw_cursor(self.nodes) {
-                Ok(c) => c,
-                Err(_) => return Err(Error::TransactionError),
-            };
+            let mut cursor = try!(txn.lmdb_txn
+                                     .open_rw_cursor(self.nodes)
+                                     .map_err(|_err| Error::DbCorruptError));
 
             let mut child_node = None;
 
@@ -288,10 +260,7 @@ impl LmdbAdapter {
 
 impl<'a> RwTransaction<'a> {
     pub fn commit(self) -> Result<()> {
-        match self.lmdb_txn.commit() {
-            Ok(_) => Ok(()),
-            Err(_) => return Err(Error::TransactionError),
-        }
+        self.lmdb_txn.commit().map_err(|_err| Error::TransactionError)
     }
 }
 
