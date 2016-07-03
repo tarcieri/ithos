@@ -80,7 +80,7 @@ impl<'a> Node<'a> {
         }
     }
 
-    fn from_bytes_and_parent_id(bytes: &[u8], parent_id: Id) -> Result<Node> {
+    fn from_parent_id_and_bytes(parent_id: Id, bytes: &[u8]) -> Result<Node> {
         if bytes.len() < 8 {
             return Err(Error::DbCorruptError);
         }
@@ -268,7 +268,7 @@ impl LmdbAdapter {
                     return Err(Error::NotFoundError);
                 }
 
-                let node = try!(Node::from_bytes_and_parent_id(node_bytes, parent_id));
+                let node = try!(Node::from_parent_id_and_bytes(parent_id, node_bytes));
 
                 if node.name == *component {
                     child_node = Some(node);
