@@ -1,7 +1,8 @@
 extern crate lmdb;
 extern crate lmdb_sys;
 
-#[cfg(test)] extern crate tempdir;
+#[cfg(test)]
+extern crate tempdir;
 
 use std::{result, str};
 use std::path::Path;
@@ -98,6 +99,33 @@ impl<'a> Node<'a> {
         })
     }
 
+    // TODO: since LMDB is ordered, we could e.g. perform a binary search
+    fn find_child_node<T: Transaction>(&self,
+                                       txn: &T,
+                                       nodes: lmdb::Database,
+                                       name: &str)
+                                       -> Result<Node<'a>> {
+        let mut cursor = try!(txn.open_ro_cursor(nodes)
+                                 .map_err(|_err| Error::TransactionError));
+
+        let mut child_node = None;
+
+        for (id, node_bytes) in cursor.iter_from(self.id.as_bytes()) {
+            if id != self.id.as_bytes() {
+                return Err(Error::NotFoundError);
+            }
+
+            let node = try!(Node::from_parent_id_and_bytes(self.id, node_bytes));
+
+            if node.name == name {
+                child_node = Some(node);
+                break;
+            }
+        }
+
+        child_node.ok_or(Error::NotFoundError)
+    }
+
     fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(8 + self.name.len());
         bytes.extend_from_slice(&self.id.as_bytes());
@@ -179,14 +207,10 @@ impl LmdbAdapter {
             name: name,
         };
 
-        try!(txn.put(self.nodes,
-                     &parent_id.as_bytes(),
-                     &node.to_bytes())
+        try!(txn.put(self.nodes, &parent_id.as_bytes(), &node.to_bytes())
                 .map_err(|_err| Error::DbWriteError));
 
-        try!(txn.put(self.entries,
-                     &id.as_bytes(),
-                     &objectclass.as_bytes())
+        try!(txn.put(self.entries, &id.as_bytes(), &objectclass.as_bytes())
                 .map_err(|_err| Error::DbWriteError));
 
         Ok(Entry {
@@ -224,30 +248,8 @@ impl LmdbAdapter {
             return Err(Error::PathError);
         }
 
-        // Perform a hierarchical path lookup
-        // TODO: since LMDB is ordered, we could e.g. perform a binary search
         components.iter().fold(Ok(Node::root()), |parent_node, component| {
-            let parent_id = try!(parent_node).id;
-
-            let mut cursor = try!(txn.open_ro_cursor(self.nodes)
-                                     .map_err(|_err| Error::DbCorruptError));
-
-            let mut child_node = None;
-
-            for (id, node_bytes) in cursor.iter_from(parent_id.as_bytes()) {
-                if id != parent_id.as_bytes() {
-                    return Err(Error::NotFoundError);
-                }
-
-                let node = try!(Node::from_parent_id_and_bytes(parent_id, node_bytes));
-
-                if node.name == *component {
-                    child_node = Some(node);
-                    break;
-                }
-            }
-
-            child_node.ok_or(Error::NotFoundError)
+            try!(parent_node).find_child_node(txn, self.nodes, component)
         })
     }
 }
@@ -288,7 +290,9 @@ impl<'a> Transaction for RoTransaction<'a> {
 
 impl<'a> RwTransaction<'a> {
     fn put(&mut self, database: lmdb::Database, key: &[u8], data: &[u8]) -> Result<()> {
-        self.0.put(database, &key, &data, lmdb::WriteFlags::empty()).map_err(|_err| Error::TransactionError)
+        self.0
+            .put(database, &key, &data, lmdb::WriteFlags::empty())
+            .map_err(|_err| Error::TransactionError)
     }
 }
 
@@ -316,7 +320,8 @@ mod tests {
             adapter.create_entry(&mut txn, hosts_id, domain_id, "hosts", "ou").unwrap();
 
             let host_id = hosts_id.next();
-            adapter.create_entry(&mut txn, host_id, hosts_id, "master.example.com", "host").unwrap();
+            adapter.create_entry(&mut txn, host_id, hosts_id, "master.example.com", "host")
+                   .unwrap();
 
             txn.commit().unwrap();
         }
