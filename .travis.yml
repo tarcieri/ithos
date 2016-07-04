@@ -2,6 +2,7 @@ language: rust
 branches:
   only:
     - auto
+    - master
 
 rust:
   - stable
