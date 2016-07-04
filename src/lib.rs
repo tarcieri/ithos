@@ -1,6 +1,8 @@
 extern crate lmdb;
 extern crate lmdb_sys;
 
+#[cfg(test)] extern crate tempdir;
+
 use std::{result, str};
 use std::path::Path;
 use lmdb::{Cursor, DUP_SORT, INTEGER_KEY};
@@ -292,28 +294,12 @@ impl<'a> RwTransaction<'a> {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-    use std::path::Path;
     use {LmdbAdapter, Id, Transaction};
+    use tempdir::TempDir;
 
     fn create_database() -> LmdbAdapter {
-        let path = Path::new("./tmp");
-
-        if !path.exists() {
-            panic!("Unable to find repo-local temp path")
-        }
-
-        let data = path.join("data.mdb");
-        if data.exists() {
-            fs::remove_file(data).unwrap()
-        }
-
-        let lock = path.join("lock.mdb");
-        if lock.exists() {
-            fs::remove_file(lock).unwrap()
-        }
-
-        LmdbAdapter::create_database(path).unwrap()
+        let dir = TempDir::new("ithos-test").unwrap();
+        LmdbAdapter::create_database(dir.path()).unwrap()
     }
 
     #[test]

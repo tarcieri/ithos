@@ -12,3 +12,6 @@ authors     = ["Tony Arcieri <bascule@gmail.com>"]
 [dependencies]
 lmdb = ">= 0.5.0"
 lmdb-sys = ">= 0.5.0"
+
+[dev-dependencies]
+tempdir = "0.3"
