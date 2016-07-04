@@ -1,7 +1,7 @@
 language: rust
 branches:
   only:
-    - auto
+    - master
 
 rust:
   - stable
@@ -10,4 +10,3 @@ rust:
 
 notifications:
   irc: 'irc.freenode.org#cryptosphere'
-  webhooks: http://iqulus.cryptosphere.org:10103/travis
