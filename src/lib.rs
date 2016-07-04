@@ -3,7 +3,8 @@ extern crate lmdb_sys;
 
 use std::{result, str};
 use std::path::Path;
-use lmdb::{Transaction, Cursor, DUP_SORT, INTEGER_KEY};
+use lmdb::{Cursor, DUP_SORT, INTEGER_KEY};
+use lmdb::Transaction as LmdbTransaction;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum Error {
@@ -25,9 +26,8 @@ pub struct LmdbAdapter {
     entries: lmdb::Database,
 }
 
-pub struct RwTransaction<'a> {
-    lmdb_txn: lmdb::RwTransaction<'a>,
-}
+pub struct RwTransaction<'a>(lmdb::RwTransaction<'a>);
+pub struct RoTransaction<'a>(lmdb::RoTransaction<'a>);
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct Id(u64);
@@ -140,14 +140,20 @@ impl LmdbAdapter {
 
     pub fn rw_transaction(&self) -> Result<RwTransaction> {
         match self.env.begin_rw_txn() {
-            Ok(txn) => Ok(RwTransaction { lmdb_txn: txn }),
+            Ok(txn) => Ok(RwTransaction(txn)),
             Err(_) => Err(Error::TransactionError),
         }
     }
 
-    pub fn next_available_id(&self, txn: &mut RwTransaction) -> Result<Id> {
-        let cursor = try!(txn.lmdb_txn
-                             .open_rw_cursor(self.nodes)
+    pub fn ro_transaction(&self) -> Result<RoTransaction> {
+        match self.env.begin_ro_txn() {
+            Ok(txn) => Ok(RoTransaction(txn)),
+            Err(_) => Err(Error::TransactionError),
+        }
+    }
+
+    pub fn next_available_id<T: Transaction>(&self, txn: &T) -> Result<Id> {
+        let cursor = try!(txn.open_ro_cursor(self.nodes)
                              .map_err(|_err| Error::TransactionError));
 
         let last_id = match cursor.get(None, None, lmdb_sys::MDB_LAST) {
@@ -171,18 +177,14 @@ impl LmdbAdapter {
             name: name,
         };
 
-        try!(txn.lmdb_txn
-                .put(self.nodes,
+        try!(txn.put(self.nodes,
                      &parent_id.as_bytes(),
-                     &node.to_bytes(),
-                     lmdb::WriteFlags::empty())
+                     &node.to_bytes())
                 .map_err(|_err| Error::DbWriteError));
 
-        try!(txn.lmdb_txn
-                .put(self.entries,
+        try!(txn.put(self.entries,
                      &id.as_bytes(),
-                     &objectclass,
-                     lmdb::WriteFlags::empty())
+                     &objectclass.as_bytes())
                 .map_err(|_err| Error::DbWriteError));
 
         Ok(Entry {
@@ -191,11 +193,10 @@ impl LmdbAdapter {
         })
     }
 
-    pub fn find_entry<'a>(&'a self, txn: &'a RwTransaction, path: &str) -> Result<Entry> {
+    pub fn find_entry<'a, T: Transaction>(&'a self, txn: &'a T, path: &str) -> Result<Entry> {
         let node = try!(self.find_node(txn, path));
 
-        let entry_bytes = try!(txn.lmdb_txn
-                                  .get(self.entries, &node.id.as_bytes())
+        let entry_bytes = try!(txn.get(self.entries, &node.id.as_bytes())
                                   .map_err(|_err| Error::DbCorruptError));
 
         let objectclass = try!(std::str::from_utf8(&entry_bytes)
@@ -207,7 +208,7 @@ impl LmdbAdapter {
         })
     }
 
-    fn find_node(&self, txn: &RwTransaction, path: &str) -> Result<Node> {
+    fn find_node<T: Transaction>(&self, txn: &T, path: &str) -> Result<Node> {
         let all_components: Vec<&str> = path.split("/").collect();
 
         if all_components.is_empty() {
@@ -226,8 +227,7 @@ impl LmdbAdapter {
         components.iter().fold(Ok(Node::root()), |parent_node, component| {
             let parent_id = try!(parent_node).id;
 
-            let mut cursor = try!(txn.lmdb_txn
-                                     .open_ro_cursor(self.nodes)
+            let mut cursor = try!(txn.open_ro_cursor(self.nodes)
                                      .map_err(|_err| Error::DbCorruptError));
 
             let mut child_node = None;
@@ -250,9 +250,43 @@ impl LmdbAdapter {
     }
 }
 
+pub trait Transaction {
+    fn get(&self, database: lmdb::Database, key: &[u8]) -> Result<&[u8]>;
+    fn commit(self) -> Result<()>;
+    fn open_ro_cursor(&self, db: lmdb::Database) -> lmdb::Result<lmdb::RoCursor>;
+}
+
+impl<'a> Transaction for RwTransaction<'a> {
+    fn get(&self, database: lmdb::Database, key: &[u8]) -> Result<&[u8]> {
+        self.0.get(database, &key).map_err(|_err| Error::TransactionError)
+    }
+
+    fn commit(self) -> Result<()> {
+        self.0.commit().map_err(|_err| Error::TransactionError)
+    }
+
+    fn open_ro_cursor(&self, db: lmdb::Database) -> lmdb::Result<lmdb::RoCursor> {
+        self.0.open_ro_cursor(db)
+    }
+}
+
+impl<'a> Transaction for RoTransaction<'a> {
+    fn get(&self, database: lmdb::Database, key: &[u8]) -> Result<&[u8]> {
+        self.0.get(database, &key).map_err(|_err| Error::TransactionError)
+    }
+
+    fn commit(self) -> Result<()> {
+        self.0.commit().map_err(|_err| Error::TransactionError)
+    }
+
+    fn open_ro_cursor(&self, db: lmdb::Database) -> lmdb::Result<lmdb::RoCursor> {
+        self.0.open_ro_cursor(db)
+    }
+}
+
 impl<'a> RwTransaction<'a> {
-    pub fn commit(self) -> Result<()> {
-        self.lmdb_txn.commit().map_err(|_err| Error::TransactionError)
+    fn put(&mut self, database: lmdb::Database, key: &[u8], data: &[u8]) -> Result<()> {
+        self.0.put(database, &key, &data, lmdb::WriteFlags::empty()).map_err(|_err| Error::TransactionError)
     }
 }
 
@@ -264,7 +298,7 @@ fn test_entry_lookup() {
     {
         let mut txn = adapter.rw_transaction().unwrap();
 
-        let domain_id = adapter.next_available_id(&mut txn).unwrap();
+        let domain_id = adapter.next_available_id(&txn).unwrap();
         adapter.create_entry(&mut txn, domain_id, Id::root(), "example.com", "domain").unwrap();
 
         let hosts_id = domain_id.next();
@@ -277,7 +311,7 @@ fn test_entry_lookup() {
     }
 
     {
-        let txn = adapter.rw_transaction().unwrap();
+        let txn = adapter.ro_transaction().unwrap();
 
         {
             let entry = adapter.find_entry(&txn, "/example.com/hosts/master.example.com")
