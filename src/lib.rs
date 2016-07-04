@@ -19,6 +19,7 @@ pub enum Error {
     TransactionError,
     PathError,
     NotFoundError,
+    DuplicateEntryError,
 }
 
 pub type Result<T> = result::Result<T, Error>;
@@ -35,12 +36,14 @@ pub struct RoTransaction<'a>(lmdb::RoTransaction<'a>);
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct Id(u64);
 
+#[derive(Debug, Eq, PartialEq)]
 pub struct Node<'a> {
     pub id: Id,
     pub parent_id: Id,
     pub name: &'a str,
 }
 
+#[derive(Debug, Eq, PartialEq)]
 pub struct Entry<'a> {
     pub node: Node<'a>,
     pub objectclass: &'a str,
@@ -97,33 +100,6 @@ impl<'a> Node<'a> {
             parent_id: parent_id,
             name: name,
         })
-    }
-
-    // TODO: since LMDB is ordered, we could e.g. perform a binary search
-    fn find_child_node<T: Transaction>(&self,
-                                       txn: &T,
-                                       nodes: lmdb::Database,
-                                       name: &str)
-                                       -> Result<Node<'a>> {
-        let mut cursor = try!(txn.open_ro_cursor(nodes)
-                                 .map_err(|_err| Error::TransactionError));
-
-        let mut child_node = None;
-
-        for (id, node_bytes) in cursor.iter_from(self.id.as_bytes()) {
-            if id != self.id.as_bytes() {
-                return Err(Error::NotFoundError);
-            }
-
-            let node = try!(Node::from_parent_id_and_bytes(self.id, node_bytes));
-
-            if node.name == name {
-                child_node = Some(node);
-                break;
-            }
-        }
-
-        child_node.ok_or(Error::NotFoundError)
     }
 
     fn to_bytes(&self) -> Vec<u8> {
@@ -201,6 +177,15 @@ impl LmdbAdapter {
                             name: &'a str,
                             objectclass: &'a str)
                             -> Result<Entry> {
+        if txn.get(self.entries, &id.as_bytes()) != Err(Error::NotFoundError) {
+            return Err(Error::DuplicateEntryError);
+        }
+
+        if txn.get(self.nodes, &parent_id.as_bytes()) != Err(Error::NotFoundError) &&
+           self.find_child_node(txn, parent_id, name) != Err(Error::NotFoundError) {
+            return Err(Error::DuplicateEntryError);
+        }
+
         let node = Node {
             id: id,
             parent_id: parent_id,
@@ -249,8 +234,31 @@ impl LmdbAdapter {
         }
 
         components.iter().fold(Ok(Node::root()), |parent_node, component| {
-            try!(parent_node).find_child_node(txn, self.nodes, component)
+            self.find_child_node(txn, try!(parent_node).id, component)
         })
+    }
+
+    // TODO: since LMDB is ordered, we could e.g. perform a binary search
+    fn find_child_node<T: Transaction>(&self, txn: &T, parent_id: Id, name: &str) -> Result<Node> {
+        let mut cursor = try!(txn.open_ro_cursor(self.nodes)
+                                 .map_err(|_err| Error::TransactionError));
+
+        let mut child_node = None;
+
+        for (id, node_bytes) in cursor.iter_from(parent_id.as_bytes()) {
+            if id != parent_id.as_bytes() {
+                return Err(Error::NotFoundError);
+            }
+
+            let node = try!(Node::from_parent_id_and_bytes(parent_id, node_bytes));
+
+            if node.name == name {
+                child_node = Some(node);
+                break;
+            }
+        }
+
+        child_node.ok_or(Error::NotFoundError)
     }
 }
 
@@ -262,7 +270,7 @@ pub trait Transaction {
 
 impl<'a> Transaction for RwTransaction<'a> {
     fn get(&self, database: lmdb::Database, key: &[u8]) -> Result<&[u8]> {
-        self.0.get(database, &key).map_err(|_err| Error::TransactionError)
+        self.0.get(database, &key).map_err(|_err| Error::NotFoundError)
     }
 
     fn commit(self) -> Result<()> {
@@ -276,7 +284,7 @@ impl<'a> Transaction for RwTransaction<'a> {
 
 impl<'a> Transaction for RoTransaction<'a> {
     fn get(&self, database: lmdb::Database, key: &[u8]) -> Result<&[u8]> {
-        self.0.get(database, &key).map_err(|_err| Error::TransactionError)
+        self.0.get(database, &key).map_err(|_err| Error::NotFoundError)
     }
 
     fn commit(self) -> Result<()> {
@@ -298,7 +306,7 @@ impl<'a> RwTransaction<'a> {
 
 #[cfg(test)]
 mod tests {
-    use {LmdbAdapter, Id, Transaction};
+    use {LmdbAdapter, Id, Transaction, Error};
     use tempdir::TempDir;
 
     fn create_database() -> LmdbAdapter {
@@ -339,5 +347,35 @@ mod tests {
 
             txn.commit().unwrap();
         }
+    }
+
+    #[test]
+    fn test_duplicate_entry_id() {
+        let adapter = create_database();
+
+        let mut txn = adapter.rw_transaction().unwrap();
+
+        let domain_id = adapter.next_available_id(&txn).unwrap();
+        adapter.create_entry(&mut txn, domain_id, Id::root(), "example.com", "domain").unwrap();
+
+        assert_eq!(adapter.create_entry(&mut txn, domain_id, Id::root(), "another.com", "domain"),
+                   Err(Error::DuplicateEntryError));
+    }
+
+    #[test]
+    fn test_duplicate_entry_name() {
+        let adapter = create_database();
+
+        let mut txn = adapter.rw_transaction().unwrap();
+
+        let domain_id = adapter.next_available_id(&txn).unwrap();
+        adapter.create_entry(&mut txn, domain_id, Id::root(), "example.com", "domain").unwrap();
+
+        assert_eq!(adapter.create_entry(&mut txn,
+                                        domain_id.next(),
+                                        Id::root(),
+                                        "example.com",
+                                        "domain"),
+                   Err(Error::DuplicateEntryError));
     }
 }
