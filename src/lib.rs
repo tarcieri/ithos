@@ -172,17 +172,19 @@ impl LmdbAdapter {
             name: name,
         };
 
-        try!(txn.lmdb_txn.put(self.nodes,
-                          &parent_id.as_bytes(),
-                          &node.to_bytes(),
-                          lmdb::WriteFlags::empty())
-                     .map_err(|_err| Error::DbWriteError));
+        try!(txn.lmdb_txn
+                .put(self.nodes,
+                     &parent_id.as_bytes(),
+                     &node.to_bytes(),
+                     lmdb::WriteFlags::empty())
+                .map_err(|_err| Error::DbWriteError));
 
-        try!(txn.lmdb_txn.put(self.entries,
-                          &id.as_bytes(),
-                          &objectclass,
-                          lmdb::WriteFlags::empty())
-                     .map_err(|_err| Error::DbWriteError));
+        try!(txn.lmdb_txn
+                .put(self.entries,
+                     &id.as_bytes(),
+                     &objectclass,
+                     lmdb::WriteFlags::empty())
+                .map_err(|_err| Error::DbWriteError));
 
         Ok(Entry {
             txn: txn,
@@ -191,7 +193,7 @@ impl LmdbAdapter {
         })
     }
 
-    pub fn find_entry<'a>(&'a self, txn: &'a mut RwTransaction, path: &str) -> Result<Entry> {
+    pub fn find_entry<'a>(&'a self, txn: &'a RwTransaction, path: &str) -> Result<Entry> {
         let node = try!(self.find_node(txn, path));
 
         let entry_bytes = try!(txn.lmdb_txn
@@ -208,7 +210,7 @@ impl LmdbAdapter {
         })
     }
 
-    fn find_node(&self, txn: &mut RwTransaction, path: &str) -> Result<Node> {
+    fn find_node(&self, txn: &RwTransaction, path: &str) -> Result<Node> {
         let all_components: Vec<&str> = path.split("/").collect();
 
         if all_components.is_empty() {
@@ -228,7 +230,7 @@ impl LmdbAdapter {
             let parent_id = try!(parent_node).id;
 
             let mut cursor = try!(txn.lmdb_txn
-                                     .open_rw_cursor(self.nodes)
+                                     .open_ro_cursor(self.nodes)
                                      .map_err(|_err| Error::DbCorruptError));
 
             let mut child_node = None;
@@ -278,11 +280,11 @@ fn test_entry_lookup() {
     }
 
     {
-        let mut txn = adapter.rw_transaction().unwrap();
+        let txn = adapter.rw_transaction().unwrap();
 
         {
-            let mut entry = adapter.find_entry(&mut txn, "/example.com/hosts/master.example.com")
-                                   .unwrap();
+            let entry = adapter.find_entry(&txn, "/example.com/hosts/master.example.com")
+                               .unwrap();
 
             assert_eq!(entry.node.name, "master.example.com");
             assert_eq!(entry.objectclass, "host");
