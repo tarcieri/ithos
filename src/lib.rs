@@ -19,29 +19,28 @@ pub enum Error {
 
 pub type Result<T> = result::Result<T, Error>;
 
-struct LmdbAdapter {
+pub struct LmdbAdapter {
     env: lmdb::Environment,
     nodes: lmdb::Database,
     entries: lmdb::Database,
 }
 
-struct RwTransaction<'a> {
+pub struct RwTransaction<'a> {
     lmdb_txn: lmdb::RwTransaction<'a>,
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
-struct Id(u64);
+pub struct Id(u64);
 
-struct Node<'a> {
-    id: Id,
-    parent_id: Id,
-    name: &'a str,
+pub struct Node<'a> {
+    pub id: Id,
+    pub parent_id: Id,
+    pub name: &'a str,
 }
 
-struct Entry<'a> {
-    txn: &'a RwTransaction<'a>,
-    node: Node<'a>,
-    objectclass: &'a str,
+pub struct Entry<'a> {
+    pub node: Node<'a>,
+    pub objectclass: &'a str,
 }
 
 // Ids are 64-bit integers in host-native byte order
@@ -187,7 +186,6 @@ impl LmdbAdapter {
                 .map_err(|_err| Error::DbWriteError));
 
         Ok(Entry {
-            txn: txn,
             node: node,
             objectclass: objectclass,
         })
@@ -204,7 +202,6 @@ impl LmdbAdapter {
                                    .map_err(|_err| Error::DbCorruptError));
 
         Ok(Entry {
-            txn: txn,
             node: node,
             objectclass: objectclass,
         })
