@@ -292,13 +292,33 @@ impl<'a> RwTransaction<'a> {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
     use std::path::Path;
     use {LmdbAdapter, Id, Transaction};
 
+    fn create_database() -> LmdbAdapter {
+        let path = Path::new("./tmp");
+
+        if !path.exists() {
+            panic!("Unable to find repo-local temp path")
+        }
+
+        let data = path.join("data.mdb");
+        if data.exists() {
+            fs::remove_file(data).unwrap()
+        }
+
+        let lock = path.join("lock.mdb");
+        if lock.exists() {
+            fs::remove_file(lock).unwrap()
+        }
+
+        LmdbAdapter::create_database(path).unwrap()
+    }
+
     #[test]
     fn test_entry_lookup() {
-        let path = Path::new("./tmp");
-        let adapter = LmdbAdapter::create_database(path).unwrap();
+        let adapter = create_database();
 
         {
             let mut txn = adapter.rw_transaction().unwrap();
