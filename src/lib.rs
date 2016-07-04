@@ -290,37 +290,43 @@ impl<'a> RwTransaction<'a> {
     }
 }
 
-#[test]
-fn test_entry_lookup() {
-    let path = Path::new("./tmp");
-    let adapter = LmdbAdapter::create_database(path).unwrap();
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+    use {LmdbAdapter, Id, Transaction};
 
-    {
-        let mut txn = adapter.rw_transaction().unwrap();
-
-        let domain_id = adapter.next_available_id(&txn).unwrap();
-        adapter.create_entry(&mut txn, domain_id, Id::root(), "example.com", "domain").unwrap();
-
-        let hosts_id = domain_id.next();
-        adapter.create_entry(&mut txn, hosts_id, domain_id, "hosts", "ou").unwrap();
-
-        let host_id = hosts_id.next();
-        adapter.create_entry(&mut txn, host_id, hosts_id, "master.example.com", "host").unwrap();
-
-        txn.commit().unwrap();
-    }
-
-    {
-        let txn = adapter.ro_transaction().unwrap();
+    #[test]
+    fn test_entry_lookup() {
+        let path = Path::new("./tmp");
+        let adapter = LmdbAdapter::create_database(path).unwrap();
 
         {
-            let entry = adapter.find_entry(&txn, "/example.com/hosts/master.example.com")
-                               .unwrap();
+            let mut txn = adapter.rw_transaction().unwrap();
 
-            assert_eq!(entry.node.name, "master.example.com");
-            assert_eq!(entry.objectclass, "host");
+            let domain_id = adapter.next_available_id(&txn).unwrap();
+            adapter.create_entry(&mut txn, domain_id, Id::root(), "example.com", "domain").unwrap();
+
+            let hosts_id = domain_id.next();
+            adapter.create_entry(&mut txn, hosts_id, domain_id, "hosts", "ou").unwrap();
+
+            let host_id = hosts_id.next();
+            adapter.create_entry(&mut txn, host_id, hosts_id, "master.example.com", "host").unwrap();
+
+            txn.commit().unwrap();
         }
 
-        txn.commit().unwrap();
+        {
+            let txn = adapter.ro_transaction().unwrap();
+
+            {
+                let entry = adapter.find_entry(&txn, "/example.com/hosts/master.example.com")
+                                   .unwrap();
+
+                assert_eq!(entry.node.name, "master.example.com");
+                assert_eq!(entry.objectclass, "host");
+            }
+
+            txn.commit().unwrap();
+        }
     }
 }
