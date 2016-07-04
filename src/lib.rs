@@ -172,21 +172,17 @@ impl LmdbAdapter {
             name: name,
         };
 
-        {
-            let ref mut lmdb_txn = txn.lmdb_txn;
+        try!(txn.lmdb_txn.put(self.nodes,
+                          &parent_id.as_bytes(),
+                          &node.to_bytes(),
+                          lmdb::WriteFlags::empty())
+                     .map_err(|_err| Error::DbWriteError));
 
-            try!(lmdb_txn.put(self.nodes,
-                              &parent_id.as_bytes(),
-                              &node.to_bytes(),
-                              lmdb::WriteFlags::empty())
-                         .map_err(|_err| Error::DbWriteError));
-
-            try!(lmdb_txn.put(self.entries,
-                              &id.as_bytes(),
-                              &objectclass,
-                              lmdb::WriteFlags::empty())
-                         .map_err(|_err| Error::DbWriteError));
-        }
+        try!(txn.lmdb_txn.put(self.entries,
+                          &id.as_bytes(),
+                          &objectclass,
+                          lmdb::WriteFlags::empty())
+                     .map_err(|_err| Error::DbWriteError));
 
         Ok(Entry {
             txn: txn,
