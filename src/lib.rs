@@ -268,33 +268,24 @@ pub trait Transaction {
     fn open_ro_cursor(&self, db: lmdb::Database) -> lmdb::Result<lmdb::RoCursor>;
 }
 
-impl<'a> Transaction for RwTransaction<'a> {
-    fn get(&self, database: lmdb::Database, key: &[u8]) -> Result<&[u8]> {
-        self.0.get(database, &key).map_err(|_err| Error::NotFoundError)
-    }
+macro_rules! impl_transaction (($newtype:ident) => (
+    impl<'a> Transaction for $newtype<'a> {
+        fn get(&self, database: lmdb::Database, key: &[u8]) -> Result<&[u8]> {
+            self.0.get(database, &key).map_err(|_err| Error::NotFoundError)
+        }
 
-    fn commit(self) -> Result<()> {
-        self.0.commit().map_err(|_err| Error::TransactionError)
-    }
+        fn commit(self) -> Result<()> {
+            self.0.commit().map_err(|_err| Error::TransactionError)
+        }
 
-    fn open_ro_cursor(&self, db: lmdb::Database) -> lmdb::Result<lmdb::RoCursor> {
-        self.0.open_ro_cursor(db)
+        fn open_ro_cursor(&self, db: lmdb::Database) -> lmdb::Result<lmdb::RoCursor> {
+            self.0.open_ro_cursor(db)
+        }
     }
-}
+));
 
-impl<'a> Transaction for RoTransaction<'a> {
-    fn get(&self, database: lmdb::Database, key: &[u8]) -> Result<&[u8]> {
-        self.0.get(database, &key).map_err(|_err| Error::NotFoundError)
-    }
-
-    fn commit(self) -> Result<()> {
-        self.0.commit().map_err(|_err| Error::TransactionError)
-    }
-
-    fn open_ro_cursor(&self, db: lmdb::Database) -> lmdb::Result<lmdb::RoCursor> {
-        self.0.open_ro_cursor(db)
-    }
-}
+impl_transaction!(RwTransaction);
+impl_transaction!(RoTransaction);
 
 impl<'a> RwTransaction<'a> {
     fn put(&mut self, database: lmdb::Database, key: &[u8], data: &[u8]) -> Result<()> {
