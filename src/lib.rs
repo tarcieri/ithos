@@ -158,8 +158,9 @@ impl LmdbAdapter {
         }
     }
 
-    pub fn next_available_id<T: Transaction>(&self, txn: &T) -> Result<Id> {
-        let cursor = try!(txn.open_ro_cursor(self.nodes)
+    pub fn next_available_id(&self, txn: &RwTransaction) -> Result<Id> {
+        let cursor = try!(txn.0
+                             .open_ro_cursor(self.nodes)
                              .map_err(|_err| Error::TransactionError));
 
         let last_id = match cursor.get(None, None, lmdb_sys::MDB_LAST) {
@@ -219,7 +220,7 @@ impl LmdbAdapter {
         })
     }
 
-    fn find_node<T: Transaction>(&self, txn: &T, path: &str) -> Result<Node> {
+    fn find_node<'a, T: Transaction>(&'a self, txn: &'a T, path: &str) -> Result<Node> {
         let all_components: Vec<&str> = path.split("/").collect();
 
         if all_components.is_empty() {
@@ -238,34 +239,27 @@ impl LmdbAdapter {
         })
     }
 
-    // TODO: since LMDB is ordered, we could e.g. perform a binary search
-    fn find_child_node<T: Transaction>(&self, txn: &T, parent_id: Id, name: &str) -> Result<Node> {
-        let mut cursor = try!(txn.open_ro_cursor(self.nodes)
-                                 .map_err(|_err| Error::TransactionError));
-
-        let mut child_node = None;
-
-        for (id, node_bytes) in cursor.iter_from(parent_id.as_bytes()) {
-            if id != parent_id.as_bytes() {
-                return Err(Error::NotFoundError);
+    fn find_child_node<'a, T: Transaction>(&'a self,
+                                           txn: &'a T,
+                                           parent_id: Id,
+                                           name: &str)
+                                           -> Result<Node> {
+        let node_bytes = try!(txn.find(self.nodes, &parent_id.as_bytes(), |node_bytes| {
+            match Node::from_parent_id_and_bytes(parent_id, node_bytes) {
+                Ok(node) => node.name == name,
+                _ => false,
             }
+        }));
 
-            let node = try!(Node::from_parent_id_and_bytes(parent_id, node_bytes));
-
-            if node.name == name {
-                child_node = Some(node);
-                break;
-            }
-        }
-
-        child_node.ok_or(Error::NotFoundError)
+        Node::from_parent_id_and_bytes(parent_id, node_bytes)
     }
 }
 
 pub trait Transaction {
     fn get(&self, database: lmdb::Database, key: &[u8]) -> Result<&[u8]>;
+    fn find<P>(&self, db: lmdb::Database, key: &[u8], predicate: P) -> Result<&[u8]>
+        where P: Fn(&[u8]) -> bool;
     fn commit(self) -> Result<()>;
-    fn open_ro_cursor(&self, db: lmdb::Database) -> lmdb::Result<lmdb::RoCursor>;
 }
 
 macro_rules! impl_transaction (($newtype:ident) => (
@@ -274,12 +268,32 @@ macro_rules! impl_transaction (($newtype:ident) => (
             self.0.get(database, &key).map_err(|_err| Error::NotFoundError)
         }
 
-        fn commit(self) -> Result<()> {
-            self.0.commit().map_err(|_err| Error::TransactionError)
+        // TODO: since LMDB is ordered, we could e.g. perform a binary search
+        fn find<P>(&self, db: lmdb::Database, key: &[u8], predicate: P) -> Result<&[u8]>
+            where P: Fn(&[u8]) -> bool
+        {
+            let mut cursor = try!(self.0
+                                      .open_ro_cursor(db)
+                                      .map_err(|_err| Error::TransactionError));
+
+            let mut result = None;
+
+            for (cursor_key, value) in cursor.iter_from(key) {
+                if cursor_key != key {
+                    return Err(Error::NotFoundError);
+                }
+
+                if predicate(value) {
+                    result = Some(value);
+                    break;
+                }
+            }
+
+            result.ok_or(Error::NotFoundError)
         }
 
-        fn open_ro_cursor(&self, db: lmdb::Database) -> lmdb::Result<lmdb::RoCursor> {
-            self.0.open_ro_cursor(db)
+        fn commit(self) -> Result<()> {
+            self.0.commit().map_err(|_err| Error::TransactionError)
         }
     }
 ));
