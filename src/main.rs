@@ -4,7 +4,9 @@ extern crate clap;
 use clap::{App, Arg, SubCommand};
 
 mod server;
-use server::LmdbAdapter;
+mod lmdb;
+
+use lmdb::Adapter;
 
 fn main() {
     let version = "v0.1";
@@ -25,6 +27,6 @@ fn main() {
         let path = matches.value_of("path").unwrap();
 
         println!("Creating database at: {}", path);
-        LmdbAdapter::create_database(Path::new(path)).unwrap();
+        Adapter::create_database(Path::new(path)).unwrap();
     }
 }
