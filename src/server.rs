@@ -4,10 +4,10 @@ extern crate lmdb_sys;
 #[cfg(test)]
 extern crate tempdir;
 
-use std::{result, str};
+use std::{result, mem, str};
 use std::path::Path;
-use lmdb::{Cursor, DUP_SORT, INTEGER_KEY};
-use lmdb::Transaction as LmdbTransaction;
+use self::lmdb::{Cursor, DUP_SORT, INTEGER_KEY};
+use self::lmdb::Transaction as LmdbTransaction;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum Error {
@@ -25,13 +25,13 @@ pub enum Error {
 pub type Result<T> = result::Result<T, Error>;
 
 pub struct LmdbAdapter {
-    env: lmdb::Environment,
-    nodes: lmdb::Database,
-    entries: lmdb::Database,
+    env: self::lmdb::Environment,
+    nodes: self::lmdb::Database,
+    entries: self::lmdb::Database,
 }
 
-pub struct RwTransaction<'a>(lmdb::RwTransaction<'a>);
-pub struct RoTransaction<'a>(lmdb::RoTransaction<'a>);
+pub struct RwTransaction<'a>(self::lmdb::RwTransaction<'a>);
+pub struct RoTransaction<'a>(self::lmdb::RoTransaction<'a>);
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct Id(u64);
@@ -64,12 +64,12 @@ impl Id {
         let mut id = [0u8; 8];
         id.copy_from_slice(&bytes[0..8]);
 
-        Ok(Id(unsafe { std::mem::transmute(id) }))
+        Ok(Id(unsafe { mem::transmute(id) }))
     }
 
     fn as_bytes(self) -> [u8; 8] {
         let Id(id) = self;
-        unsafe { std::mem::transmute(id) }
+        unsafe { mem::transmute(id) }
     }
 
     fn next(self) -> Id {
@@ -93,7 +93,7 @@ impl<'a> Node<'a> {
         }
 
         let id = try!(Id::from_bytes(&bytes[0..8]));
-        let name = try!(std::str::from_utf8(&bytes[8..]).map_err(|_err| Error::DbCorruptError));
+        let name = try!(str::from_utf8(&bytes[8..]).map_err(|_err| Error::DbCorruptError));
 
         Ok(Node {
             id: id,
@@ -112,7 +112,7 @@ impl<'a> Node<'a> {
 
 impl LmdbAdapter {
     pub fn create_database(path: &Path) -> Result<LmdbAdapter> {
-        let env = try!(lmdb::Environment::new()
+        let env = try!(self::lmdb::Environment::new()
                            .set_max_dbs(8)
                            .open_with_permissions(&path, 0o600)
                            .map_err(|_err| Error::DbCreateError));
@@ -131,7 +131,7 @@ impl LmdbAdapter {
     }
 
     pub fn open_database(path: &Path) -> Result<LmdbAdapter> {
-        let env = try!(lmdb::Environment::new().open(&path).map_err(|_err| Error::DbOpenError));
+        let env = try!(self::lmdb::Environment::new().open(&path).map_err(|_err| Error::DbOpenError));
 
         let nodes = try!(env.open_db(Some("nodes")).map_err(|_err| Error::DbOpenError));
 
@@ -211,7 +211,7 @@ impl LmdbAdapter {
         let entry_bytes = try!(txn.get(self.entries, &node.id.as_bytes())
                                   .map_err(|_err| Error::DbCorruptError));
 
-        let objectclass = try!(std::str::from_utf8(&entry_bytes)
+        let objectclass = try!(str::from_utf8(&entry_bytes)
                                    .map_err(|_err| Error::DbCorruptError));
 
         Ok(Entry {
@@ -256,20 +256,20 @@ impl LmdbAdapter {
 }
 
 pub trait Transaction {
-    fn get(&self, database: lmdb::Database, key: &[u8]) -> Result<&[u8]>;
-    fn find<P>(&self, db: lmdb::Database, key: &[u8], predicate: P) -> Result<&[u8]>
+    fn get(&self, database: self::lmdb::Database, key: &[u8]) -> Result<&[u8]>;
+    fn find<P>(&self, db: self::lmdb::Database, key: &[u8], predicate: P) -> Result<&[u8]>
         where P: Fn(&[u8]) -> bool;
     fn commit(self) -> Result<()>;
 }
 
 macro_rules! impl_transaction (($newtype:ident) => (
     impl<'a> Transaction for $newtype<'a> {
-        fn get(&self, database: lmdb::Database, key: &[u8]) -> Result<&[u8]> {
+        fn get(&self, database: self::lmdb::Database, key: &[u8]) -> Result<&[u8]> {
             self.0.get(database, &key).map_err(|_err| Error::NotFoundError)
         }
 
         // TODO: since LMDB is ordered, we could e.g. perform a binary search
-        fn find<P>(&self, db: lmdb::Database, key: &[u8], predicate: P) -> Result<&[u8]>
+        fn find<P>(&self, db: self::lmdb::Database, key: &[u8], predicate: P) -> Result<&[u8]>
             where P: Fn(&[u8]) -> bool
         {
             let mut cursor = try!(self.0
@@ -302,17 +302,17 @@ impl_transaction!(RwTransaction);
 impl_transaction!(RoTransaction);
 
 impl<'a> RwTransaction<'a> {
-    fn put(&mut self, database: lmdb::Database, key: &[u8], data: &[u8]) -> Result<()> {
+    fn put(&mut self, database: self::lmdb::Database, key: &[u8], data: &[u8]) -> Result<()> {
         self.0
-            .put(database, &key, &data, lmdb::WriteFlags::empty())
+            .put(database, &key, &data, self::lmdb::WriteFlags::empty())
             .map_err(|_err| Error::TransactionError)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use {LmdbAdapter, Id, Transaction, Error};
-    use tempdir::TempDir;
+    use server::{LmdbAdapter, Id, Transaction, Error};
+    use server::tempdir::TempDir;
 
     fn create_database() -> LmdbAdapter {
         let dir = TempDir::new("ithos-test").unwrap();
