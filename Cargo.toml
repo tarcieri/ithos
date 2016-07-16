@@ -5,7 +5,7 @@ homepage    = "https://github.com/cryptosphere/ithos"
 repository  = "https://github.com/cryptosphere/ithos"
 readme      = "README.md"
 keywords    = ["directory", "identity", "access", "credentials"]
-license     = "MIT"
+license     = "Apache-2.0"
 version     = "0.0.0"
 authors     = ["Tony Arcieri <bascule@gmail.com>"]
 
