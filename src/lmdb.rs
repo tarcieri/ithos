@@ -7,7 +7,7 @@ extern crate tempdir;
 use std::path::Path;
 use std::str;
 
-use server::{Id, Node, Entry, Result, Error};
+use server::{Id, Node, Entry, TxCommit, Result, Error};
 
 use self::lmdb::{Cursor, DUP_SORT, INTEGER_KEY};
 use self::lmdb::Transaction as LmdbTransaction;
@@ -170,7 +170,6 @@ pub trait Transaction {
     fn get(&self, database: self::lmdb::Database, key: &[u8]) -> Result<&[u8]>;
     fn find<P>(&self, db: self::lmdb::Database, key: &[u8], predicate: P) -> Result<&[u8]>
         where P: Fn(&[u8]) -> bool;
-    fn commit(self) -> Result<()>;
 }
 
 macro_rules! impl_transaction (($newtype:ident) => (
@@ -202,7 +201,9 @@ macro_rules! impl_transaction (($newtype:ident) => (
 
             result.ok_or(Error::NotFoundError)
         }
+    }
 
+    impl<'a> TxCommit for $newtype<'a> {
         fn commit(self) -> Result<()> {
             self.0.commit().map_err(|_err| Error::TransactionError)
         }
@@ -222,8 +223,8 @@ impl<'a> RwTransaction<'a> {
 
 #[cfg(test)]
 mod tests {
-    use server::{Id, Error};
-    use lmdb::{Adapter, Transaction};
+    use server::{Id, Error, TxCommit};
+    use lmdb::Adapter;
     use lmdb::tempdir::TempDir;
 
     fn create_database() -> Adapter {

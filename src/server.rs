@@ -31,6 +31,10 @@ pub struct Entry<'a> {
     pub objectclass: &'a str,
 }
 
+pub trait TxCommit {
+    fn commit(self) -> Result<()>;
+}
+
 // Ids are 64-bit integers in host-native byte order
 // LMDB has special optimizations for host-native integers as keys
 impl Id {
