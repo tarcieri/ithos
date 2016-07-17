@@ -24,15 +24,15 @@ pub struct RoTransaction<'a>(self::lmdb::RoTransaction<'a>);
 impl Adapter {
     pub fn create_database(path: &Path) -> Result<Adapter> {
         let env = try!(self::lmdb::Environment::new()
-                           .set_max_dbs(8)
-                           .open_with_permissions(&path, 0o600)
-                           .map_err(|_err| Error::DbCreateError));
+            .set_max_dbs(8)
+            .open_with_permissions(&path, 0o600)
+            .map_err(|_err| Error::DbCreateError));
 
         let nodes = try!(env.create_db(Some("nodes"), INTEGER_KEY | DUP_SORT)
-                            .map_err(|_err| Error::DbCreateError));
+            .map_err(|_err| Error::DbCreateError));
 
         let entries = try!(env.create_db(Some("entries"), INTEGER_KEY)
-                              .map_err(|_err| Error::DbCreateError));
+            .map_err(|_err| Error::DbCreateError));
 
         Ok(Adapter {
             env: env,
@@ -42,7 +42,9 @@ impl Adapter {
     }
 
     pub fn open_database(path: &Path) -> Result<Adapter> {
-        let env = try!(self::lmdb::Environment::new().open(&path).map_err(|_err| Error::DbOpenError));
+        let env = try!(self::lmdb::Environment::new()
+            .open(&path)
+            .map_err(|_err| Error::DbOpenError));
 
         let nodes = try!(env.open_db(Some("nodes")).map_err(|_err| Error::DbOpenError));
 
@@ -71,8 +73,8 @@ impl Adapter {
 
     pub fn next_available_id(&self, txn: &RwTransaction) -> Result<Id> {
         let cursor = try!(txn.0
-                             .open_ro_cursor(self.nodes)
-                             .map_err(|_err| Error::TransactionError));
+            .open_ro_cursor(self.nodes)
+            .map_err(|_err| Error::TransactionError));
 
         let last_id = match cursor.get(None, None, lmdb_sys::MDB_LAST) {
             Ok((id, _)) => Id::from_bytes(id.unwrap()).unwrap(),
@@ -105,10 +107,10 @@ impl Adapter {
         };
 
         try!(txn.put(self.nodes, &parent_id.as_bytes(), &node.to_bytes())
-                .map_err(|_err| Error::DbWriteError));
+            .map_err(|_err| Error::DbWriteError));
 
         try!(txn.put(self.entries, &id.as_bytes(), &objectclass.as_bytes())
-                .map_err(|_err| Error::DbWriteError));
+            .map_err(|_err| Error::DbWriteError));
 
         Ok(Entry {
             node: node,
@@ -120,10 +122,9 @@ impl Adapter {
         let node = try!(self.find_node(txn, path));
 
         let entry_bytes = try!(txn.get(self.entries, &node.id.as_bytes())
-                                  .map_err(|_err| Error::DbCorruptError));
+            .map_err(|_err| Error::DbCorruptError));
 
-        let objectclass = try!(str::from_utf8(&entry_bytes)
-                                   .map_err(|_err| Error::DbCorruptError));
+        let objectclass = try!(str::from_utf8(&entry_bytes).map_err(|_err| Error::DbCorruptError));
 
         Ok(Entry {
             node: node,
@@ -172,13 +173,13 @@ pub trait Transaction {
         where P: Fn(&[u8]) -> bool;
 }
 
+// TODO: since LMDB is ordered, we could e.g. perform a binary search for find
 macro_rules! impl_transaction (($newtype:ident) => (
     impl<'a> Transaction for $newtype<'a> {
         fn get(&self, database: self::lmdb::Database, key: &[u8]) -> Result<&[u8]> {
             self.0.get(database, &key).map_err(|_err| Error::NotFoundError)
         }
 
-        // TODO: since LMDB is ordered, we could e.g. perform a binary search
         fn find<P>(&self, db: self::lmdb::Database, key: &[u8], predicate: P) -> Result<&[u8]>
             where P: Fn(&[u8]) -> bool
         {
@@ -247,7 +248,7 @@ mod tests {
 
             let host_id = hosts_id.next();
             adapter.create_entry(&mut txn, host_id, hosts_id, "master.example.com", "host")
-                   .unwrap();
+                .unwrap();
 
             txn.commit().unwrap();
         }
@@ -257,7 +258,7 @@ mod tests {
 
             {
                 let entry = adapter.find_entry(&txn, "/example.com/hosts/master.example.com")
-                                   .unwrap();
+                    .unwrap();
 
                 assert_eq!(entry.node.name, "master.example.com");
                 assert_eq!(entry.objectclass, "host");
