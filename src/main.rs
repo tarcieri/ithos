@@ -3,8 +3,13 @@ use std::path::Path;
 extern crate clap;
 use clap::{App, Arg, SubCommand};
 
-mod server;
+extern crate ring;
+
+mod log;
 mod lmdb;
+mod password;
+mod server;
+mod signature;
 
 use lmdb::Adapter;
 
