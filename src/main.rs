@@ -7,6 +7,7 @@ extern crate ring;
 
 mod log;
 mod lmdb;
+mod objecthash;
 mod password;
 mod server;
 mod signature;
