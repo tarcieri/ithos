@@ -5,6 +5,8 @@ extern crate time;
 use ring::digest;
 use signature::{SignatureAlgorithm, KeyPair};
 
+use objecthash::{ObjectHash, DIGEST_ALG};
+
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum DigestAlgorithm {
     SHA256,
@@ -55,65 +57,32 @@ impl Op {
             data: Vec::from(data),
         }
     }
+}
 
-    // TODO: abstraction!
-    pub fn objecthash(&self, algorithm: DigestAlgorithm) -> digest::Digest {
-        // SHA-256 is the only digest algorithm we support for now
-        assert!(algorithm == DigestAlgorithm::SHA256);
+impl ObjectHash for Op {
+    fn objecthash(&self) -> digest::Digest {
+        let mut ctx = digest::Context::new(&DIGEST_ALG);
 
-        let mut op_ctx = digest::Context::new(&digest::SHA256);
-        op_ctx.update(b"d"); // objecthash qualifier for dictionaries
+        // objecthash qualifier for dictionaries
+        ctx.update(b"d");
 
         // OpType::Add is the only op we support right now
         assert!(self.optype == OpType::Add);
-        let mut optype_ctx = digest::Context::new(&digest::SHA256);
+        let optype_str = "ADD";
 
-        {
-            let optype_str = "ADD";
+        ctx.update(digest::digest(&DIGEST_ALG, b"optype").as_ref());
+        ctx.update(optype_str.objecthash().as_ref());
 
-            optype_ctx.update(b"u"); // objecthash qualifier for Unicode strings
-            optype_ctx.update(digest::digest(&digest::SHA256, &optype_str.as_bytes()).as_ref());
-        }
+        ctx.update(digest::digest(&DIGEST_ALG, b"path").as_ref());
+        ctx.update(self.path.objecthash().as_ref());
 
-        op_ctx.update(digest::digest(&digest::SHA256, b"optype").as_ref());
-        op_ctx.update(optype_ctx.finish().as_ref());
+        ctx.update(digest::digest(&DIGEST_ALG, b"objectclass").as_ref());
+        ctx.update(self.objectclass.objecthash().as_ref());
 
-        let mut path_ctx = digest::Context::new(&digest::SHA256);
+        ctx.update(digest::digest(&DIGEST_ALG, b"data").as_ref());
+        ctx.update(self.data.objecthash().as_ref());
 
-        {
-            path_ctx.update(b"u"); // objecthash qualifier for Unicode strings
-            path_ctx.update(digest::digest(&digest::SHA256, &self.path.as_bytes()).as_ref());
-        }
-
-        op_ctx.update(digest::digest(&digest::SHA256, b"path").as_ref());
-        op_ctx.update(path_ctx.finish().as_ref());
-
-        let mut objectclass_ctx = digest::Context::new(&digest::SHA256);
-
-        {
-            objectclass_ctx.update(b"u"); // objecthash qualifier for Unicode strings
-            objectclass_ctx.update(digest::digest(
-                &digest::SHA256,
-                &self.objectclass.as_bytes()
-            ).as_ref());
-        }
-
-        op_ctx.update(digest::digest(&digest::SHA256, b"objectclass").as_ref());
-        op_ctx.update(objectclass_ctx.finish().as_ref());
-
-        // TODO: we should serialize the underlying structure of the data
-        // That way we can transcode it between e.g. protos and JSON
-        let mut data_ctx = digest::Context::new(&digest::SHA256);
-
-        {
-            data_ctx.update(b"u"); // objecthash qualifier for Unicode strings
-            data_ctx.update(digest::digest(&digest::SHA256, &self.data).as_ref());
-        }
-
-        op_ctx.update(digest::digest(&digest::SHA256, b"data").as_ref());
-        op_ctx.update(data_ctx.finish().as_ref());
-
-        op_ctx.finish()
+        ctx.finish()
     }
 }
 
@@ -124,35 +93,22 @@ impl OobData {
             data: Vec::from(data),
         }
     }
+}
 
-    pub fn objecthash(&self, algorithm: DigestAlgorithm) -> digest::Digest {
-        // SHA-256 is the only digest algorithm we support for now
-        assert!(algorithm == DigestAlgorithm::SHA256);
+impl ObjectHash for OobData {
+    fn objecthash(&self) -> digest::Digest {
+        let mut ctx = digest::Context::new(&DIGEST_ALG);
 
-        let mut oob_data_ctx = digest::Context::new(&digest::SHA256);
-        oob_data_ctx.update(b"d"); // objecthash qualifier for dictionaries
+        // objecthash qualifier for dictionaries
+        ctx.update(b"d");
 
-        let mut label_ctx = digest::Context::new(&digest::SHA256);
+        ctx.update(digest::digest(&DIGEST_ALG, b"label").as_ref());
+        ctx.update(self.label.objecthash().as_ref());
 
-        {
-            label_ctx.update(b"u"); // objecthash qualifier for Unicode strings
-            label_ctx.update(digest::digest(&digest::SHA256, &self.label.as_bytes()).as_ref());
-        }
+        ctx.update(digest::digest(&DIGEST_ALG, b"data").as_ref());
+        ctx.update(self.data.objecthash().as_ref());
 
-        oob_data_ctx.update(digest::digest(&digest::SHA256, b"label").as_ref());
-        oob_data_ctx.update(label_ctx.finish().as_ref());
-
-        let mut data_ctx = digest::Context::new(&digest::SHA256);
-
-        {
-            data_ctx.update(b"u"); // objecthash qualifier for Unicode strings
-            data_ctx.update(digest::digest(&digest::SHA256, &self.data).as_ref());
-        }
-
-        oob_data_ctx.update(digest::digest(&digest::SHA256, b"data").as_ref());
-        oob_data_ctx.update(data_ctx.finish().as_ref());
-
-        oob_data_ctx.finish()
+        ctx.finish()
     }
 }
 
@@ -218,90 +174,47 @@ impl Block {
         self.oob_data.push(OobData::new(&label, &data));
     }
 
-    // TODO: abstraction!
-    pub fn objecthash(&self, algorithm: DigestAlgorithm) -> digest::Digest {
+    pub fn sign(&mut self, keypair: &KeyPair, digest_alg: DigestAlgorithm) {
         // SHA-256 is the only digest algorithm we support for now
-        assert!(algorithm == DigestAlgorithm::SHA256);
+        assert!(digest_alg == DigestAlgorithm::SHA256);
 
-        let mut block_ctx = digest::Context::new(&digest::SHA256);
-        block_ctx.update(b"d"); // objecthash qualifier for dictionaries
-
-        let mut timestamp_ctx = digest::Context::new(&digest::SHA256);
-
-        {
-            timestamp_ctx.update(b"i"); // objecthash qualifier for integers
-            timestamp_ctx.update(self.timestamp.to_string().as_bytes());
-        }
-
-        block_ctx.update(digest::digest(&digest::SHA256, b"timestamp").as_ref());
-        block_ctx.update(timestamp_ctx.finish().as_ref());
-
-        let mut op_list_ctx = digest::Context::new(&digest::SHA256);
-
-        {
-            op_list_ctx.update(b"l"); // objecthash qualifier for lists
-
-            let ref ops = self.ops;
-            for op in ops {
-                op_list_ctx.update(op.objecthash(algorithm).as_ref());
-            }
-        }
-
-        block_ctx.update(digest::digest(&digest::SHA256, b"ops").as_ref());
-        block_ctx.update(op_list_ctx.finish().as_ref());
-
-        let mut oob_data_ctx = digest::Context::new(&digest::SHA256);
-
-        {
-            oob_data_ctx.update(b"d"); // objecthash qualifier for lists
-
-            let ref oob_data = self.oob_data;
-            for o in oob_data {
-                oob_data_ctx.update(o.objecthash(algorithm).as_ref());
-            }
-        }
-
-        block_ctx.update(digest::digest(&digest::SHA256, b"oob_data").as_ref());
-        block_ctx.update(oob_data_ctx.finish().as_ref());
-
-        let mut comment_ctx = digest::Context::new(&digest::SHA256);
-
-        {
-            comment_ctx.update(b"u"); // objecthash qualifier for Unicode strings
-            comment_ctx.update(digest::digest(&digest::SHA256, &self.comment.as_bytes()).as_ref());
-        }
-
-        block_ctx.update(digest::digest(&digest::SHA256, b"comment").as_ref());
-        block_ctx.update(comment_ctx.finish().as_ref());
-
-        let mut signed_by_ctx = digest::Context::new(&digest::SHA256);
-
-        {
-            signed_by_ctx.update(b"u"); // objecthash qualifier for Unicode strings
-
-            // TODO: Don't Panic
-            let signed_by = self.signed_by.expect("signed_by missing");
-            signed_by_ctx.update(digest::digest(&digest::SHA256, &signed_by).as_ref());
-        }
-
-        block_ctx.update(digest::digest(&digest::SHA256, b"signed_by").as_ref());
-        block_ctx.update(signed_by_ctx.finish().as_ref());
-
-        block_ctx.finish()
-    }
-
-    pub fn sign(&mut self, keypair: &KeyPair, digest_algorithm: DigestAlgorithm) {
         let mut signed_by = [0u8; 32];
         signed_by.copy_from_slice(&keypair.public_key_bytes());
         self.signed_by = Some(signed_by);
 
         let mut id = [0u8; 32];
-        id.copy_from_slice(self.objecthash(digest_algorithm).as_ref());
+        id.copy_from_slice(self.objecthash().as_ref());
         self.id = Some(id);
 
         let mut signature = [0u8; 64];
         signature.copy_from_slice(keypair.sign(&id).as_slice());
         self.signature = Some(signature);
+    }
+}
+
+impl ObjectHash for Block {
+    fn objecthash(&self) -> digest::Digest {
+        let mut block_ctx = digest::Context::new(&DIGEST_ALG);
+
+        // objecthash qualifier for dictionaries
+        block_ctx.update(b"d");
+
+        block_ctx.update(digest::digest(&DIGEST_ALG, b"timestamp").as_ref());
+        block_ctx.update(self.timestamp.objecthash().as_ref());
+
+        block_ctx.update(digest::digest(&DIGEST_ALG, b"ops").as_ref());
+        block_ctx.update(self.ops.objecthash().as_ref());
+
+        block_ctx.update(digest::digest(&DIGEST_ALG, b"oob_data").as_ref());
+        block_ctx.update(self.oob_data.objecthash().as_ref());
+
+        block_ctx.update(digest::digest(&DIGEST_ALG, b"comment").as_ref());
+        block_ctx.update(self.comment.objecthash().as_ref());
+
+        block_ctx.update(digest::digest(&DIGEST_ALG, b"signed_by").as_ref());
+        block_ctx.update(self.signed_by.expect("signed_by missing").objecthash().as_ref());
+
+        block_ctx.finish()
     }
 }
 
