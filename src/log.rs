@@ -1,11 +1,11 @@
 // "Merkelized" append-only replication log
 
-extern crate time;
-
+use time;
 use ring::digest;
-use signature::{SignatureAlgorithm, KeyPair};
 
+use objectclass::ObjectClass;
 use objecthash::{ObjectHash, DIGEST_ALG};
+use signature::{SignatureAlgorithm, KeyPair};
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum DigestAlgorithm {
@@ -20,7 +20,7 @@ pub enum OpType {
 pub struct Op {
     optype: OpType,
     path: String,
-    objectclass: String,
+    objectclass: ObjectClass,
     data: Vec<u8>,
 }
 
@@ -49,11 +49,11 @@ pub struct Log {
 }
 
 impl Op {
-    pub fn new(optype: OpType, path: &str, objectclass: &str, data: &[u8]) -> Op {
+    pub fn new(optype: OpType, path: &str, objectclass: ObjectClass, data: &[u8]) -> Op {
         Op {
             optype: optype,
             path: String::from(path),
-            objectclass: String::from(objectclass),
+            objectclass: objectclass,
             data: Vec::from(data),
         }
     }
@@ -127,7 +127,7 @@ impl Block {
                          -> Block {
         let mut block = Block::new(GENESIS_BLOCK_ID);
 
-        block.op(OpType::Add, "/id", "logid", logid);
+        block.op(OpType::Add, "", ObjectClass::ROOT, logid);
 
         let public_key_bytes = admin_keypair.public_key_bytes();
 
@@ -142,7 +142,7 @@ impl Block {
         admin_path.push_str("/system/");
         admin_path.push_str(admin_username);
 
-        block.op(OpType::Add, &admin_path, "system", &admin_user);
+        block.op(OpType::Add, &admin_path, ObjectClass::SYSTEM, &admin_user);
 
         let mut keypair_label = String::new();
         keypair_label.push_str(&admin_username);
@@ -166,7 +166,7 @@ impl Block {
         }
     }
 
-    pub fn op(&mut self, optype: OpType, path: &str, objectclass: &str, data: &[u8]) {
+    pub fn op(&mut self, optype: OpType, path: &str, objectclass: ObjectClass, data: &[u8]) {
         self.ops.push(Op::new(optype, path, objectclass, data));
     }
 

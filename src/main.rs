@@ -4,9 +4,11 @@ extern crate clap;
 use clap::{App, Arg, SubCommand};
 
 extern crate ring;
+extern crate time;
 
 mod log;
 mod lmdb;
+mod objectclass;
 mod objecthash;
 mod password;
 mod server;
