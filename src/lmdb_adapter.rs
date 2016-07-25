@@ -8,6 +8,7 @@ use std::path::Path;
 use std::str;
 
 use adapter::{Adapter, Transaction};
+use objectclass::ObjectClass;
 use server::{Id, Node, Entry, Result, Error};
 
 use self::lmdb::{Environment, Database, Cursor, WriteFlags, DUP_SORT, INTEGER_KEY};
@@ -129,7 +130,7 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
                      id: Id,
                      parent_id: Id,
                      name: &'b str,
-                     objectclass: &'b str)
+                     objectclass: ObjectClass)
                      -> Result<Entry> {
         if txn.get(self.entries, &id.as_bytes()) != Err(Error::NotFoundError) {
             return Err(Error::DuplicateEntryError);
@@ -149,7 +150,9 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
         try!(txn.put(self.nodes, &parent_id.as_bytes(), &node.to_bytes())
             .map_err(|_err| Error::DbWriteError));
 
-        try!(txn.put(self.entries, &id.as_bytes(), &objectclass.as_bytes())
+        try!(txn.put(self.entries,
+                 &id.as_bytes(),
+                 &objectclass.to_string().as_bytes())
             .map_err(|_err| Error::DbWriteError));
 
         Ok(Entry {
@@ -167,7 +170,8 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
         let entry_bytes = try!(txn.get(self.entries, &node.id.as_bytes())
             .map_err(|_err| Error::DbCorruptError));
 
-        let objectclass = try!(str::from_utf8(&entry_bytes).map_err(|_err| Error::DbCorruptError));
+        let objectclass = try!(ObjectClass::from_bytes(&entry_bytes)
+            .map_err(|_err| Error::DbCorruptError));
 
         Ok(Entry {
             node: node,
@@ -226,6 +230,7 @@ impl<'a> RwTransaction<'a> {
 #[cfg(test)]
 mod tests {
     use adapter::{Adapter, Transaction};
+    use objectclass::ObjectClass;
     use server::{Id, Error};
     use lmdb_adapter::LmdbAdapter;
     use lmdb_adapter::tempdir::TempDir;
@@ -243,13 +248,23 @@ mod tests {
             let mut txn = adapter.rw_transaction().unwrap();
 
             let domain_id = adapter.next_available_id(&txn).unwrap();
-            adapter.add_entry(&mut txn, domain_id, Id::root(), "example.com", "domain").unwrap();
+            adapter.add_entry(&mut txn,
+                           domain_id,
+                           Id::root(),
+                           "example.com",
+                           ObjectClass::DOMAIN)
+                .unwrap();
 
             let hosts_id = domain_id.next();
-            adapter.add_entry(&mut txn, hosts_id, domain_id, "hosts", "ou").unwrap();
+            adapter.add_entry(&mut txn, hosts_id, domain_id, "hosts", ObjectClass::OU).unwrap();
 
             let host_id = hosts_id.next();
-            adapter.add_entry(&mut txn, host_id, hosts_id, "master.example.com", "host").unwrap();
+            adapter.add_entry(&mut txn,
+                           host_id,
+                           hosts_id,
+                           "master.example.com",
+                           ObjectClass::HOST)
+                .unwrap();
 
             txn.commit().unwrap();
         }
@@ -262,7 +277,7 @@ mod tests {
                     .unwrap();
 
                 assert_eq!(entry.node.name, "master.example.com");
-                assert_eq!(entry.objectclass, "host");
+                assert_eq!(entry.objectclass, ObjectClass::HOST);
             }
 
             txn.commit().unwrap();
@@ -276,9 +291,18 @@ mod tests {
         let mut txn = adapter.rw_transaction().unwrap();
 
         let domain_id = adapter.next_available_id(&txn).unwrap();
-        adapter.add_entry(&mut txn, domain_id, Id::root(), "example.com", "domain").unwrap();
+        adapter.add_entry(&mut txn,
+                       domain_id,
+                       Id::root(),
+                       "example.com",
+                       ObjectClass::DOMAIN)
+            .unwrap();
 
-        let result = adapter.add_entry(&mut txn, domain_id, Id::root(), "another.com", "domain");
+        let result = adapter.add_entry(&mut txn,
+                                       domain_id,
+                                       Id::root(),
+                                       "another.com",
+                                       ObjectClass::DOMAIN);
         assert_eq!(result, Err(Error::DuplicateEntryError));
     }
 
@@ -289,13 +313,18 @@ mod tests {
         let mut txn = adapter.rw_transaction().unwrap();
 
         let domain_id = adapter.next_available_id(&txn).unwrap();
-        adapter.add_entry(&mut txn, domain_id, Id::root(), "example.com", "domain").unwrap();
+        adapter.add_entry(&mut txn,
+                       domain_id,
+                       Id::root(),
+                       "example.com",
+                       ObjectClass::DOMAIN)
+            .unwrap();
 
         let result = adapter.add_entry(&mut txn,
                                        domain_id.next(),
                                        Id::root(),
                                        "example.com",
-                                       "domain");
+                                       ObjectClass::DOMAIN);
         assert_eq!(result, Err(Error::DuplicateEntryError));
     }
 }
