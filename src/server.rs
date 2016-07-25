@@ -4,7 +4,7 @@ use std::path::Path;
 use ring::rand;
 
 use lmdb_adapter::LmdbAdapter;
-use log::{Log, DigestAlgorithm};
+use log::{Block, DigestAlgorithm};
 use password;
 use password::PasswordAlgorithm;
 use signature::{SignatureAlgorithm, KeyPair};
@@ -67,11 +67,11 @@ impl Server {
         let (admin_keypair, admin_keypair_sealed) =
             KeyPair::generate_and_seal(SignatureAlgorithm::Ed25519, &rng, &admin_symmetric_key);
 
-        let log = Log::generate(&logid,
-                                &admin_username,
-                                &admin_keypair,
-                                &admin_keypair_sealed,
-                                DigestAlgorithm::SHA256);
+        let genesis_block = Block::genesis_block(&logid,
+                                                 &admin_username,
+                                                 &admin_keypair,
+                                                 &admin_keypair_sealed,
+                                                 DigestAlgorithm::SHA256);
 
         LmdbAdapter::create_database(path).unwrap();
         Ok(())

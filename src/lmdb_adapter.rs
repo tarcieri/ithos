@@ -293,7 +293,11 @@ mod tests {
         let domain_id = adapter.next_available_id(&txn).unwrap();
         adapter.create_entry(&mut txn, domain_id, Id::root(), "example.com", "domain").unwrap();
 
-        let result = adapter.create_entry(&mut txn, domain_id.next(), Id::root(), "example.com", "domain");
+        let result = adapter.create_entry(&mut txn,
+                                          domain_id.next(),
+                                          Id::root(),
+                                          "example.com",
+                                          "domain");
         assert_eq!(result, Err(Error::DuplicateEntryError));
     }
 }
