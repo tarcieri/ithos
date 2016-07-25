@@ -5,8 +5,8 @@ use ring::rand;
 
 use lmdb_adapter::LmdbAdapter;
 use log::{Block, DigestAlgorithm};
-use password;
-use password::PasswordAlgorithm;
+use password::{self, PasswordAlgorithm};
+use objectclass::ObjectClass;
 use signature::{SignatureAlgorithm, KeyPair};
 
 #[cfg(test)]
@@ -45,7 +45,7 @@ pub struct Node<'a> {
 #[derive(Debug, Eq, PartialEq)]
 pub struct Entry<'a> {
     pub node: Node<'a>,
-    pub objectclass: &'a str,
+    pub objectclass: ObjectClass,
 }
 
 impl Server {

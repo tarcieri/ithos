@@ -1,3 +1,4 @@
+use objectclass::ObjectClass;
 use server::{Id, Entry, Result};
 
 pub trait Transaction<D> {
@@ -17,7 +18,7 @@ pub trait Adapter<'a, D, R: Transaction<D>, W: Transaction<D>> {
                      id: Id,
                      parent_id: Id,
                      name: &'b str,
-                     objectclass: &'b str)
+                     objectclass: ObjectClass)
                      -> Result<Entry>;
     fn find_entry<'b, T: Transaction<D>>(&'b self, txn: &'b T, path: &str) -> Result<Entry>;
 }
