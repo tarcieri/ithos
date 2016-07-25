@@ -3,7 +3,7 @@ use std::path::Path;
 
 use ring::rand;
 
-use lmdb::Adapter;
+use lmdb_adapter::LmdbAdapter;
 use log::{Log, DigestAlgorithm};
 use password;
 use password::PasswordAlgorithm;
@@ -29,7 +29,7 @@ pub enum Error {
 pub type Result<T> = result::Result<T, Error>;
 
 pub struct Server {
-    adapter: Adapter,
+    adapter: LmdbAdapter,
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
@@ -46,10 +46,6 @@ pub struct Node<'a> {
 pub struct Entry<'a> {
     pub node: Node<'a>,
     pub objectclass: &'a str,
-}
-
-pub trait TxCommit {
-    fn commit(self) -> Result<()>;
 }
 
 impl Server {
@@ -77,7 +73,7 @@ impl Server {
                                 &admin_keypair_sealed,
                                 DigestAlgorithm::SHA256);
 
-        Adapter::create_database(path);
+        LmdbAdapter::create_database(path).unwrap();
         Ok(())
     }
 }
