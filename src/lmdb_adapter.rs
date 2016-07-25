@@ -124,13 +124,13 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
         Ok(last_id.next())
     }
 
-    fn create_entry<'b>(&'b self,
-                        txn: &'b mut RwTransaction,
-                        id: Id,
-                        parent_id: Id,
-                        name: &'b str,
-                        objectclass: &'b str)
-                        -> Result<Entry> {
+    fn add_entry<'b>(&'b self,
+                     txn: &'b mut RwTransaction,
+                     id: Id,
+                     parent_id: Id,
+                     name: &'b str,
+                     objectclass: &'b str)
+                     -> Result<Entry> {
         if txn.get(self.entries, &id.as_bytes()) != Err(Error::NotFoundError) {
             return Err(Error::DuplicateEntryError);
         }
@@ -243,15 +243,13 @@ mod tests {
             let mut txn = adapter.rw_transaction().unwrap();
 
             let domain_id = adapter.next_available_id(&txn).unwrap();
-            adapter.create_entry(&mut txn, domain_id, Id::root(), "example.com", "domain")
-                .unwrap();
+            adapter.add_entry(&mut txn, domain_id, Id::root(), "example.com", "domain").unwrap();
 
             let hosts_id = domain_id.next();
-            adapter.create_entry(&mut txn, hosts_id, domain_id, "hosts", "ou").unwrap();
+            adapter.add_entry(&mut txn, hosts_id, domain_id, "hosts", "ou").unwrap();
 
             let host_id = hosts_id.next();
-            adapter.create_entry(&mut txn, host_id, hosts_id, "master.example.com", "host")
-                .unwrap();
+            adapter.add_entry(&mut txn, host_id, hosts_id, "master.example.com", "host").unwrap();
 
             txn.commit().unwrap();
         }
@@ -278,9 +276,9 @@ mod tests {
         let mut txn = adapter.rw_transaction().unwrap();
 
         let domain_id = adapter.next_available_id(&txn).unwrap();
-        adapter.create_entry(&mut txn, domain_id, Id::root(), "example.com", "domain").unwrap();
+        adapter.add_entry(&mut txn, domain_id, Id::root(), "example.com", "domain").unwrap();
 
-        let result = adapter.create_entry(&mut txn, domain_id, Id::root(), "another.com", "domain");
+        let result = adapter.add_entry(&mut txn, domain_id, Id::root(), "another.com", "domain");
         assert_eq!(result, Err(Error::DuplicateEntryError));
     }
 
@@ -291,13 +289,13 @@ mod tests {
         let mut txn = adapter.rw_transaction().unwrap();
 
         let domain_id = adapter.next_available_id(&txn).unwrap();
-        adapter.create_entry(&mut txn, domain_id, Id::root(), "example.com", "domain").unwrap();
+        adapter.add_entry(&mut txn, domain_id, Id::root(), "example.com", "domain").unwrap();
 
-        let result = adapter.create_entry(&mut txn,
-                                          domain_id.next(),
-                                          Id::root(),
-                                          "example.com",
-                                          "domain");
+        let result = adapter.add_entry(&mut txn,
+                                       domain_id.next(),
+                                       Id::root(),
+                                       "example.com",
+                                       "domain");
         assert_eq!(result, Err(Error::DuplicateEntryError));
     }
 }

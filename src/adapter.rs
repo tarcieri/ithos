@@ -12,12 +12,12 @@ pub trait Adapter<'a, D, R: Transaction<D>, W: Transaction<D>> {
     fn ro_transaction(&'a self) -> Result<R>;
     fn rw_transaction(&'a self) -> Result<W>;
     fn next_available_id(&self, txn: &W) -> Result<Id>;
-    fn create_entry<'b>(&'b self,
-                        txn: &'b mut W,
-                        id: Id,
-                        parent_id: Id,
-                        name: &'b str,
-                        objectclass: &'b str)
-                        -> Result<Entry>;
+    fn add_entry<'b>(&'b self,
+                     txn: &'b mut W,
+                     id: Id,
+                     parent_id: Id,
+                     name: &'b str,
+                     objectclass: &'b str)
+                     -> Result<Entry>;
     fn find_entry<'b, T: Transaction<D>>(&'b self, txn: &'b T, path: &str) -> Result<Entry>;
 }
