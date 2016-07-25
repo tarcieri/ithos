@@ -40,14 +40,6 @@ pub struct Block {
     signature: Option<[u8; 64]>,
 }
 
-pub struct Log {
-    id: [u8; 16],
-    signature_alg: SignatureAlgorithm,
-    digest_alg: DigestAlgorithm,
-    head: [u8; 32],
-    blocks: Vec<Block>,
-}
-
 impl Op {
     pub fn new(optype: OpType, path: &str, objectclass: ObjectClass, data: &[u8]) -> Op {
         Op {
@@ -123,7 +115,8 @@ impl Block {
     pub fn genesis_block(logid: &[u8; 16],
                          admin_username: &str,
                          admin_keypair: &KeyPair,
-                         admin_keypair_sealed: &[u8])
+                         admin_keypair_sealed: &[u8],
+                         digest_alg: DigestAlgorithm)
                          -> Block {
         let mut block = Block::new(GENESIS_BLOCK_ID);
 
@@ -149,6 +142,11 @@ impl Block {
         keypair_label.push_str(".keypair");
 
         block.oob_data(&keypair_label, &admin_keypair_sealed);
+
+        // TODO: Customization
+        block.comment.push_str("Initial block");
+
+        block.sign(admin_keypair, digest_alg);
 
         block
     }
@@ -218,33 +216,11 @@ impl ObjectHash for Block {
     }
 }
 
-impl Log {
-    pub fn generate(logid: &[u8; 16],
-                    admin_username: &str,
-                    admin_keypair: &KeyPair,
-                    admin_keypair_sealed: &[u8],
-                    digest_algorithm: DigestAlgorithm)
-                    -> Log {
-        let mut genesis_block =
-            Block::genesis_block(logid, admin_username, admin_keypair, admin_keypair_sealed);
-
-        genesis_block.sign(admin_keypair, digest_algorithm);
-
-        Log {
-            id: *logid,
-            signature_alg: admin_keypair.algorithm(),
-            digest_alg: digest_algorithm,
-            head: *GENESIS_BLOCK_ID,
-            blocks: vec![genesis_block],
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use ring::rand;
 
-    use log::{Log, DigestAlgorithm};
+    use log::{Block, DigestAlgorithm};
     use signature::{SignatureAlgorithm, KeyPair};
 
     const LOGID: &'static [u8; 16] = &[0u8; 16];
@@ -256,10 +232,10 @@ mod tests {
         let rng = rand::SystemRandom::new();
         let admin_keypair = KeyPair::generate(&rng);
 
-        let log = Log::generate(LOGID,
-                                ADMIN_USERNAME,
-                                &admin_keypair,
-                                ADMIN_KEYPAIR_SEALED,
-                                DigestAlgorithm::SHA256);
+        let block = Block::genesis_block(LOGID,
+                                         ADMIN_USERNAME,
+                                         &admin_keypair,
+                                         ADMIN_KEYPAIR_SEALED,
+                                         DigestAlgorithm::SHA256);
     }
 }
