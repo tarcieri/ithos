@@ -1,4 +1,4 @@
-use ring::{rand, signature, aead};
+use ring::{signature, aead};
 use ring::rand::SecureRandom;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]

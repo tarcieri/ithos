@@ -6,15 +6,16 @@ use clap::{App, Arg, SubCommand};
 extern crate ring;
 extern crate time;
 
+mod adapter;
+mod lmdb_adapter;
 mod log;
-mod lmdb;
 mod objectclass;
 mod objecthash;
 mod password;
 mod server;
 mod signature;
 
-use lmdb::Adapter;
+use lmdb_adapter::LmdbAdapter;
 
 fn main() {
     let version = "v0.1";
@@ -35,6 +36,6 @@ fn main() {
         let path = matches.value_of("path").unwrap();
 
         println!("Creating database at: {}", path);
-        Adapter::create_database(Path::new(path)).unwrap();
+        LmdbAdapter::create_database(Path::new(path)).unwrap();
     }
 }
