@@ -120,7 +120,7 @@ impl Block {
                          -> Block {
         let mut block = Block::new(GENESIS_BLOCK_ID);
 
-        block.op(OpType::Add, "", ObjectClass::ROOT, logid);
+        block.op(OpType::Add, "", ObjectClass::Root, logid);
 
         let public_key_bytes = admin_keypair.public_key_bytes();
 
@@ -135,7 +135,7 @@ impl Block {
         admin_path.push_str("/system/");
         admin_path.push_str(admin_username);
 
-        block.op(OpType::Add, &admin_path, ObjectClass::SYSTEM, &admin_user);
+        block.op(OpType::Add, &admin_path, ObjectClass::System, &admin_user);
 
         let mut keypair_label = String::new();
         keypair_label.push_str(&admin_username);

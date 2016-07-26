@@ -252,7 +252,7 @@ mod tests {
                            domain_id,
                            Id::root(),
                            "example.com",
-                           ObjectClass::DOMAIN)
+                           ObjectClass::Domain)
                 .unwrap();
 
             let hosts_id = domain_id.next();
@@ -263,7 +263,7 @@ mod tests {
                            host_id,
                            hosts_id,
                            "master.example.com",
-                           ObjectClass::HOST)
+                           ObjectClass::Host)
                 .unwrap();
 
             txn.commit().unwrap();
@@ -277,7 +277,7 @@ mod tests {
                     .unwrap();
 
                 assert_eq!(entry.node.name, "master.example.com");
-                assert_eq!(entry.objectclass, ObjectClass::HOST);
+                assert_eq!(entry.objectclass, ObjectClass::Host);
             }
 
             txn.commit().unwrap();
@@ -295,14 +295,14 @@ mod tests {
                        domain_id,
                        Id::root(),
                        "example.com",
-                       ObjectClass::DOMAIN)
+                       ObjectClass::Domain)
             .unwrap();
 
         let result = adapter.add_entry(&mut txn,
                                        domain_id,
                                        Id::root(),
                                        "another.com",
-                                       ObjectClass::DOMAIN);
+                                       ObjectClass::Domain);
         assert_eq!(result, Err(Error::DuplicateEntryError));
     }
 
@@ -317,14 +317,14 @@ mod tests {
                        domain_id,
                        Id::root(),
                        "example.com",
-                       ObjectClass::DOMAIN)
+                       ObjectClass::Domain)
             .unwrap();
 
         let result = adapter.add_entry(&mut txn,
                                        domain_id.next(),
                                        Id::root(),
                                        "example.com",
-                                       ObjectClass::DOMAIN);
+                                       ObjectClass::Domain);
         assert_eq!(result, Err(Error::DuplicateEntryError));
     }
 }

@@ -6,21 +6,21 @@ use server::{Result, Error};
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum ObjectClass {
-    ROOT, // Root DSE
-    DOMAIN, // ala DNS domain or Kerberos realm
+    Root, // Root DSE
+    Domain, // ala DNS domain or Kerberos realm
     OU, // Organizational unit
-    SYSTEM, // System User (i.e. non-human account)
-    HOST, // an individual server
+    System, // System User (i.e. non-human account)
+    Host, // an individual server
 }
 
 impl ObjectClass {
     pub fn from_bytes(bytes: &[u8]) -> Result<ObjectClass> {
         match bytes {
-            b"root" => Ok(ObjectClass::ROOT),
-            b"domain" => Ok(ObjectClass::DOMAIN),
+            b"root" => Ok(ObjectClass::Root),
+            b"domain" => Ok(ObjectClass::Domain),
             b"ou" => Ok(ObjectClass::OU),
-            b"system" => Ok(ObjectClass::SYSTEM),
-            b"host" => Ok(ObjectClass::HOST),
+            b"system" => Ok(ObjectClass::System),
+            b"host" => Ok(ObjectClass::Host),
             _ => Err(Error::NotFoundError),
         }
     }
@@ -29,11 +29,11 @@ impl ObjectClass {
 impl ToString for ObjectClass {
     fn to_string(&self) -> String {
         match *self {
-            ObjectClass::ROOT => "root".to_string(),
-            ObjectClass::DOMAIN => "domain".to_string(),
+            ObjectClass::Root => "root".to_string(),
+            ObjectClass::Domain => "domain".to_string(),
             ObjectClass::OU => "ou".to_string(),
-            ObjectClass::HOST => "host".to_string(),
-            ObjectClass::SYSTEM => "system".to_string(),
+            ObjectClass::Host => "host".to_string(),
+            ObjectClass::System => "system".to_string(),
         }
     }
 }
