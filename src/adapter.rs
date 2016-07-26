@@ -3,8 +3,6 @@ use server::{Id, Entry, Result};
 
 pub trait Transaction<D> {
     fn commit(self) -> Result<()>;
-
-    // TODO: these are the guts of LmdbAdapter leaking out. They should get moved elsewhere
     fn get(&self, database: D, key: &[u8]) -> Result<&[u8]>;
     fn find<P>(&self, db: D, key: &[u8], predicate: P) -> Result<&[u8]> where P: Fn(&[u8]) -> bool;
 }
