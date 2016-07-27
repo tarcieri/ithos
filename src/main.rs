@@ -4,6 +4,7 @@ extern crate clap;
 use clap::{App, Arg, SubCommand};
 
 extern crate ring;
+extern crate ring_pwhash as pwhash;
 extern crate time;
 
 mod adapter;

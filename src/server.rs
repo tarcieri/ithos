@@ -59,7 +59,7 @@ impl Server {
         salt.extend(admin_username.as_bytes());
 
         let mut admin_symmetric_key = [0u8; 32];
-        password::derive(PasswordAlgorithm::PBKDF2,
+        password::derive(PasswordAlgorithm::SCRYPT,
                          &salt,
                          &admin_password,
                          &mut admin_symmetric_key);

@@ -18,5 +18,8 @@ clap = "2"
 [dependencies.ring]
 git = "https://github.com/briansmith/ring"
 
+[dependencies.ring-pwhash]
+git = "https://github.com/cryptosphere/ring-pwhash"
+
 [dev-dependencies]
 tempdir = "0.3"
