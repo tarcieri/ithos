@@ -1,19 +1,21 @@
-use ring::pbkdf2;
+use pwhash::scrypt::{self, ScryptParams};
+use ring::constant_time;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum PasswordAlgorithm {
-    // TODO: support better algorithms than PBKDF2
-    PBKDF2,
+    SCRYPT,
 }
 
-static PBKDF2_PRF: &'static pbkdf2::PRF = &pbkdf2::HMAC_SHA256;
-static PBKDF2_ITER: usize = 100_000;
+#[inline(always)]
+fn params() -> ScryptParams {
+  ScryptParams::new(16, 8, 1)
+}
 
 pub fn derive(alg: PasswordAlgorithm, salt: &[u8], password: &str, out: &mut [u8]) {
-    // PBKDF2 is the only password hashing algorithm we support for now
-    assert!(alg == PasswordAlgorithm::PBKDF2);
+    // scrypt is the only password hashing algorithm we support for now
+    assert!(alg == PasswordAlgorithm::SCRYPT);
 
-    pbkdf2::derive(PBKDF2_PRF, PBKDF2_ITER, salt, password.as_bytes(), out);
+    scrypt::scrypt(password.as_bytes(), salt, &params(), out);
 }
 
 pub fn verify(alg: PasswordAlgorithm,
@@ -21,15 +23,13 @@ pub fn verify(alg: PasswordAlgorithm,
               password: &str,
               previously_derived: &[u8])
               -> bool {
-    // PBKDF2 is the only password hashing algorithm we support for now
-    assert!(alg == PasswordAlgorithm::PBKDF2);
+    // scrypt is the only password hashing algorithm we support for now
+    assert!(alg == PasswordAlgorithm::SCRYPT);
 
-    pbkdf2::verify(PBKDF2_PRF,
-                   PBKDF2_ITER,
-                   salt,
-                   password.as_bytes(),
-                   previously_derived)
-        .is_ok()
+    let mut out = vec![0u8; previously_derived.len()];
+    scrypt::scrypt(password.as_bytes(), &*salt, &params(), &mut out);
+
+    constant_time::verify_slices_are_equal(&previously_derived, &out).is_ok()
 }
 
 #[cfg(test)]
@@ -44,9 +44,9 @@ mod tests {
         let salt = [0u8; 32];
         let mut derived_buf = [0u8; 32];
 
-        password::derive(PasswordAlgorithm::PBKDF2, &salt, PASSWORD, &mut derived_buf);
+        password::derive(PasswordAlgorithm::SCRYPT, &salt, PASSWORD, &mut derived_buf);
 
-        assert!(password::verify(PasswordAlgorithm::PBKDF2, &salt, PASSWORD, &derived_buf));
-        assert!(!password::verify(PasswordAlgorithm::PBKDF2, &salt, "WRONG", &derived_buf));
+        assert!(password::verify(PasswordAlgorithm::SCRYPT, &salt, PASSWORD, &derived_buf));
+        assert!(!password::verify(PasswordAlgorithm::SCRYPT, &salt, "WRONG", &derived_buf));
     }
 }
