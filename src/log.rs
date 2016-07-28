@@ -62,16 +62,16 @@ impl ObjectHash for Op {
         assert!(self.optype == OpType::Add);
         let optype_str = "ADD";
 
-        ctx.update(digest::digest(&DIGEST_ALG, b"optype").as_ref());
+        ctx.update("optype".objecthash().as_ref());
         ctx.update(optype_str.objecthash().as_ref());
 
-        ctx.update(digest::digest(&DIGEST_ALG, b"path").as_ref());
+        ctx.update("path".objecthash().as_ref());
         ctx.update(self.path.objecthash().as_ref());
 
-        ctx.update(digest::digest(&DIGEST_ALG, b"objectclass").as_ref());
+        ctx.update("objectclass".objecthash().as_ref());
         ctx.update(self.objectclass.objecthash().as_ref());
 
-        ctx.update(digest::digest(&DIGEST_ALG, b"data").as_ref());
+        ctx.update("data".objecthash().as_ref());
         ctx.update(self.data.objecthash().as_ref());
 
         ctx.finish()
@@ -94,10 +94,10 @@ impl ObjectHash for OobData {
         // objecthash qualifier for dictionaries
         ctx.update(b"d");
 
-        ctx.update(digest::digest(&DIGEST_ALG, b"label").as_ref());
+        ctx.update("label".objecthash().as_ref());
         ctx.update(self.label.objecthash().as_ref());
 
-        ctx.update(digest::digest(&DIGEST_ALG, b"data").as_ref());
+        ctx.update("data".objecthash().as_ref());
         ctx.update(self.data.objecthash().as_ref());
 
         ctx.finish()
@@ -197,19 +197,19 @@ impl ObjectHash for Block {
         // objecthash qualifier for dictionaries
         block_ctx.update(b"d");
 
-        block_ctx.update(digest::digest(&DIGEST_ALG, b"timestamp").as_ref());
+        block_ctx.update("timestamp".objecthash().as_ref());
         block_ctx.update(self.timestamp.objecthash().as_ref());
 
-        block_ctx.update(digest::digest(&DIGEST_ALG, b"ops").as_ref());
+        block_ctx.update("ops".objecthash().as_ref());
         block_ctx.update(self.ops.objecthash().as_ref());
 
-        block_ctx.update(digest::digest(&DIGEST_ALG, b"oob_data").as_ref());
+        block_ctx.update("oob_data".objecthash().as_ref());
         block_ctx.update(self.oob_data.objecthash().as_ref());
 
-        block_ctx.update(digest::digest(&DIGEST_ALG, b"comment").as_ref());
+        block_ctx.update("comment".objecthash().as_ref());
         block_ctx.update(self.comment.objecthash().as_ref());
 
-        block_ctx.update(digest::digest(&DIGEST_ALG, b"signed_by").as_ref());
+        block_ctx.update("signed_by".objecthash().as_ref());
         block_ctx.update(self.signed_by.expect("signed_by missing").objecthash().as_ref());
 
         block_ctx.finish()

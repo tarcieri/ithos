@@ -1,3 +1,6 @@
+// Format-independent digests for structured data
+// See: https://github.com/benlaurie/objecthash
+
 use ring::digest;
 
 pub static DIGEST_ALG: &'static digest::Algorithm = &digest::SHA256;
@@ -6,28 +9,26 @@ pub trait ObjectHash {
     fn objecthash(&self) -> digest::Digest;
 }
 
+#[inline]
+pub fn digest(qualifier: &[u8], data: &[u8]) -> digest::Digest {
+    let mut ctx = digest::Context::new(&DIGEST_ALG);
+
+    ctx.update(qualifier);
+    ctx.update(data);
+
+    ctx.finish()
+}
+
 // TODO: other integer types
 impl ObjectHash for u64 {
     fn objecthash(&self) -> digest::Digest {
-        let mut ctx = digest::Context::new(&DIGEST_ALG);
-
-        // objecthash qualifier for integers
-        ctx.update(b"i");
-        ctx.update(self.to_string().as_bytes());
-
-        ctx.finish()
+        digest(b"i", self.to_string().as_bytes())
     }
 }
 
 impl ObjectHash for str {
     fn objecthash(&self) -> digest::Digest {
-        let mut ctx = digest::Context::new(&DIGEST_ALG);
-
-        // objecthash qualifier for Unicode strings
-        ctx.update(b"u");
-        ctx.update(digest::digest(&DIGEST_ALG, &self.as_bytes()).as_ref());
-
-        ctx.finish()
+        digest(b"u", self.as_bytes())
     }
 }
 
@@ -36,13 +37,7 @@ impl ObjectHash for str {
 // objecthash of the encoded data
 impl ObjectHash for [u8] {
     fn objecthash(&self) -> digest::Digest {
-        let mut ctx = digest::Context::new(&DIGEST_ALG);
-
-        // Pseudo-objecthash qualifier for octet strings
-        ctx.update(b"o");
-        ctx.update(digest::digest(&DIGEST_ALG, &self).as_ref());
-
-        ctx.finish()
+        digest(b"o", self)
     }
 }
 
