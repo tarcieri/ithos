@@ -1,5 +1,3 @@
-use std::path::Path;
-
 extern crate clap;
 use clap::{App, Arg, SubCommand};
 
@@ -37,6 +35,6 @@ fn main() {
         let path = matches.value_of("path").unwrap();
 
         println!("Creating database at: {}", path);
-        LmdbAdapter::create_database(Path::new(path)).unwrap();
+        LmdbAdapter::create_database(std::path::Path::new(path)).unwrap();
     }
 }

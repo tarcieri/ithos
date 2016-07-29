@@ -1,5 +1,4 @@
-use std::{result, mem, str};
-use std::path::Path;
+use std::{self, result, mem, str};
 
 use ring::rand;
 
@@ -49,7 +48,7 @@ pub struct Entry<'a> {
 }
 
 impl Server {
-    pub fn create_database(path: &Path, admin_username: &str, admin_password: &str) -> Result<()> {
+    pub fn create_database(path: &std::path::Path, admin_username: &str, admin_password: &str) -> Result<()> {
         let rng = rand::SystemRandom::new();
         let mut logid = [0u8; 16];
         try!(rng.fill(&mut logid).map_err(|_err| Error::RngError));

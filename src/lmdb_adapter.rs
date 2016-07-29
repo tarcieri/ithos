@@ -4,8 +4,7 @@ extern crate lmdb_sys;
 #[cfg(test)]
 extern crate tempdir;
 
-use std::path::Path;
-use std::str;
+use std::{self, str};
 
 use adapter::{Adapter, Transaction};
 use objectclass::ObjectClass;
@@ -24,7 +23,7 @@ pub struct RwTransaction<'a>(self::lmdb::RwTransaction<'a>);
 pub struct RoTransaction<'a>(self::lmdb::RoTransaction<'a>);
 
 impl LmdbAdapter {
-    pub fn create_database(path: &Path) -> Result<LmdbAdapter> {
+    pub fn create_database(path: &std::path::Path) -> Result<LmdbAdapter> {
         let env = try!(Environment::new()
             .set_max_dbs(8)
             .open_with_permissions(&path, 0o600)
@@ -43,7 +42,7 @@ impl LmdbAdapter {
         })
     }
 
-    pub fn open_database(path: &Path) -> Result<LmdbAdapter> {
+    pub fn open_database(path: &std::path::Path) -> Result<LmdbAdapter> {
         let env = try!(Environment::new()
             .open(&path)
             .map_err(|_err| Error::DbOpenError));
