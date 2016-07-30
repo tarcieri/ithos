@@ -4,12 +4,11 @@ extern crate lmdb_sys;
 #[cfg(test)]
 extern crate tempdir;
 
-use std::path::Path;
-use std::str;
+use std::{self, str};
 
 use adapter::{Adapter, Transaction};
 use objectclass::ObjectClass;
-use server::{Id, Node, Entry, Result, Error};
+use server::{Id, Node, Entry, Path, Result, Error};
 
 use self::lmdb::{Environment, Database, Cursor, WriteFlags, DUP_SORT, INTEGER_KEY};
 use self::lmdb::Transaction as LmdbTransaction;
@@ -24,7 +23,7 @@ pub struct RwTransaction<'a>(self::lmdb::RwTransaction<'a>);
 pub struct RoTransaction<'a>(self::lmdb::RoTransaction<'a>);
 
 impl LmdbAdapter {
-    pub fn create_database(path: &Path) -> Result<LmdbAdapter> {
+    pub fn create_database(path: &std::path::Path) -> Result<LmdbAdapter> {
         let env = try!(Environment::new()
             .set_max_dbs(8)
             .open_with_permissions(&path, 0o600)
@@ -43,7 +42,7 @@ impl LmdbAdapter {
         })
     }
 
-    pub fn open_database(path: &Path) -> Result<LmdbAdapter> {
+    pub fn open_database(path: &std::path::Path) -> Result<LmdbAdapter> {
         let env = try!(Environment::new()
             .open(&path)
             .map_err(|_err| Error::DbOpenError));
@@ -61,22 +60,9 @@ impl LmdbAdapter {
 
     fn find_node<'a, T: Transaction<lmdb::Database>>(&'a self,
                                                      txn: &'a T,
-                                                     path: &str)
+                                                     path: &Path)
                                                      -> Result<Node> {
-        let all_components: Vec<&str> = path.split("/").collect();
-
-        if all_components.is_empty() {
-            return Err(Error::PathError);
-        }
-
-        let (prefix, components) = all_components.split_first().unwrap();
-
-        // Does the path start with something other than "/"?
-        if !prefix.is_empty() {
-            return Err(Error::PathError);
-        }
-
-        components.iter().fold(Ok(Node::root()), |parent_node, component| {
+        path.components.iter().fold(Ok(Node::root()), |parent_node, component| {
             self.find_child_node(txn, try!(parent_node).id, component)
         })
     }
@@ -163,7 +149,7 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
 
     fn find_entry<'b, T: Transaction<lmdb::Database>>(&'b self,
                                                       txn: &'b T,
-                                                      path: &str)
+                                                      path: &Path)
                                                       -> Result<Entry> {
         let node = try!(self.find_node(txn, path));
 
@@ -231,7 +217,7 @@ impl<'a> RwTransaction<'a> {
 mod tests {
     use adapter::{Adapter, Transaction};
     use objectclass::ObjectClass;
-    use server::{Id, Error};
+    use server::{Id, Path, Error};
     use lmdb_adapter::LmdbAdapter;
     use lmdb_adapter::tempdir::TempDir;
 
@@ -273,7 +259,8 @@ mod tests {
             let txn = adapter.ro_transaction().unwrap();
 
             {
-                let entry = adapter.find_entry(&txn, "/example.com/hosts/master.example.com")
+                let path = Path::new("/example.com/hosts/master.example.com").unwrap();
+                let entry = adapter.find_entry(&txn, &path)
                     .unwrap();
 
                 assert_eq!(entry.node.name, "master.example.com");
