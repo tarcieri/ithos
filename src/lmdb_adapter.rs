@@ -58,15 +58,6 @@ impl LmdbAdapter {
         })
     }
 
-    fn find_node<'a, T: Transaction<lmdb::Database>>(&'a self,
-                                                     txn: &'a T,
-                                                     path: &Path)
-                                                     -> Result<Node> {
-        path.components.iter().fold(Ok(Node::root()), |parent_node, component| {
-            self.find_child_node(txn, try!(parent_node).id, component)
-        })
-    }
-
     fn find_child_node<'a, T: Transaction<lmdb::Database>>(&'a self,
                                                            txn: &'a T,
                                                            parent_id: Id,
@@ -119,12 +110,12 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
                      objectclass: ObjectClass)
                      -> Result<Entry> {
         if txn.get(self.entries, &id.as_bytes()) != Err(Error::NotFoundError) {
-            return Err(Error::DuplicateEntryError);
+            return Err(Error::EntryAlreadyExistsError);
         }
 
         if txn.get(self.nodes, &parent_id.as_bytes()) != Err(Error::NotFoundError) &&
            self.find_child_node(txn, parent_id, name) != Err(Error::NotFoundError) {
-            return Err(Error::DuplicateEntryError);
+            return Err(Error::EntryAlreadyExistsError);
         }
 
         let node = Node {
@@ -144,6 +135,15 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
         Ok(Entry {
             node: node,
             objectclass: objectclass,
+        })
+    }
+
+    fn find_node<'b, T: Transaction<lmdb::Database>>(&'b self,
+                                                     txn: &'b T,
+                                                     path: &Path)
+                                                     -> Result<Node> {
+        path.components.iter().fold(Ok(Node::root()), |parent_node, component| {
+            self.find_child_node(txn, try!(parent_node).id, component)
         })
     }
 
@@ -290,7 +290,7 @@ mod tests {
                                        Id::root(),
                                        "another.com",
                                        ObjectClass::Domain);
-        assert_eq!(result, Err(Error::DuplicateEntryError));
+        assert_eq!(result, Err(Error::EntryAlreadyExistsError));
     }
 
     #[test]
@@ -312,6 +312,6 @@ mod tests {
                                        Id::root(),
                                        "example.com",
                                        ObjectClass::Domain);
-        assert_eq!(result, Err(Error::DuplicateEntryError));
+        assert_eq!(result, Err(Error::EntryAlreadyExistsError));
     }
 }
