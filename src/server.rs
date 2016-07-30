@@ -1,9 +1,12 @@
 use std::{self, result, mem, str};
+use std::hash::{Hash, Hasher};
+use std::collections::HashMap;
 
 use ring::rand;
 
+use adapter::{Adapter, Transaction};
 use lmdb_adapter::LmdbAdapter;
-use log::{Block, DigestAlgorithm};
+use log::{OpType, Block, DigestAlgorithm};
 use password::{self, PasswordAlgorithm};
 use objectclass::ObjectClass;
 use signature::{SignatureAlgorithm, KeyPair};
@@ -22,14 +25,10 @@ pub enum Error {
     TransactionError,
     PathError,
     NotFoundError,
-    DuplicateEntryError,
+    EntryAlreadyExistsError,
 }
 
 pub type Result<T> = result::Result<T, Error>;
-
-pub struct Server {
-    adapter: LmdbAdapter,
-}
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct Id(u64);
@@ -52,34 +51,8 @@ pub struct Path {
     pub components: Vec<String>,
 }
 
-impl Server {
-    pub fn create_database(path: &std::path::Path, admin_username: &str, admin_password: &str) -> Result<()> {
-        let rng = rand::SystemRandom::new();
-        let mut logid = [0u8; 16];
-        try!(rng.fill(&mut logid).map_err(|_err| Error::RngError));
-
-        let mut salt = Vec::with_capacity(16 + admin_username.as_bytes().len());
-        salt.extend(logid.as_ref());
-        salt.extend(admin_username.as_bytes());
-
-        let mut admin_symmetric_key = [0u8; 32];
-        password::derive(PasswordAlgorithm::SCRYPT,
-                         &salt,
-                         &admin_password,
-                         &mut admin_symmetric_key);
-
-        let (admin_keypair, admin_keypair_sealed) =
-            KeyPair::generate_and_seal(SignatureAlgorithm::Ed25519, &rng, &admin_symmetric_key);
-
-        let genesis_block = Block::genesis_block(&logid,
-                                                 &admin_username,
-                                                 &admin_keypair,
-                                                 &admin_keypair_sealed,
-                                                 DigestAlgorithm::SHA256);
-
-        LmdbAdapter::create_database(path).unwrap();
-        Ok(())
-    }
+pub struct Server {
+    adapter: LmdbAdapter,
 }
 
 // Ids are 64-bit integers in host-native byte order
@@ -170,6 +143,97 @@ impl Path {
         }
 
         result
+    }
+
+    pub fn parent(&self) -> Path {
+        if self.is_root() {
+            return Path { components: vec![String::from("")] };
+        }
+
+        let mut parent_components = self.components.clone();
+        parent_components.pop();
+
+        Path { components: parent_components }
+    }
+
+    pub fn name(&self) -> String {
+        self.components.last().unwrap().clone()
+    }
+
+    pub fn is_root(&self) -> bool {
+        self.components.len() == 1 && self.components[0] == ""
+    }
+}
+
+impl Hash for Path {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        for component in &self.components {
+          component.hash(state);
+        }
+    }
+}
+
+impl Server {
+    pub fn create_database(path: &std::path::Path, admin_username: &str, admin_password: &str) -> Result<Server> {
+        let rng = rand::SystemRandom::new();
+        let mut logid = [0u8; 16];
+        try!(rng.fill(&mut logid).map_err(|_err| Error::RngError));
+
+        let mut salt = Vec::with_capacity(16 + admin_username.as_bytes().len());
+        salt.extend(logid.as_ref());
+        salt.extend(admin_username.as_bytes());
+
+        let mut admin_symmetric_key = [0u8; 32];
+        password::derive(PasswordAlgorithm::SCRYPT,
+                         &salt,
+                         &admin_password,
+                         &mut admin_symmetric_key);
+
+        let (admin_keypair, admin_keypair_sealed) =
+            KeyPair::generate_and_seal(SignatureAlgorithm::Ed25519, &rng, &admin_symmetric_key);
+
+        let genesis_block = Block::genesis_block(&logid,
+                                                 &admin_username,
+                                                 &admin_keypair,
+                                                 &admin_keypair_sealed,
+                                                 DigestAlgorithm::SHA256);
+
+        let adapter = LmdbAdapter::create_database(path).unwrap();
+        let server = Server{adapter: adapter};
+
+        try!(server.commit_unverified_block(&genesis_block));
+        Ok(server)
+    }
+
+    // Commit a block without first checking its signature
+    fn commit_unverified_block(&self, block: &Block) -> Result<()> {
+        let mut txn = try!(self.adapter.rw_transaction());
+        let mut id = try!(self.adapter.next_available_id(&txn));
+        let mut new_entries = HashMap::new();
+
+        for op in &block.ops {
+            match op.optype {
+                OpType::Add => {
+                    let parent_id = if op.path.is_root() {
+                        Id::root()
+                    } else {
+                        match new_entries.get(&op.path.parent()) {
+                            Some(&id) => id,
+                            _ => try!(self.adapter.find_node(&txn, &op.path.parent())).id
+                        }
+                    };
+
+                    let name = op.path.name();
+
+                    // NOTE: We depend on the underlying adapter to handle Error::EntryAlreadyExistsError
+                    let entry = try!(self.adapter.add_entry(&mut txn, id, parent_id, &name, op.objectclass));
+                    new_entries.insert(&op.path, id);
+                    id = id.next()
+                }
+            }
+        }
+
+        txn.commit()
     }
 }
 

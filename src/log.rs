@@ -19,10 +19,10 @@ pub enum OpType {
 }
 
 pub struct Op {
-    optype: OpType,
-    path: Path,
-    objectclass: ObjectClass,
-    data: Vec<u8>,
+    pub optype: OpType,
+    pub path: Path,
+    pub objectclass: ObjectClass,
+    pub data: Vec<u8>,
 }
 
 pub struct OobData {
@@ -31,14 +31,14 @@ pub struct OobData {
 }
 
 pub struct Block {
-    id: Option<[u8; 32]>,
-    parent: [u8; 32],
-    timestamp: u64,
-    ops: Vec<Op>,
-    oob_data: Vec<OobData>,
-    comment: String,
-    signed_by: Option<[u8; 32]>,
-    signature: Option<[u8; 64]>,
+    pub id: Option<[u8; 32]>,
+    pub parent: [u8; 32],
+    pub timestamp: u64,
+    pub ops: Vec<Op>,
+    pub oob_data: Vec<OobData>,
+    pub comment: String,
+    pub signed_by: Option<[u8; 32]>,
+    pub signature: Option<[u8; 64]>,
 }
 
 impl Op {
@@ -121,7 +121,9 @@ impl Block {
                          -> Block {
         let mut block = Block::new(GENESIS_BLOCK_ID);
 
+        // TODO: use a real type for the root entry
         block.op(OpType::Add, Path::new("/").unwrap(), ObjectClass::Root, logid);
+        block.op(OpType::Add, Path::new("/system").unwrap(), ObjectClass::OU, b"");
 
         let public_key_bytes = admin_keypair.public_key_bytes();
 
