@@ -122,8 +122,15 @@ impl Block {
         let mut block = Block::new(GENESIS_BLOCK_ID);
 
         // TODO: use a real type for the root entry
-        block.op(OpType::Add, Path::new("/").unwrap(), ObjectClass::Root, logid);
-        block.op(OpType::Add, Path::new("/system").unwrap(), ObjectClass::OU, b"");
+        block.op(OpType::Add,
+                 Path::new("/").unwrap(),
+                 ObjectClass::Root,
+                 logid);
+
+        block.op(OpType::Add,
+                 Path::new("/system").unwrap(),
+                 ObjectClass::OU,
+                 b"");
 
         let public_key_bytes = admin_keypair.public_key_bytes();
 
@@ -138,7 +145,10 @@ impl Block {
         admin_path.push_str("/system/");
         admin_path.push_str(admin_username);
 
-        block.op(OpType::Add, Path::new(&admin_path).unwrap(), ObjectClass::System, &admin_user);
+        block.op(OpType::Add,
+                 Path::new(&admin_path).unwrap(),
+                 ObjectClass::System,
+                 &admin_user);
 
         let mut keypair_label = String::new();
         keypair_label.push_str(&admin_username);

@@ -118,7 +118,8 @@ impl<'a> Node<'a> {
 
 impl Path {
     pub fn new(string: &str) -> Result<Path> {
-        let mut components: Vec<String> = string.split("/").map(|component| String::from(component)).collect();
+        let mut components: Vec<String> =
+            string.split("/").map(|component| String::from(component)).collect();
 
         if components.is_empty() {
             return Err(Error::PathError);
@@ -168,13 +169,16 @@ impl Path {
 impl Hash for Path {
     fn hash<H: Hasher>(&self, state: &mut H) {
         for component in &self.components {
-          component.hash(state);
+            component.hash(state);
         }
     }
 }
 
 impl Server {
-    pub fn create_database(path: &std::path::Path, admin_username: &str, admin_password: &str) -> Result<Server> {
+    pub fn create_database(path: &std::path::Path,
+                           admin_username: &str,
+                           admin_password: &str)
+                           -> Result<Server> {
         let rng = rand::SystemRandom::new();
         let mut logid = [0u8; 16];
         try!(rng.fill(&mut logid).map_err(|_err| Error::RngError));
@@ -199,7 +203,7 @@ impl Server {
                                                  DigestAlgorithm::SHA256);
 
         let adapter = LmdbAdapter::create_database(path).unwrap();
-        let server = Server{adapter: adapter};
+        let server = Server { adapter: adapter };
 
         try!(server.commit_unverified_block(&genesis_block));
         Ok(server)
@@ -219,14 +223,14 @@ impl Server {
                     } else {
                         match new_entries.get(&op.path.parent()) {
                             Some(&id) => id,
-                            _ => try!(self.adapter.find_node(&txn, &op.path.parent())).id
+                            _ => try!(self.adapter.find_node(&txn, &op.path.parent())).id,
                         }
                     };
 
                     let name = op.path.name();
 
-                    // NOTE: We depend on the underlying adapter to handle Error::EntryAlreadyExistsError
-                    let entry = try!(self.adapter.add_entry(&mut txn, id, parent_id, &name, op.objectclass));
+                    // NOTE: The underlying adapter must handle Error::EntryAlreadyExistsError
+                    try!(self.adapter.add_entry(&mut txn, id, parent_id, &name, op.objectclass));
                     new_entries.insert(&op.path, id);
                     id = id.next()
                 }

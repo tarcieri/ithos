@@ -8,7 +8,7 @@ pub enum PasswordAlgorithm {
 
 #[inline(always)]
 fn params() -> ScryptParams {
-  ScryptParams::new(16, 8, 1)
+    ScryptParams::new(16, 8, 1)
 }
 
 pub fn derive(alg: PasswordAlgorithm, salt: &[u8], password: &str, out: &mut [u8]) {
