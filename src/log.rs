@@ -5,6 +5,7 @@ use ring::digest;
 
 use objectclass::ObjectClass;
 use objecthash::{ObjectHash, DIGEST_ALG};
+use server::Path;
 use signature::{SignatureAlgorithm, KeyPair};
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
@@ -19,7 +20,7 @@ pub enum OpType {
 
 pub struct Op {
     optype: OpType,
-    path: String,
+    path: Path,
     objectclass: ObjectClass,
     data: Vec<u8>,
 }
@@ -41,10 +42,10 @@ pub struct Block {
 }
 
 impl Op {
-    pub fn new(optype: OpType, path: &str, objectclass: ObjectClass, data: &[u8]) -> Op {
+    pub fn new(optype: OpType, path: Path, objectclass: ObjectClass, data: &[u8]) -> Op {
         Op {
             optype: optype,
-            path: String::from(path),
+            path: path,
             objectclass: objectclass,
             data: Vec::from(data),
         }
@@ -66,7 +67,7 @@ impl ObjectHash for Op {
         ctx.update(optype_str.objecthash().as_ref());
 
         ctx.update("path".objecthash().as_ref());
-        ctx.update(self.path.objecthash().as_ref());
+        ctx.update(self.path.to_string().objecthash().as_ref());
 
         ctx.update("objectclass".objecthash().as_ref());
         ctx.update(self.objectclass.objecthash().as_ref());
@@ -120,7 +121,7 @@ impl Block {
                          -> Block {
         let mut block = Block::new(GENESIS_BLOCK_ID);
 
-        block.op(OpType::Add, "", ObjectClass::Root, logid);
+        block.op(OpType::Add, Path::new("/").unwrap(), ObjectClass::Root, logid);
 
         let public_key_bytes = admin_keypair.public_key_bytes();
 
@@ -135,7 +136,7 @@ impl Block {
         admin_path.push_str("/system/");
         admin_path.push_str(admin_username);
 
-        block.op(OpType::Add, &admin_path, ObjectClass::System, &admin_user);
+        block.op(OpType::Add, Path::new(&admin_path).unwrap(), ObjectClass::System, &admin_user);
 
         let mut keypair_label = String::new();
         keypair_label.push_str(&admin_username);
@@ -164,7 +165,7 @@ impl Block {
         }
     }
 
-    pub fn op(&mut self, optype: OpType, path: &str, objectclass: ObjectClass, data: &[u8]) {
+    pub fn op(&mut self, optype: OpType, path: Path, objectclass: ObjectClass, data: &[u8]) {
         self.ops.push(Op::new(optype, path, objectclass, data));
     }
 

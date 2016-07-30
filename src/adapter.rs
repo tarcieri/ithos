@@ -1,5 +1,5 @@
 use objectclass::ObjectClass;
-use server::{Id, Entry, Result};
+use server::{Id, Entry, Path, Result};
 
 pub trait Transaction<D> {
     fn commit(self) -> Result<()>;
@@ -18,5 +18,5 @@ pub trait Adapter<'a, D, R: Transaction<D>, W: Transaction<D>> {
                      name: &'b str,
                      objectclass: ObjectClass)
                      -> Result<Entry>;
-    fn find_entry<'b, T: Transaction<D>>(&'b self, txn: &'b T, path: &str) -> Result<Entry>;
+    fn find_entry<'b, T: Transaction<D>>(&'b self, txn: &'b T, path: &Path) -> Result<Entry>;
 }
