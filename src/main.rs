@@ -8,6 +8,7 @@ extern crate serde_json;
 extern crate time;
 
 mod adapter;
+mod error;
 mod lmdb_adapter;
 mod log;
 mod objectclass;

@@ -1,10 +1,11 @@
-use std::{self, result, mem, str};
+use std::{self, mem, str};
 use std::hash::{Hash, Hasher};
 use std::collections::HashMap;
 
 use ring::rand;
 
 use adapter::{Adapter, Transaction};
+use error::{Error, Result};
 use lmdb_adapter::LmdbAdapter;
 use log::{OpType, Block, DigestAlgorithm};
 use password::{self, PasswordAlgorithm};
@@ -13,22 +14,6 @@ use signature::{SignatureAlgorithm, KeyPair};
 
 #[cfg(test)]
 extern crate tempdir;
-
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub enum Error {
-    RngError,
-    DbCreateError,
-    DbOpenError,
-    DbWriteError,
-    DbCorruptError,
-    ParseError,
-    TransactionError,
-    PathError,
-    NotFoundError,
-    EntryAlreadyExistsError,
-}
-
-pub type Result<T> = result::Result<T, Error>;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct Id(u64);
@@ -64,7 +49,7 @@ impl Id {
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Id> {
         if bytes.len() != 8 {
-            return Err(Error::ParseError);
+            return Err(Error::Parse);
         }
 
         let mut id = [0u8; 8];
@@ -95,11 +80,11 @@ impl<'a> Node<'a> {
 
     pub fn from_parent_id_and_bytes(parent_id: Id, bytes: &[u8]) -> Result<Node> {
         if bytes.len() < 8 {
-            return Err(Error::DbCorruptError);
+            return Err(Error::DbCorrupt);
         }
 
         let id = try!(Id::from_bytes(&bytes[0..8]));
-        let name = try!(str::from_utf8(&bytes[8..]).map_err(|_err| Error::DbCorruptError));
+        let name = try!(str::from_utf8(&bytes[8..]).map_err(|_err| Error::DbCorrupt));
 
         Ok(Node {
             id: id,
@@ -122,14 +107,14 @@ impl Path {
             string.split("/").map(|component| String::from(component)).collect();
 
         if components.is_empty() {
-            return Err(Error::PathError);
+            return Err(Error::PathInvalid);
         }
 
         let prefix = components.remove(0);
 
         // Does the path start with something other than "/"?
         if !prefix.is_empty() {
-            return Err(Error::PathError);
+            return Err(Error::PathInvalid);
         }
 
         Ok(Path { components: components })
@@ -181,7 +166,7 @@ impl Server {
                            -> Result<Server> {
         let rng = rand::SystemRandom::new();
         let mut logid = [0u8; 16];
-        try!(rng.fill(&mut logid).map_err(|_err| Error::RngError));
+        try!(rng.fill(&mut logid).map_err(|_err| Error::Rng));
 
         let mut salt = Vec::with_capacity(16 + admin_username.as_bytes().len());
         salt.extend(logid.as_ref());
@@ -229,7 +214,7 @@ impl Server {
 
                     let name = op.path.name();
 
-                    // NOTE: The underlying adapter must handle Error::EntryAlreadyExistsError
+                    // NOTE: The underlying adapter must handle Error::EntryAlreadyExists
                     try!(self.adapter.add_entry(&mut txn, id, parent_id, &name, op.objectclass));
                     new_entries.insert(&op.path, id);
                     id = id.next()

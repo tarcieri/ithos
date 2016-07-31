@@ -7,8 +7,9 @@ extern crate tempdir;
 use std::{self, str};
 
 use adapter::{Adapter, Transaction};
+use error::{Error, Result};
 use objectclass::ObjectClass;
-use server::{Id, Node, Entry, Path, Result, Error};
+use server::{Id, Node, Entry, Path};
 
 use self::lmdb::{Environment, Database, Cursor, WriteFlags, DUP_SORT, INTEGER_KEY};
 use self::lmdb::Transaction as LmdbTransaction;
@@ -27,13 +28,13 @@ impl LmdbAdapter {
         let env = try!(Environment::new()
             .set_max_dbs(8)
             .open_with_permissions(&path, 0o600)
-            .map_err(|_err| Error::DbCreateError));
+            .map_err(|_err| Error::DbCreate));
 
         let nodes = try!(env.create_db(Some("nodes"), INTEGER_KEY | DUP_SORT)
-            .map_err(|_err| Error::DbCreateError));
+            .map_err(|_err| Error::DbCreate));
 
         let entries = try!(env.create_db(Some("entries"), INTEGER_KEY)
-            .map_err(|_err| Error::DbCreateError));
+            .map_err(|_err| Error::DbCreate));
 
         Ok(LmdbAdapter {
             env: env,
@@ -45,11 +46,11 @@ impl LmdbAdapter {
     pub fn open_database(path: &std::path::Path) -> Result<LmdbAdapter> {
         let env = try!(Environment::new()
             .open(&path)
-            .map_err(|_err| Error::DbOpenError));
+            .map_err(|_err| Error::DbOpen));
 
-        let nodes = try!(env.open_db(Some("nodes")).map_err(|_err| Error::DbOpenError));
+        let nodes = try!(env.open_db(Some("nodes")).map_err(|_err| Error::DbOpen));
 
-        let entries = try!(env.open_db(Some("entries")).map_err(|_err| Error::DbOpenError));
+        let entries = try!(env.open_db(Some("entries")).map_err(|_err| Error::DbOpen));
 
         Ok(LmdbAdapter {
             env: env,
@@ -78,21 +79,21 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
     fn rw_transaction(&'a self) -> Result<RwTransaction<'a>> {
         match self.env.begin_rw_txn() {
             Ok(txn) => Ok(RwTransaction(txn)),
-            Err(_) => Err(Error::TransactionError),
+            Err(_) => Err(Error::Transaction),
         }
     }
 
     fn ro_transaction(&'a self) -> Result<RoTransaction<'a>> {
         match self.env.begin_ro_txn() {
             Ok(txn) => Ok(RoTransaction(txn)),
-            Err(_) => Err(Error::TransactionError),
+            Err(_) => Err(Error::Transaction),
         }
     }
 
     fn next_available_id(&self, txn: &RwTransaction) -> Result<Id> {
         let cursor = try!(txn.0
             .open_ro_cursor(self.nodes)
-            .map_err(|_err| Error::TransactionError));
+            .map_err(|_err| Error::Transaction));
 
         let last_id = match cursor.get(None, None, lmdb_sys::MDB_LAST) {
             Ok((id, _)) => Id::from_bytes(id.unwrap()).unwrap(),
@@ -109,13 +110,13 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
                      name: &'b str,
                      objectclass: ObjectClass)
                      -> Result<Entry> {
-        if txn.get(self.entries, &id.as_bytes()) != Err(Error::NotFoundError) {
-            return Err(Error::EntryAlreadyExistsError);
+        if txn.get(self.entries, &id.as_bytes()) != Err(Error::NotFound) {
+            return Err(Error::EntryAlreadyExists);
         }
 
-        if txn.get(self.nodes, &parent_id.as_bytes()) != Err(Error::NotFoundError) &&
-           self.find_child_node(txn, parent_id, name) != Err(Error::NotFoundError) {
-            return Err(Error::EntryAlreadyExistsError);
+        if txn.get(self.nodes, &parent_id.as_bytes()) != Err(Error::NotFound) &&
+           self.find_child_node(txn, parent_id, name) != Err(Error::NotFound) {
+            return Err(Error::EntryAlreadyExists);
         }
 
         let node = Node {
@@ -125,12 +126,12 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
         };
 
         try!(txn.put(self.nodes, &parent_id.as_bytes(), &node.to_bytes())
-            .map_err(|_err| Error::DbWriteError));
+            .map_err(|_err| Error::DbWrite));
 
         try!(txn.put(self.entries,
                  &id.as_bytes(),
                  &objectclass.to_string().as_bytes())
-            .map_err(|_err| Error::DbWriteError));
+            .map_err(|_err| Error::DbWrite));
 
         Ok(Entry {
             node: node,
@@ -154,10 +155,10 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
         let node = try!(self.find_node(txn, path));
 
         let entry_bytes = try!(txn.get(self.entries, &node.id.as_bytes())
-            .map_err(|_err| Error::DbCorruptError));
+            .map_err(|_err| Error::DbCorrupt));
 
         let objectclass = try!(ObjectClass::from_bytes(&entry_bytes)
-            .map_err(|_err| Error::DbCorruptError));
+            .map_err(|_err| Error::DbCorrupt));
 
         Ok(Entry {
             node: node,
@@ -170,7 +171,7 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
 macro_rules! impl_transaction (($newtype:ident) => (
     impl<'a> Transaction<lmdb::Database> for $newtype<'a> {
         fn get(&self, database: Database, key: &[u8]) -> Result<&[u8]> {
-            self.0.get(database, &key).map_err(|_err| Error::NotFoundError)
+            self.0.get(database, &key).map_err(|_err| Error::NotFound)
         }
 
         fn find<P>(&self, db: Database, key: &[u8], predicate: P) -> Result<&[u8]>
@@ -178,13 +179,13 @@ macro_rules! impl_transaction (($newtype:ident) => (
         {
             let mut cursor = try!(self.0
                                       .open_ro_cursor(db)
-                                      .map_err(|_err| Error::TransactionError));
+                                      .map_err(|_err| Error::Transaction));
 
             let mut result = None;
 
             for (cursor_key, value) in cursor.iter_from(key) {
                 if cursor_key != key {
-                    return Err(Error::NotFoundError);
+                    return Err(Error::NotFound);
                 }
 
                 if predicate(value) {
@@ -193,11 +194,11 @@ macro_rules! impl_transaction (($newtype:ident) => (
                 }
             }
 
-            result.ok_or(Error::NotFoundError)
+            result.ok_or(Error::NotFound)
         }
 
         fn commit(self) -> Result<()> {
-            self.0.commit().map_err(|_err| Error::TransactionError)
+            self.0.commit().map_err(|_err| Error::Transaction)
         }
     }
 ));
@@ -209,15 +210,16 @@ impl<'a> RwTransaction<'a> {
     fn put(&mut self, database: Database, key: &[u8], data: &[u8]) -> Result<()> {
         self.0
             .put(database, &key, &data, WriteFlags::empty())
-            .map_err(|_err| Error::TransactionError)
+            .map_err(|_err| Error::Transaction)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use adapter::{Adapter, Transaction};
+    use error::Error;
     use objectclass::ObjectClass;
-    use server::{Id, Path, Error};
+    use server::{Id, Path};
     use lmdb_adapter::LmdbAdapter;
     use lmdb_adapter::tempdir::TempDir;
 
@@ -290,7 +292,7 @@ mod tests {
                                        Id::root(),
                                        "another.com",
                                        ObjectClass::Domain);
-        assert_eq!(result, Err(Error::EntryAlreadyExistsError));
+        assert_eq!(result, Err(Error::EntryAlreadyExists));
     }
 
     #[test]
@@ -312,6 +314,6 @@ mod tests {
                                        Id::root(),
                                        "example.com",
                                        ObjectClass::Domain);
-        assert_eq!(result, Err(Error::EntryAlreadyExistsError));
+        assert_eq!(result, Err(Error::EntryAlreadyExists));
     }
 }
