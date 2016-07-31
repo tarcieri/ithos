@@ -1,5 +1,6 @@
 use objectclass::ObjectClass;
-use server::{Id, Node, Entry, Path, Result};
+use error::Result;
+use server::{Id, Node, Entry, Path};
 
 pub trait Transaction<D> {
     fn commit(self) -> Result<()>;

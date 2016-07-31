@@ -1,8 +1,8 @@
 use std::string::ToString;
 use ring::digest::Digest;
 
+use error::{Error, Result};
 use objecthash::ObjectHash;
-use server::{Result, Error};
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum ObjectClass {
@@ -21,7 +21,7 @@ impl ObjectClass {
             b"ou" => Ok(ObjectClass::OU),
             b"system" => Ok(ObjectClass::System),
             b"host" => Ok(ObjectClass::Host),
-            _ => Err(Error::NotFoundError),
+            _ => Err(Error::NotFound),
         }
     }
 }
