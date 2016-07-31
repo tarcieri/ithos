@@ -10,10 +10,12 @@ version     = "0.0.0"
 authors     = ["Tony Arcieri <bascule@gmail.com>"]
 
 [dependencies]
-time = ">= 0.1.35"
-lmdb = ">= 0.5.0"
-lmdb-sys = ">= 0.5.0"
-clap = "2"
+time            = ">= 0.1.35"
+lmdb            = ">= 0.5.0"
+lmdb-sys        = ">= 0.5.0"
+serde_json      = "0.8"
+rustc-serialize = ">= 0.3.19"
+clap            = "2"
 
 [dependencies.ring]
 git = "https://github.com/briansmith/ring"

@@ -1,12 +1,20 @@
 // "Merkelized" append-only replication log
 
+use std::string::ToString;
+
 use time;
 use ring::digest;
+use rustc_serialize::base64::{self, FromBase64, ToBase64};
+use serde_json;
+use serde_json::builder::ObjectBuilder;
 
 use objectclass::ObjectClass;
 use objecthash::{ObjectHash, DIGEST_ALG};
 use server::Path;
 use signature::{SignatureAlgorithm, KeyPair};
+
+const DIGEST_SIZE: usize = 32;
+const SIGNATURE_SIZE: usize = 64;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum DigestAlgorithm {
@@ -31,14 +39,22 @@ pub struct OobData {
 }
 
 pub struct Block {
-    pub id: Option<[u8; 32]>,
-    pub parent: [u8; 32],
+    pub id: Option<[u8; DIGEST_SIZE]>,
+    pub parent: [u8; DIGEST_SIZE],
     pub timestamp: u64,
     pub ops: Vec<Op>,
     pub oob_data: Vec<OobData>,
     pub comment: String,
-    pub signed_by: Option<[u8; 32]>,
-    pub signature: Option<[u8; 64]>,
+    pub signed_by: Option<[u8; DIGEST_SIZE]>,
+    pub signature: Option<[u8; SIGNATURE_SIZE]>,
+}
+
+impl ToString for OpType {
+    fn to_string(&self) -> String {
+        match *self {
+            OpType::Add => "add".to_string(),
+        }
+    }
 }
 
 impl Op {
@@ -61,10 +77,9 @@ impl ObjectHash for Op {
 
         // OpType::Add is the only op we support right now
         assert!(self.optype == OpType::Add);
-        let optype_str = "ADD";
 
         ctx.update("optype".objecthash().as_ref());
-        ctx.update(optype_str.objecthash().as_ref());
+        ctx.update(self.optype.to_string().objecthash().as_ref());
 
         ctx.update("path".objecthash().as_ref());
         ctx.update(self.path.to_string().objecthash().as_ref());
@@ -167,8 +182,8 @@ impl Block {
     pub fn new(parent: &[u8; 32]) -> Block {
         Block {
             id: None,
-            timestamp: time::now_utc().to_timespec().sec as u64,
             parent: *parent,
+            timestamp: time::now_utc().to_timespec().sec as u64,
             ops: Vec::new(),
             oob_data: Vec::new(),
             comment: String::new(),
@@ -201,9 +216,44 @@ impl Block {
         signature.copy_from_slice(keypair.sign(&id).as_slice());
         self.signature = Some(signature);
     }
+
+    pub fn to_json(&self) -> String {
+        let value = ObjectBuilder::new()
+            .insert("id", self.id.expect("id missing").to_base64(base64::URL_SAFE))
+            .insert("parent", self.parent.to_base64(base64::URL_SAFE))
+            .insert("timestamp", self.timestamp)
+            .insert_array("ops", |builder| {
+                self.ops.iter().fold(builder, |b, op| {
+                    b.push_object(|b| {
+                        b
+                        .insert("optype", op.optype.to_string())
+                        .insert("path", op.path.to_string())
+                        .insert("objectclass", op.objectclass.to_string())
+                        .insert("data", op.data.to_base64(base64::URL_SAFE))
+                    })
+                })
+
+            })
+            .insert_array("oob_data", |builder| {
+                self.oob_data.iter().fold(builder, |b, oob_data| {
+                    b.push_object(|b| {
+                        b
+                        .insert("label", oob_data.label.clone())
+                        .insert("data", oob_data.data.to_base64(base64::URL_SAFE))
+                    })
+                })
+            })
+            .insert("comment", self.comment.clone())
+            .insert("signed_by", self.signed_by.expect("signed_by missing").to_base64(base64::URL_SAFE))
+            .insert("signature", self.signature.expect("signature missing").to_base64(base64::URL_SAFE))
+            .build();
+
+        serde_json::to_string(&value).unwrap()
+    }
 }
 
 impl ObjectHash for Block {
+    #[inline]
     fn objecthash(&self) -> digest::Digest {
         let mut block_ctx = digest::Context::new(&DIGEST_ALG);
 
@@ -250,5 +300,8 @@ mod tests {
                                          &admin_keypair,
                                          ADMIN_KEYPAIR_SEALED,
                                          DigestAlgorithm::SHA256);
+
+        // TODO: better test JSON serialization. For now just make sure we don't panic
+        block.to_json();
     }
 }

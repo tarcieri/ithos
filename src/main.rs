@@ -3,6 +3,8 @@ use clap::{App, Arg, SubCommand};
 
 extern crate ring;
 extern crate ring_pwhash as pwhash;
+extern crate rustc_serialize;
+extern crate serde_json;
 extern crate time;
 
 mod adapter;
