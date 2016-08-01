@@ -8,14 +8,16 @@ use std::{self, str};
 
 use adapter::{Adapter, Transaction};
 use error::{Error, Result};
+use log::Block;
 use objectclass::ObjectClass;
 use server::{Id, Node, Entry, Path};
 
-use self::lmdb::{Environment, Database, Cursor, WriteFlags, DUP_SORT, INTEGER_KEY};
+use self::lmdb::{Environment, Database, DatabaseFlags, Cursor, WriteFlags, DUP_SORT, INTEGER_KEY};
 use self::lmdb::Transaction as LmdbTransaction;
 
 pub struct LmdbAdapter {
     env: Environment,
+    blocks: Database,
     nodes: Database,
     entries: Database,
 }
@@ -30,16 +32,20 @@ impl LmdbAdapter {
             .open_with_permissions(&path, 0o600)
             .map_err(|_err| Error::DbCreate));
 
-        let nodes = try!(env.create_db(Some("nodes"), INTEGER_KEY | DUP_SORT)
+        let blocks = try!(env.create_db(Some("blocks"), DatabaseFlags::empty())
             .map_err(|_err| Error::DbCreate));
 
         let entries = try!(env.create_db(Some("entries"), INTEGER_KEY)
             .map_err(|_err| Error::DbCreate));
 
+        let nodes = try!(env.create_db(Some("nodes"), INTEGER_KEY | DUP_SORT)
+            .map_err(|_err| Error::DbCreate));
+
         Ok(LmdbAdapter {
             env: env,
-            nodes: nodes,
+            blocks: blocks,
             entries: entries,
+            nodes: nodes,
         })
     }
 
@@ -48,14 +54,17 @@ impl LmdbAdapter {
             .open(&path)
             .map_err(|_err| Error::DbOpen));
 
-        let nodes = try!(env.open_db(Some("nodes")).map_err(|_err| Error::DbOpen));
+        let blocks = try!(env.open_db(Some("blocks")).map_err(|_err| Error::DbOpen));
 
         let entries = try!(env.open_db(Some("entries")).map_err(|_err| Error::DbOpen));
 
+        let nodes = try!(env.open_db(Some("nodes")).map_err(|_err| Error::DbOpen));
+
         Ok(LmdbAdapter {
             env: env,
-            nodes: nodes,
+            blocks: blocks,
             entries: entries,
+            nodes: nodes,
         })
     }
 
@@ -101,6 +110,24 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
         };
 
         Ok(last_id.next())
+    }
+
+    fn add_block<'b>(&'b self, txn: &'b mut RwTransaction, block: &Block) -> Result<()> {
+        // TODO: Don't Panic
+        let block_id = block.id.expect("block ID unset");
+
+        // TODO: use a better serialization format than JSON, e.g. protos
+        // This is only temporary as JSON is the only format we presently support
+        let block_json = block.to_json();
+
+        if txn.get(self.blocks, &block_id) != Err(Error::NotFound) {
+            return Err(Error::EntryAlreadyExists);
+        }
+
+        try!(txn.put(self.blocks, &block_id, &block_json.as_bytes())
+            .map_err(|_err| Error::DbWrite));
+
+        Ok(())
     }
 
     fn add_entry<'b>(&'b self,
@@ -218,6 +245,7 @@ impl<'a> RwTransaction<'a> {
 mod tests {
     use adapter::{Adapter, Transaction};
     use error::Error;
+    use log::{self, Block};
     use objectclass::ObjectClass;
     use server::{Id, Path};
     use lmdb_adapter::LmdbAdapter;
@@ -226,6 +254,20 @@ mod tests {
     fn create_database() -> LmdbAdapter {
         let dir = TempDir::new("ithos-test").unwrap();
         LmdbAdapter::create_database(dir.path()).unwrap()
+    }
+
+    #[test]
+    fn test_duplicate_block() {
+        let adapter = create_database();
+        let block = log::tests::example_block();
+
+        let mut txn = adapter.rw_transaction().unwrap();
+        adapter.add_block(&mut txn, &block).unwrap();
+        txn.commit().unwrap();
+
+        let mut txn = adapter.rw_transaction().unwrap();
+        let result = adapter.add_block(&mut txn, &block);
+        assert_eq!(result, Err(Error::EntryAlreadyExists));
     }
 
     #[test]
@@ -314,6 +356,7 @@ mod tests {
                                        Id::root(),
                                        "example.com",
                                        ObjectClass::Domain);
+
         assert_eq!(result, Err(Error::EntryAlreadyExists));
     }
 }

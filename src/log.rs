@@ -4,14 +4,14 @@ use std::string::ToString;
 
 use time;
 use ring::digest;
-use rustc_serialize::base64::{self, FromBase64, ToBase64};
+use rustc_serialize::base64::{self, ToBase64};
 use serde_json;
 use serde_json::builder::ObjectBuilder;
 
 use objectclass::ObjectClass;
 use objecthash::{ObjectHash, DIGEST_ALG};
 use server::Path;
-use signature::{SignatureAlgorithm, KeyPair};
+use signature::KeyPair;
 
 const DIGEST_SIZE: usize = 32;
 const SIGNATURE_SIZE: usize = 64;
@@ -280,28 +280,32 @@ impl ObjectHash for Block {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use ring::rand;
 
     use log::{Block, DigestAlgorithm};
-    use signature::{SignatureAlgorithm, KeyPair};
+    use signature::KeyPair;
 
     const LOGID: &'static [u8; 16] = &[0u8; 16];
     const ADMIN_USERNAME: &'static str = "manager";
     const ADMIN_KEYPAIR_SEALED: &'static [u8; 11] = b"placeholder";
 
-    #[test]
-    fn test_generate_log() {
+    pub fn example_block() -> Block {
         let rng = rand::SystemRandom::new();
         let admin_keypair = KeyPair::generate(&rng);
 
-        let block = Block::genesis_block(LOGID,
-                                         ADMIN_USERNAME,
-                                         &admin_keypair,
-                                         ADMIN_KEYPAIR_SEALED,
-                                         DigestAlgorithm::SHA256);
+        Block::genesis_block(LOGID,
+                             ADMIN_USERNAME,
+                             &admin_keypair,
+                             ADMIN_KEYPAIR_SEALED,
+                             DigestAlgorithm::SHA256)
+    }
 
-        // TODO: better test JSON serialization. For now just make sure we don't panic
+    #[test]
+    fn test_json_serialization() {
+        let block = example_block();
+
+        // TODO: better test of the serialized JSON
         block.to_json();
     }
 }
