@@ -200,6 +200,7 @@ impl Server {
         let mut id = try!(self.adapter.next_available_id(&txn));
         let mut new_entries = HashMap::new();
 
+        // Process the operations in the block and apply them to the database
         for op in &block.ops {
             match op.optype {
                 OpType::Add => {
@@ -221,6 +222,9 @@ impl Server {
                 }
             }
         }
+
+        // NOTE: This only stores the block in the database. It does not process it
+        try!(self.adapter.add_block(&mut txn, block));
 
         txn.commit()
     }
