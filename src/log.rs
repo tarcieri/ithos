@@ -1,12 +1,14 @@
 // "Merkelized" append-only replication log
 
+use std::io;
 use std::string::ToString;
 
-use time;
+use buffoon::{OutputStream, Serialize};
 use ring::digest;
 use rustc_serialize::base64::{self, ToBase64};
 use serde_json;
 use serde_json::builder::ObjectBuilder;
+use time;
 
 use objectclass::ObjectClass;
 use objecthash::{ObjectHash, DIGEST_ALG};
@@ -59,6 +61,16 @@ impl Op {
             objectclass: objectclass,
             data: Vec::from(data),
         }
+    }
+}
+
+impl Serialize for Op {
+    fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
+        try!(out.write(1, &(self.optype as u32 + 1)));
+        try!(out.write(2, &self.path.to_string()));
+        try!(out.write(3, &(self.objectclass as u32 + 1)));
+        try!(out.write(4, &self.data));
+        Ok(())
     }
 }
 
@@ -209,6 +221,19 @@ impl Block {
     }
 }
 
+impl Serialize for Block {
+    fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
+        try!(out.write(1, &self.id.expect("id missing")[..]));
+        try!(out.write(2, &self.parent[..]));
+        try!(out.write(3, &self.timestamp));
+        try!(out.write_repeated(4, &self.ops));
+        try!(out.write(5, &self.comment));
+        try!(out.write(6, &self.signed_by.expect("signed_by missing")[..]));
+        try!(out.write(7, &self.signature.expect("signature missing")[..]));
+        Ok(())
+    }
+}
+
 impl ObjectHash for Block {
     #[inline]
     fn objecthash(&self) -> digest::Digest {
@@ -238,6 +263,7 @@ impl ObjectHash for Block {
 
 #[cfg(test)]
 pub mod tests {
+    use buffoon;
     use ring::rand;
 
     use log::{Block, DigestAlgorithm};
@@ -260,10 +286,15 @@ pub mod tests {
     }
 
     #[test]
-    fn test_json_serialization() {
+    fn test_proto_block_serialization() {
         let block = example_block();
+        // TODO: better test of the serialized proto
+        buffoon::serialize(&block).unwrap();
+    }
 
+    #[test]
+    fn test_json_block_serialization() {
         // TODO: better test of the serialized JSON
-        block.to_json();
+        example_block().to_json();
     }
 }
