@@ -9,11 +9,12 @@ extern crate serde_json;
 extern crate time;
 
 mod adapter;
+mod block;
 mod error;
 mod lmdb_adapter;
-mod log;
 mod objectclass;
 mod objecthash;
+mod op;
 mod password;
 mod server;
 mod signature;

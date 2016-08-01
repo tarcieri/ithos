@@ -1,5 +1,3 @@
-// "Merkelized" append-only replication log
-
 use std::io;
 use std::string::ToString;
 
@@ -12,6 +10,7 @@ use time;
 
 use objectclass::ObjectClass;
 use objecthash::{ObjectHash, DIGEST_ALG};
+use op::{Op, OpType};
 use server::Path;
 use signature::KeyPair;
 
@@ -23,18 +22,6 @@ pub enum DigestAlgorithm {
     SHA256,
 }
 
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub enum OpType {
-    Add,
-}
-
-pub struct Op {
-    pub optype: OpType,
-    pub path: Path,
-    pub objectclass: ObjectClass,
-    pub data: Vec<u8>,
-}
-
 pub struct Block {
     pub id: Option<[u8; DIGEST_SIZE]>,
     pub parent: [u8; DIGEST_SIZE],
@@ -43,61 +30,6 @@ pub struct Block {
     pub comment: String,
     pub signed_by: Option<[u8; DIGEST_SIZE]>,
     pub signature: Option<[u8; SIGNATURE_SIZE]>,
-}
-
-impl ToString for OpType {
-    fn to_string(&self) -> String {
-        match *self {
-            OpType::Add => "add".to_string(),
-        }
-    }
-}
-
-impl Op {
-    pub fn new(optype: OpType, path: Path, objectclass: ObjectClass, data: &[u8]) -> Op {
-        Op {
-            optype: optype,
-            path: path,
-            objectclass: objectclass,
-            data: Vec::from(data),
-        }
-    }
-}
-
-impl Serialize for Op {
-    fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
-        try!(out.write(1, &(self.optype as u32 + 1)));
-        try!(out.write(2, &self.path.to_string()));
-        try!(out.write(3, &(self.objectclass as u32 + 1)));
-        try!(out.write(4, &self.data));
-        Ok(())
-    }
-}
-
-impl ObjectHash for Op {
-    fn objecthash(&self) -> digest::Digest {
-        let mut ctx = digest::Context::new(&DIGEST_ALG);
-
-        // objecthash qualifier for dictionaries
-        ctx.update(b"d");
-
-        // OpType::Add is the only op we support right now
-        assert!(self.optype == OpType::Add);
-
-        ctx.update("optype".objecthash().as_ref());
-        ctx.update(self.optype.to_string().objecthash().as_ref());
-
-        ctx.update("path".objecthash().as_ref());
-        ctx.update(self.path.to_string().objecthash().as_ref());
-
-        ctx.update("objectclass".objecthash().as_ref());
-        ctx.update(self.objectclass.objecthash().as_ref());
-
-        ctx.update("data".objecthash().as_ref());
-        ctx.update(self.data.objecthash().as_ref());
-
-        ctx.finish()
-    }
 }
 
 // ID of the genesis block (256-bits of zero)
@@ -266,7 +198,7 @@ pub mod tests {
     use buffoon;
     use ring::rand;
 
-    use log::{Block, DigestAlgorithm};
+    use block::{Block, DigestAlgorithm};
     use signature::KeyPair;
 
     const LOGID: &'static [u8; 16] = &[0u8; 16];
@@ -286,14 +218,14 @@ pub mod tests {
     }
 
     #[test]
-    fn test_proto_block_serialization() {
+    fn test_proto_serialization() {
         let block = example_block();
         // TODO: better test of the serialized proto
         buffoon::serialize(&block).unwrap();
     }
 
     #[test]
-    fn test_json_block_serialization() {
+    fn test_json_serialization() {
         // TODO: better test of the serialized JSON
         example_block().to_json();
     }

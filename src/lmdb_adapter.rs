@@ -11,8 +11,8 @@ use self::lmdb::{Environment, Database, DatabaseFlags, Cursor, WriteFlags, DUP_S
 use self::lmdb::Transaction as LmdbTransaction;
 
 use adapter::{Adapter, Transaction};
+use block::Block;
 use error::{Error, Result};
-use log::Block;
 use objectclass::ObjectClass;
 use server::{Id, Node, Entry, Path};
 
@@ -242,8 +242,8 @@ impl<'a> RwTransaction<'a> {
 #[cfg(test)]
 mod tests {
     use adapter::{Adapter, Transaction};
+    use block;
     use error::Error;
-    use log;
     use objectclass::ObjectClass;
     use server::{Id, Path};
     use lmdb_adapter::LmdbAdapter;
@@ -257,7 +257,7 @@ mod tests {
     #[test]
     fn test_duplicate_block() {
         let adapter = create_database();
-        let block = log::tests::example_block();
+        let block = block::tests::example_block();
 
         let mut txn = adapter.rw_transaction().unwrap();
         adapter.add_block(&mut txn, &block).unwrap();
