@@ -5,11 +5,12 @@ use std::collections::HashMap;
 use ring::rand;
 
 use adapter::{Adapter, Transaction};
+use block::{Block, DigestAlgorithm};
 use error::{Error, Result};
 use lmdb_adapter::LmdbAdapter;
-use log::{OpType, Block, DigestAlgorithm};
-use password::{self, PasswordAlgorithm};
 use objectclass::ObjectClass;
+use op::OpType;
+use password::{self, PasswordAlgorithm};
 use signature::{SignatureAlgorithm, KeyPair};
 
 #[cfg(test)]

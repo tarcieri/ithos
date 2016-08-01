@@ -1,0 +1,15 @@
+package ithos;
+
+import "objectclass.proto";
+
+// Ops make modifications to the state of the database
+message Op {
+  enum Type {
+    ADD = 1;
+  }
+
+  required Type        optype = 1;
+  required string      path = 2;
+  optional ObjectClass objectclass = 3;
+  optional bytes       data = 4;
+}

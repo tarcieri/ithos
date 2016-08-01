@@ -1,7 +1,7 @@
-use objectclass::ObjectClass;
+use block::Block;
 use error::Result;
+use objectclass::ObjectClass;
 use server::{Id, Node, Entry, Path};
-use log::Block;
 
 pub trait Transaction<D> {
     fn commit(self) -> Result<()>;
