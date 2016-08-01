@@ -30,16 +30,16 @@ impl LmdbAdapter {
         let env = try!(Environment::new()
             .set_max_dbs(8)
             .open_with_permissions(&path, 0o600)
-            .map_err(|_err| Error::DbCreate));
+            .map_err(|_| Error::DbCreate));
 
         let blocks = try!(env.create_db(Some("blocks"), DatabaseFlags::empty())
-            .map_err(|_err| Error::DbCreate));
+            .map_err(|_| Error::DbCreate));
 
         let entries = try!(env.create_db(Some("entries"), INTEGER_KEY)
-            .map_err(|_err| Error::DbCreate));
+            .map_err(|_| Error::DbCreate));
 
         let nodes = try!(env.create_db(Some("nodes"), INTEGER_KEY | DUP_SORT)
-            .map_err(|_err| Error::DbCreate));
+            .map_err(|_| Error::DbCreate));
 
         Ok(LmdbAdapter {
             env: env,
@@ -52,13 +52,13 @@ impl LmdbAdapter {
     pub fn open_database(path: &std::path::Path) -> Result<LmdbAdapter> {
         let env = try!(Environment::new()
             .open(&path)
-            .map_err(|_err| Error::DbOpen));
+            .map_err(|_| Error::DbOpen));
 
-        let blocks = try!(env.open_db(Some("blocks")).map_err(|_err| Error::DbOpen));
+        let blocks = try!(env.open_db(Some("blocks")).map_err(|_| Error::DbOpen));
 
-        let entries = try!(env.open_db(Some("entries")).map_err(|_err| Error::DbOpen));
+        let entries = try!(env.open_db(Some("entries")).map_err(|_| Error::DbOpen));
 
-        let nodes = try!(env.open_db(Some("nodes")).map_err(|_err| Error::DbOpen));
+        let nodes = try!(env.open_db(Some("nodes")).map_err(|_| Error::DbOpen));
 
         Ok(LmdbAdapter {
             env: env,
@@ -102,7 +102,7 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
     fn next_available_id(&self, txn: &RwTransaction) -> Result<Id> {
         let cursor = try!(txn.0
             .open_ro_cursor(self.nodes)
-            .map_err(|_err| Error::Transaction));
+            .map_err(|_| Error::Transaction));
 
         let last_id = match cursor.get(None, None, lmdb_sys::MDB_LAST) {
             Ok((id, _)) => Id::from_bytes(id.unwrap()).unwrap(),
@@ -125,7 +125,7 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
         }
 
         try!(txn.put(self.blocks, &block_id, &block_json.as_bytes())
-            .map_err(|_err| Error::DbWrite));
+            .map_err(|_| Error::DbWrite));
 
         Ok(())
     }
@@ -153,12 +153,12 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
         };
 
         try!(txn.put(self.nodes, &parent_id.as_bytes(), &node.to_bytes())
-            .map_err(|_err| Error::DbWrite));
+            .map_err(|_| Error::DbWrite));
 
         try!(txn.put(self.entries,
                  &id.as_bytes(),
                  &objectclass.to_string().as_bytes())
-            .map_err(|_err| Error::DbWrite));
+            .map_err(|_| Error::DbWrite));
 
         Ok(Entry {
             node: node,
@@ -182,10 +182,9 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
         let node = try!(self.find_node(txn, path));
 
         let entry_bytes = try!(txn.get(self.entries, &node.id.as_bytes())
-            .map_err(|_err| Error::DbCorrupt));
+            .map_err(|_| Error::DbCorrupt));
 
-        let objectclass = try!(ObjectClass::from_bytes(&entry_bytes)
-            .map_err(|_err| Error::DbCorrupt));
+        let objectclass = try!(ObjectClass::from_bytes(&entry_bytes).map_err(|_| Error::DbCorrupt));
 
         Ok(Entry {
             node: node,
@@ -198,7 +197,7 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
 macro_rules! impl_transaction (($newtype:ident) => (
     impl<'a> Transaction<lmdb::Database> for $newtype<'a> {
         fn get(&self, database: Database, key: &[u8]) -> Result<&[u8]> {
-            self.0.get(database, &key).map_err(|_err| Error::NotFound)
+            self.0.get(database, &key).map_err(|_| Error::NotFound)
         }
 
         fn find<P>(&self, db: Database, key: &[u8], predicate: P) -> Result<&[u8]>
@@ -206,7 +205,7 @@ macro_rules! impl_transaction (($newtype:ident) => (
         {
             let mut cursor = try!(self.0
                                       .open_ro_cursor(db)
-                                      .map_err(|_err| Error::Transaction));
+                                      .map_err(|_| Error::Transaction));
 
             let mut result = None;
 
@@ -225,7 +224,7 @@ macro_rules! impl_transaction (($newtype:ident) => (
         }
 
         fn commit(self) -> Result<()> {
-            self.0.commit().map_err(|_err| Error::Transaction)
+            self.0.commit().map_err(|_| Error::Transaction)
         }
     }
 ));
@@ -237,7 +236,7 @@ impl<'a> RwTransaction<'a> {
     fn put(&mut self, database: Database, key: &[u8], data: &[u8]) -> Result<()> {
         self.0
             .put(database, &key, &data, WriteFlags::empty())
-            .map_err(|_err| Error::Transaction)
+            .map_err(|_| Error::Transaction)
     }
 }
 

@@ -84,7 +84,7 @@ impl<'a> Node<'a> {
         }
 
         let id = try!(Id::from_bytes(&bytes[0..8]));
-        let name = try!(str::from_utf8(&bytes[8..]).map_err(|_err| Error::DbCorrupt));
+        let name = try!(str::from_utf8(&bytes[8..]).map_err(|_| Error::DbCorrupt));
 
         Ok(Node {
             id: id,
@@ -166,7 +166,7 @@ impl Server {
                            -> Result<Server> {
         let rng = rand::SystemRandom::new();
         let mut logid = [0u8; 16];
-        try!(rng.fill(&mut logid).map_err(|_err| Error::Rng));
+        try!(rng.fill(&mut logid).map_err(|_| Error::Rng));
 
         let mut salt = Vec::with_capacity(16 + admin_username.as_bytes().len());
         salt.extend(logid.as_ref());

@@ -219,17 +219,19 @@ impl Block {
 
     pub fn to_json(&self) -> String {
         let value = ObjectBuilder::new()
-            .insert("id", self.id.expect("id missing").to_base64(base64::URL_SAFE))
+            .insert("id",
+                    self.id
+                        .expect("id missing")
+                        .to_base64(base64::URL_SAFE))
             .insert("parent", self.parent.to_base64(base64::URL_SAFE))
             .insert("timestamp", self.timestamp)
             .insert_array("ops", |builder| {
                 self.ops.iter().fold(builder, |b, op| {
                     b.push_object(|b| {
-                        b
-                        .insert("optype", op.optype.to_string())
-                        .insert("path", op.path.to_string())
-                        .insert("objectclass", op.objectclass.to_string())
-                        .insert("data", op.data.to_base64(base64::URL_SAFE))
+                        b.insert("optype", op.optype.to_string())
+                            .insert("path", op.path.to_string())
+                            .insert("objectclass", op.objectclass.to_string())
+                            .insert("data", op.data.to_base64(base64::URL_SAFE))
                     })
                 })
 
@@ -237,15 +239,16 @@ impl Block {
             .insert_array("oob_data", |builder| {
                 self.oob_data.iter().fold(builder, |b, oob_data| {
                     b.push_object(|b| {
-                        b
-                        .insert("label", oob_data.label.clone())
-                        .insert("data", oob_data.data.to_base64(base64::URL_SAFE))
+                        b.insert("label", oob_data.label.clone())
+                            .insert("data", oob_data.data.to_base64(base64::URL_SAFE))
                     })
                 })
             })
             .insert("comment", self.comment.clone())
-            .insert("signed_by", self.signed_by.expect("signed_by missing").to_base64(base64::URL_SAFE))
-            .insert("signature", self.signature.expect("signature missing").to_base64(base64::URL_SAFE))
+            .insert("signed_by",
+                    self.signed_by.expect("signed_by missing").to_base64(base64::URL_SAFE))
+            .insert("signature",
+                    self.signature.expect("signature missing").to_base64(base64::URL_SAFE))
             .build();
 
         serde_json::to_string(&value).unwrap()

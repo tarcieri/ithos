@@ -21,7 +21,6 @@ pub trait Adapter<'a, D, R: Transaction<D>, W: Transaction<D>> {
                      name: &'b str,
                      objectclass: ObjectClass)
                      -> Result<Entry>;
-
     fn find_node<'b, T: Transaction<D>>(&'b self, txn: &'b T, path: &Path) -> Result<Node>;
     fn find_entry<'b, T: Transaction<D>>(&'b self, txn: &'b T, path: &Path) -> Result<Entry>;
 }
