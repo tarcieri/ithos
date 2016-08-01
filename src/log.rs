@@ -33,17 +33,11 @@ pub struct Op {
     pub data: Vec<u8>,
 }
 
-pub struct OobData {
-    pub label: String,
-    pub data: Vec<u8>,
-}
-
 pub struct Block {
     pub id: Option<[u8; DIGEST_SIZE]>,
     pub parent: [u8; DIGEST_SIZE],
     pub timestamp: u64,
     pub ops: Vec<Op>,
-    pub oob_data: Vec<OobData>,
     pub comment: String,
     pub signed_by: Option<[u8; DIGEST_SIZE]>,
     pub signature: Option<[u8; SIGNATURE_SIZE]>,
@@ -94,32 +88,6 @@ impl ObjectHash for Op {
     }
 }
 
-impl OobData {
-    pub fn new(label: &str, data: &[u8]) -> OobData {
-        OobData {
-            label: String::from(label),
-            data: Vec::from(data),
-        }
-    }
-}
-
-impl ObjectHash for OobData {
-    fn objecthash(&self) -> digest::Digest {
-        let mut ctx = digest::Context::new(&DIGEST_ALG);
-
-        // objecthash qualifier for dictionaries
-        ctx.update(b"d");
-
-        ctx.update("label".objecthash().as_ref());
-        ctx.update(self.label.objecthash().as_ref());
-
-        ctx.update("data".objecthash().as_ref());
-        ctx.update(self.data.objecthash().as_ref());
-
-        ctx.finish()
-    }
-}
-
 // ID of the genesis block (256-bits of zero)
 pub const GENESIS_BLOCK_ID: &'static [u8; 32] = &[0u8; 32];
 
@@ -132,6 +100,7 @@ impl Block {
                          admin_username: &str,
                          admin_keypair: &KeyPair,
                          admin_keypair_sealed: &[u8],
+                         comment: &str,
                          digest_alg: DigestAlgorithm)
                          -> Block {
         let mut block = Block::new(GENESIS_BLOCK_ID);
@@ -144,7 +113,7 @@ impl Block {
 
         block.op(OpType::Add,
                  Path::new("/system").unwrap(),
-                 ObjectClass::OU,
+                 ObjectClass::Ou,
                  b"");
 
         let public_key_bytes = admin_keypair.public_key_bytes();
@@ -155,24 +124,22 @@ impl Block {
         admin_user.extend(public_key_bytes);
         admin_user.extend(admin_username.as_bytes());
 
-        // TODO: replace with a type for managing paths!
-        let mut admin_path = String::new();
-        admin_path.push_str("/system/");
-        admin_path.push_str(admin_username);
+        // TODO: add features for path concatenation to the Path type!
+        let admin_path = format!("/system/{username}", username = admin_username);
 
         block.op(OpType::Add,
                  Path::new(&admin_path).unwrap(),
                  ObjectClass::System,
                  &admin_user);
 
-        let mut keypair_label = String::new();
-        keypair_label.push_str(&admin_username);
-        keypair_label.push_str(".keypair");
+        let admin_keypair_path = format!("{base}/keypair", base = admin_path);
 
-        block.oob_data(&keypair_label, &admin_keypair_sealed);
+        block.op(OpType::Add,
+                 Path::new(&admin_keypair_path).unwrap(),
+                 ObjectClass::Credential,
+                 &admin_keypair_sealed);
 
-        // TODO: Customization
-        block.comment.push_str("Initial block");
+        block.comment.push_str(comment);
 
         block.sign(admin_keypair, digest_alg);
 
@@ -185,7 +152,6 @@ impl Block {
             parent: *parent,
             timestamp: time::now_utc().to_timespec().sec as u64,
             ops: Vec::new(),
-            oob_data: Vec::new(),
             comment: String::new(),
             signed_by: None,
             signature: None,
@@ -194,10 +160,6 @@ impl Block {
 
     pub fn op(&mut self, optype: OpType, path: Path, objectclass: ObjectClass, data: &[u8]) {
         self.ops.push(Op::new(optype, path, objectclass, data));
-    }
-
-    pub fn oob_data(&mut self, label: &str, data: &[u8]) {
-        self.oob_data.push(OobData::new(&label, &data));
     }
 
     pub fn sign(&mut self, keypair: &KeyPair, digest_alg: DigestAlgorithm) {
@@ -236,14 +198,6 @@ impl Block {
                 })
 
             })
-            .insert_array("oob_data", |builder| {
-                self.oob_data.iter().fold(builder, |b, oob_data| {
-                    b.push_object(|b| {
-                        b.insert("label", oob_data.label.clone())
-                            .insert("data", oob_data.data.to_base64(base64::URL_SAFE))
-                    })
-                })
-            })
             .insert("comment", self.comment.clone())
             .insert("signed_by",
                     self.signed_by.expect("signed_by missing").to_base64(base64::URL_SAFE))
@@ -263,14 +217,14 @@ impl ObjectHash for Block {
         // objecthash qualifier for dictionaries
         block_ctx.update(b"d");
 
+        block_ctx.update("parent".objecthash().as_ref());
+        block_ctx.update(self.parent.objecthash().as_ref());
+
         block_ctx.update("timestamp".objecthash().as_ref());
         block_ctx.update(self.timestamp.objecthash().as_ref());
 
         block_ctx.update("ops".objecthash().as_ref());
         block_ctx.update(self.ops.objecthash().as_ref());
-
-        block_ctx.update("oob_data".objecthash().as_ref());
-        block_ctx.update(self.oob_data.objecthash().as_ref());
 
         block_ctx.update("comment".objecthash().as_ref());
         block_ctx.update(self.comment.objecthash().as_ref());
@@ -301,6 +255,7 @@ pub mod tests {
                              ADMIN_USERNAME,
                              &admin_keypair,
                              ADMIN_KEYPAIR_SEALED,
+                             "Initial block",
                              DigestAlgorithm::SHA256)
     }
 

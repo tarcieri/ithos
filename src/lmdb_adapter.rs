@@ -244,7 +244,7 @@ impl<'a> RwTransaction<'a> {
 mod tests {
     use adapter::{Adapter, Transaction};
     use error::Error;
-    use log::{self, Block};
+    use log;
     use objectclass::ObjectClass;
     use server::{Id, Path};
     use lmdb_adapter::LmdbAdapter;
@@ -285,7 +285,7 @@ mod tests {
                 .unwrap();
 
             let hosts_id = domain_id.next();
-            adapter.add_entry(&mut txn, hosts_id, domain_id, "hosts", ObjectClass::OU).unwrap();
+            adapter.add_entry(&mut txn, hosts_id, domain_id, "hosts", ObjectClass::Ou).unwrap();
 
             let host_id = hosts_id.next();
             adapter.add_entry(&mut txn,

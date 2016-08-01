@@ -15,6 +15,8 @@ use signature::{SignatureAlgorithm, KeyPair};
 #[cfg(test)]
 extern crate tempdir;
 
+const DEFAULT_GENESIS_MESSAGE: &'static str = "Initial block";
+
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct Id(u64);
 
@@ -185,6 +187,7 @@ impl Server {
                                                  &admin_username,
                                                  &admin_keypair,
                                                  &admin_keypair_sealed,
+                                                 DEFAULT_GENESIS_MESSAGE,
                                                  DigestAlgorithm::SHA256);
 
         let adapter = LmdbAdapter::create_database(path).unwrap();
