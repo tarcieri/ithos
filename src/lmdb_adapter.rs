@@ -6,14 +6,15 @@ extern crate tempdir;
 
 use std::{self, str};
 
+use buffoon;
+use self::lmdb::{Environment, Database, DatabaseFlags, Cursor, WriteFlags, DUP_SORT, INTEGER_KEY};
+use self::lmdb::Transaction as LmdbTransaction;
+
 use adapter::{Adapter, Transaction};
 use error::{Error, Result};
 use log::Block;
 use objectclass::ObjectClass;
 use server::{Id, Node, Entry, Path};
-
-use self::lmdb::{Environment, Database, DatabaseFlags, Cursor, WriteFlags, DUP_SORT, INTEGER_KEY};
-use self::lmdb::Transaction as LmdbTransaction;
 
 pub struct LmdbAdapter {
     env: Environment,
@@ -116,15 +117,13 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
         // TODO: Don't Panic
         let block_id = block.id.expect("block ID unset");
 
-        // TODO: use a better serialization format than JSON, e.g. protos
-        // This is only temporary as JSON is the only format we presently support
-        let block_json = block.to_json();
+        let serialized = try!(buffoon::serialize(&block).map_err(|_| Error::Serialize));
 
         if txn.get(self.blocks, &block_id) != Err(Error::NotFound) {
             return Err(Error::EntryAlreadyExists);
         }
 
-        try!(txn.put(self.blocks, &block_id, &block_json.as_bytes())
+        try!(txn.put(self.blocks, &block_id, &serialized)
             .map_err(|_| Error::DbWrite));
 
         Ok(())

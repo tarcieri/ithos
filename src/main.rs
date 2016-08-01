@@ -1,6 +1,7 @@
 extern crate clap;
 use clap::{App, Arg, SubCommand};
 
+extern crate buffoon;
 extern crate ring;
 extern crate ring_pwhash as pwhash;
 extern crate rustc_serialize;

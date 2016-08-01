@@ -1,0 +1,10 @@
+package ithos;
+
+enum ObjectClass {
+  ROOT = 1;       // Root DSE
+  DOMAIN = 2;     // ala DNS domain or Kerberos realm
+  OU = 3;         // Organizational unit
+  CREDENTIAL = 4; // Encrypted access credentials
+  SYSTEM = 5;     // System User (i.e. non-human account)
+  HOST = 6;       // an individual server
+}
