@@ -8,7 +8,8 @@ use objecthash::ObjectHash;
 pub enum ObjectClass {
     Root, // Root DSE
     Domain, // ala DNS domain or Kerberos realm
-    OU, // Organizational unit
+    Ou, // Organizational unit
+    Credential, // Encrypted access credential
     System, // System User (i.e. non-human account)
     Host, // an individual server
 }
@@ -18,7 +19,8 @@ impl ObjectClass {
         match bytes {
             b"root" => Ok(ObjectClass::Root),
             b"domain" => Ok(ObjectClass::Domain),
-            b"ou" => Ok(ObjectClass::OU),
+            b"ou" => Ok(ObjectClass::Ou),
+            b"credential" => Ok(ObjectClass::Credential),
             b"system" => Ok(ObjectClass::System),
             b"host" => Ok(ObjectClass::Host),
             _ => Err(Error::NotFound),
@@ -31,9 +33,10 @@ impl ToString for ObjectClass {
         match *self {
             ObjectClass::Root => "root".to_string(),
             ObjectClass::Domain => "domain".to_string(),
-            ObjectClass::OU => "ou".to_string(),
-            ObjectClass::Host => "host".to_string(),
+            ObjectClass::Ou => "ou".to_string(),
+            ObjectClass::Credential => "credential".to_string(),
             ObjectClass::System => "system".to_string(),
+            ObjectClass::Host => "host".to_string(),
         }
     }
 }
