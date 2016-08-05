@@ -10,6 +10,7 @@ extern crate time;
 
 mod adapter;
 mod block;
+mod direntry;
 mod error;
 mod lmdb_adapter;
 mod objectclass;

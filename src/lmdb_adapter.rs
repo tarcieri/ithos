@@ -12,14 +12,15 @@ use self::lmdb::Transaction as LmdbTransaction;
 
 use adapter::{Adapter, Transaction};
 use block::Block;
+use direntry::DirEntry;
 use error::{Error, Result};
 use objectclass::ObjectClass;
-use server::{Id, Node, Entry, Path};
+use server::{Id, Entry, Path};
 
 pub struct LmdbAdapter {
     env: Environment,
     blocks: Database,
-    nodes: Database,
+    directories: Database,
     entries: Database,
 }
 
@@ -36,17 +37,17 @@ impl LmdbAdapter {
         let blocks = try!(env.create_db(Some("blocks"), DatabaseFlags::empty())
             .map_err(|_| Error::DbCreate));
 
-        let entries = try!(env.create_db(Some("entries"), INTEGER_KEY)
+        let directories = try!(env.create_db(Some("directories"), INTEGER_KEY | DUP_SORT)
             .map_err(|_| Error::DbCreate));
 
-        let nodes = try!(env.create_db(Some("nodes"), INTEGER_KEY | DUP_SORT)
+        let entries = try!(env.create_db(Some("entries"), INTEGER_KEY)
             .map_err(|_| Error::DbCreate));
 
         Ok(LmdbAdapter {
             env: env,
             blocks: blocks,
+            directories: directories,
             entries: entries,
-            nodes: nodes,
         })
     }
 
@@ -57,31 +58,32 @@ impl LmdbAdapter {
 
         let blocks = try!(env.open_db(Some("blocks")).map_err(|_| Error::DbOpen));
 
-        let entries = try!(env.open_db(Some("entries")).map_err(|_| Error::DbOpen));
+        let directories = try!(env.open_db(Some("directories")).map_err(|_| Error::DbOpen));
 
-        let nodes = try!(env.open_db(Some("nodes")).map_err(|_| Error::DbOpen));
+        let entries = try!(env.open_db(Some("entries")).map_err(|_| Error::DbOpen));
 
         Ok(LmdbAdapter {
             env: env,
             blocks: blocks,
+            directories: directories,
             entries: entries,
-            nodes: nodes,
         })
     }
 
-    fn find_child_node<'a, T: Transaction<lmdb::Database>>(&'a self,
-                                                           txn: &'a T,
-                                                           parent_id: Id,
-                                                           name: &str)
-                                                           -> Result<Node> {
-        let node_bytes = try!(txn.find(self.nodes, &parent_id.as_bytes(), |node_bytes| {
-            match Node::from_parent_id_and_bytes(parent_id, node_bytes) {
-                Ok(node) => node.name == name,
-                _ => false,
-            }
-        }));
+    fn find_child<'a, T: Transaction<lmdb::Database>>(&'a self,
+                                                      txn: &'a T,
+                                                      parent_id: Id,
+                                                      name: &str)
+                                                      -> Result<DirEntry> {
+        let direntry_bytes =
+            try!(txn.find(self.directories, &parent_id.as_bytes(), |direntry_bytes| {
+                match DirEntry::new(parent_id, direntry_bytes) {
+                    Ok(direntry) => direntry.name == name,
+                    _ => false,
+                }
+            }));
 
-        Node::from_parent_id_and_bytes(parent_id, node_bytes)
+        DirEntry::new(parent_id, direntry_bytes)
     }
 }
 
@@ -102,7 +104,7 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
 
     fn next_available_id(&self, txn: &RwTransaction) -> Result<Id> {
         let cursor = try!(txn.0
-            .open_ro_cursor(self.nodes)
+            .open_ro_cursor(self.directories)
             .map_err(|_| Error::Transaction));
 
         let last_id = match cursor.get(None, None, lmdb_sys::MDB_LAST) {
@@ -140,18 +142,20 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
             return Err(Error::EntryAlreadyExists);
         }
 
-        if txn.get(self.nodes, &parent_id.as_bytes()) != Err(Error::NotFound) &&
-           self.find_child_node(txn, parent_id, name) != Err(Error::NotFound) {
+        if txn.get(self.directories, &parent_id.as_bytes()) != Err(Error::NotFound) &&
+           self.find_child(txn, parent_id, name) != Err(Error::NotFound) {
             return Err(Error::EntryAlreadyExists);
         }
 
-        let node = Node {
+        let direntry = DirEntry {
             id: id,
             parent_id: parent_id,
             name: name,
         };
 
-        try!(txn.put(self.nodes, &parent_id.as_bytes(), &node.to_bytes())
+        try!(txn.put(self.directories,
+                 &parent_id.as_bytes(),
+                 &direntry.to_bytes())
             .map_err(|_| Error::DbWrite));
 
         try!(txn.put(self.entries,
@@ -160,17 +164,17 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
             .map_err(|_| Error::DbWrite));
 
         Ok(Entry {
-            node: node,
+            direntry: direntry,
             objectclass: objectclass,
         })
     }
 
-    fn find_node<'b, T: Transaction<lmdb::Database>>(&'b self,
-                                                     txn: &'b T,
-                                                     path: &Path)
-                                                     -> Result<Node> {
-        path.components.iter().fold(Ok(Node::root()), |parent_node, component| {
-            self.find_child_node(txn, try!(parent_node).id, component)
+    fn find_direntry<'b, T: Transaction<lmdb::Database>>(&'b self,
+                                                         txn: &'b T,
+                                                         path: &Path)
+                                                         -> Result<DirEntry> {
+        path.components.iter().fold(Ok(DirEntry::root()), |parent_direntry, component| {
+            self.find_child(txn, try!(parent_direntry).id, component)
         })
     }
 
@@ -178,15 +182,15 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
                                                       txn: &'b T,
                                                       path: &Path)
                                                       -> Result<Entry> {
-        let node = try!(self.find_node(txn, path));
+        let direntry = try!(self.find_direntry(txn, path));
 
-        let entry_bytes = try!(txn.get(self.entries, &node.id.as_bytes())
+        let entry_bytes = try!(txn.get(self.entries, &direntry.id.as_bytes())
             .map_err(|_| Error::DbCorrupt));
 
         let objectclass = try!(ObjectClass::from_bytes(&entry_bytes).map_err(|_| Error::DbCorrupt));
 
         Ok(Entry {
-            node: node,
+            direntry: direntry,
             objectclass: objectclass,
         })
     }
@@ -305,7 +309,7 @@ mod tests {
                 let entry = adapter.find_entry(&txn, &path)
                     .unwrap();
 
-                assert_eq!(entry.node.name, "master.example.com");
+                assert_eq!(entry.direntry.name, "master.example.com");
                 assert_eq!(entry.objectclass, ObjectClass::Host);
             }
 
