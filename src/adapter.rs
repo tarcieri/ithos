@@ -1,7 +1,8 @@
 use block::Block;
+use direntry::DirEntry;
 use error::Result;
 use objectclass::ObjectClass;
-use server::{Id, Node, Entry, Path};
+use server::{Id, Entry, Path};
 
 pub trait Transaction<D> {
     fn commit(self) -> Result<()>;
@@ -21,6 +22,6 @@ pub trait Adapter<'a, D, R: Transaction<D>, W: Transaction<D>> {
                      name: &'b str,
                      objectclass: ObjectClass)
                      -> Result<Entry>;
-    fn find_node<'b, T: Transaction<D>>(&'b self, txn: &'b T, path: &Path) -> Result<Node>;
+    fn find_direntry<'b, T: Transaction<D>>(&'b self, txn: &'b T, path: &Path) -> Result<DirEntry>;
     fn find_entry<'b, T: Transaction<D>>(&'b self, txn: &'b T, path: &Path) -> Result<Entry>;
 }

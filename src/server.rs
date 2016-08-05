@@ -6,6 +6,7 @@ use ring::rand;
 
 use adapter::{Adapter, Transaction};
 use block::{Block, DigestAlgorithm};
+use direntry::DirEntry;
 use error::{Error, Result};
 use lmdb_adapter::LmdbAdapter;
 use objectclass::ObjectClass;
@@ -22,15 +23,8 @@ const DEFAULT_GENESIS_MESSAGE: &'static str = "Initial block";
 pub struct Id(u64);
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct Node<'a> {
-    pub id: Id,
-    pub parent_id: Id,
-    pub name: &'a str,
-}
-
-#[derive(Debug, Eq, PartialEq)]
 pub struct Entry<'a> {
-    pub node: Node<'a>,
+    pub direntry: DirEntry<'a>,
     pub objectclass: ObjectClass,
 }
 
@@ -69,38 +63,6 @@ impl Id {
     pub fn next(self) -> Id {
         let Id(id) = self;
         Id(id + 1)
-    }
-}
-
-impl<'a> Node<'a> {
-    pub fn root() -> Node<'a> {
-        Node {
-            id: Id::root(),
-            parent_id: Id::root(),
-            name: "/",
-        }
-    }
-
-    pub fn from_parent_id_and_bytes(parent_id: Id, bytes: &[u8]) -> Result<Node> {
-        if bytes.len() < 8 {
-            return Err(Error::DbCorrupt);
-        }
-
-        let id = try!(Id::from_bytes(&bytes[0..8]));
-        let name = try!(str::from_utf8(&bytes[8..]).map_err(|_| Error::DbCorrupt));
-
-        Ok(Node {
-            id: id,
-            parent_id: parent_id,
-            name: name,
-        })
-    }
-
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(8 + self.name.len());
-        bytes.extend_from_slice(&self.id.as_bytes());
-        bytes.extend_from_slice(self.name.as_bytes());
-        bytes
     }
 }
 
@@ -213,7 +175,7 @@ impl Server {
                     } else {
                         match new_entries.get(&op.path.parent()) {
                             Some(&id) => id,
-                            _ => try!(self.adapter.find_node(&txn, &op.path.parent())).id,
+                            _ => try!(self.adapter.find_direntry(&txn, &op.path.parent())).id,
                         }
                     };
 
