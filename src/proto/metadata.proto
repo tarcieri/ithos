@@ -1,0 +1,13 @@
+package ithos;
+
+import "objectclass.proto";
+
+// Metadata associated with an ithos entry
+message Metadata {
+  required ObjectClass objectclass = 1;
+  required bytes       created_id = 2;
+  required bytes       updated_id = 3;
+  required uint64      created_at = 4;
+  required uint64      updated_at = 5;
+  required uint64      version    = 6;
+}

@@ -8,6 +8,7 @@ use block::{Block, DigestAlgorithm};
 use entry;
 use error::{Error, Result};
 use lmdb_adapter::LmdbAdapter;
+use metadata::Metadata;
 use op::OpType;
 use password::{self, PasswordAlgorithm};
 use signature::{SignatureAlgorithm, KeyPair};
@@ -77,9 +78,12 @@ impl Server {
                     };
 
                     let name = op.path.name();
+                    let metadata = Metadata::new(op.objectclass,
+                                                 block.id.expect("block id missing"),
+                                                 block.timestamp);
 
                     // NOTE: The underlying adapter must handle Error::EntryAlreadyExists
-                    try!(self.adapter.add_entry(&mut txn, id, parent_id, &name, op.objectclass));
+                    try!(self.adapter.add_entry(&mut txn, id, parent_id, &name, &metadata, b""));
                     new_entries.insert(&op.path, id);
                     id = id.next()
                 }

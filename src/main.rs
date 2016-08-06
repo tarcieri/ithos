@@ -14,6 +14,7 @@ mod direntry;
 mod entry;
 mod error;
 mod lmdb_adapter;
+mod metadata;
 mod objectclass;
 mod objecthash;
 mod op;

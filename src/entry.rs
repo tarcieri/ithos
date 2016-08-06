@@ -1,17 +1,9 @@
 use std::mem;
 
-use direntry::DirEntry;
 use error::{Error, Result};
-use objectclass::ObjectClass;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct Id(u64);
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct Entry<'a> {
-    pub direntry: DirEntry<'a>,
-    pub objectclass: ObjectClass,
-}
 
 // Ids are 64-bit integers in host-native byte order
 // LMDB has special optimizations for host-native integers as keys

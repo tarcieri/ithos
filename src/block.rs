@@ -1,7 +1,7 @@
 use std::io;
 use std::string::ToString;
 
-use buffoon::{OutputStream, Serialize};
+use buffoon::{self, OutputStream, Serialize};
 use ring::digest;
 use rustc_serialize::base64::{self, ToBase64};
 use serde_json;
@@ -154,6 +154,10 @@ impl Block {
         let mut signature = [0u8; 64];
         signature.copy_from_slice(&keypair.sign(id.as_ref()).as_slice());
         self.signature = Some(signature);
+    }
+
+    pub fn to_proto(&self) -> Result<Vec<u8>> {
+        buffoon::serialize(&self).map_err(|_| Error::Serialize)
     }
 
     pub fn to_json(&self) -> String {

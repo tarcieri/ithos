@@ -1,8 +1,8 @@
 use block::Block;
 use direntry::DirEntry;
-use entry::{self, Entry};
+use entry;
 use error::Result;
-use objectclass::ObjectClass;
+use metadata::Metadata;
 use path::Path;
 
 pub trait Transaction<D> {
@@ -21,8 +21,9 @@ pub trait Adapter<'a, D, R: Transaction<D>, W: Transaction<D>> {
                      id: entry::Id,
                      parent_id: entry::Id,
                      name: &'b str,
-                     objectclass: ObjectClass)
-                     -> Result<Entry>;
+                     metadata: &Metadata,
+                     data: &[u8])
+                     -> Result<DirEntry>;
     fn find_direntry<'b, T: Transaction<D>>(&'b self, txn: &'b T, path: &Path) -> Result<DirEntry>;
-    fn find_entry<'b, T: Transaction<D>>(&'b self, txn: &'b T, path: &Path) -> Result<Entry>;
+    fn find_entry<'b, T: Transaction<D>>(&'b self, txn: &'b T, id: &entry::Id) -> Result<&[u8]>;
 }
