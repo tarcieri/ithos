@@ -6,7 +6,7 @@ use ring::digest;
 
 use objectclass::ObjectClass;
 use objecthash::{ObjectHash, DIGEST_ALG};
-use server::Path;
+use path::Path;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum OpType {
