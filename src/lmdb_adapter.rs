@@ -13,9 +13,11 @@ use self::lmdb::Transaction as LmdbTransaction;
 use adapter::{Adapter, Transaction};
 use block::Block;
 use direntry::DirEntry;
+use entry::Entry;
 use error::{Error, Result};
+use id::Id;
 use objectclass::ObjectClass;
-use server::{Id, Entry, Path};
+use path::Path;
 
 pub struct LmdbAdapter {
     env: Environment,
@@ -248,9 +250,11 @@ mod tests {
     use adapter::{Adapter, Transaction};
     use block;
     use error::Error;
-    use objectclass::ObjectClass;
-    use server::{Id, Path};
+    use id::Id;
     use lmdb_adapter::LmdbAdapter;
+    use objectclass::ObjectClass;
+    use path::Path;
+
     use lmdb_adapter::tempdir::TempDir;
 
     fn create_database() -> LmdbAdapter {

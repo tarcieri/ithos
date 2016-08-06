@@ -1,8 +1,10 @@
 use block::Block;
 use direntry::DirEntry;
+use entry::Entry;
 use error::Result;
+use id::Id;
 use objectclass::ObjectClass;
-use server::{Id, Entry, Path};
+use path::Path;
 
 pub trait Transaction<D> {
     fn commit(self) -> Result<()>;

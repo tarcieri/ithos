@@ -11,7 +11,7 @@ use time;
 use objectclass::ObjectClass;
 use objecthash::{ObjectHash, DIGEST_ALG};
 use op::{Op, OpType};
-use server::Path;
+use path::Path;
 use signature::KeyPair;
 
 const DIGEST_SIZE: usize = 32;

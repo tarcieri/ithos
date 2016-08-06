@@ -1,7 +1,0 @@
-package ithos;
-
-message DirEntry {
-  required bytes  id = 1;
-  required bytes  parent_id = 2;
-  required string name = 3;
-}
