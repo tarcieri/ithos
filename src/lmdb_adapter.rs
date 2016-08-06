@@ -13,9 +13,8 @@ use self::lmdb::Transaction as LmdbTransaction;
 use adapter::{Adapter, Transaction};
 use block::Block;
 use direntry::DirEntry;
-use entry::Entry;
+use entry::{self, Entry};
 use error::{Error, Result};
-use id::Id;
 use objectclass::ObjectClass;
 use path::Path;
 
@@ -74,11 +73,11 @@ impl LmdbAdapter {
 
     fn find_child<'a, T: Transaction<lmdb::Database>>(&'a self,
                                                       txn: &'a T,
-                                                      parent_id: Id,
+                                                      parent_id: entry::Id,
                                                       name: &str)
                                                       -> Result<DirEntry> {
         let direntry_bytes =
-            try!(txn.find(self.directories, &parent_id.as_bytes(), |direntry_bytes| {
+            try!(txn.find(self.directories, parent_id.as_ref(), |direntry_bytes| {
                 match DirEntry::new(parent_id, direntry_bytes) {
                     Ok(direntry) => direntry.name == name,
                     _ => false,
@@ -104,14 +103,14 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
         }
     }
 
-    fn next_available_id(&self, txn: &RwTransaction) -> Result<Id> {
+    fn next_free_entry_id(&self, txn: &RwTransaction) -> Result<entry::Id> {
         let cursor = try!(txn.0
             .open_ro_cursor(self.directories)
             .map_err(|_| Error::Transaction));
 
         let last_id = match cursor.get(None, None, lmdb_sys::MDB_LAST) {
-            Ok((id, _)) => Id::from_bytes(id.unwrap()).unwrap(),
-            Err(_) => Id::root(),
+            Ok((id, _)) => entry::Id::from_bytes(id.unwrap()).unwrap(),
+            Err(_) => entry::Id::root(),
         };
 
         Ok(last_id.next())
@@ -123,11 +122,11 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
 
         let serialized = try!(buffoon::serialize(&block).map_err(|_| Error::Serialize));
 
-        if txn.get(self.blocks, &block_id) != Err(Error::NotFound) {
+        if txn.get(self.blocks, block_id.as_ref()) != Err(Error::NotFound) {
             return Err(Error::EntryAlreadyExists);
         }
 
-        try!(txn.put(self.blocks, &block_id, &serialized)
+        try!(txn.put(self.blocks, block_id.as_ref(), &serialized)
             .map_err(|_| Error::DbWrite));
 
         Ok(())
@@ -135,16 +134,16 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
 
     fn add_entry<'b>(&'b self,
                      txn: &'b mut RwTransaction,
-                     id: Id,
-                     parent_id: Id,
+                     id: entry::Id,
+                     parent_id: entry::Id,
                      name: &'b str,
                      objectclass: ObjectClass)
                      -> Result<Entry> {
-        if txn.get(self.entries, &id.as_bytes()) != Err(Error::NotFound) {
+        if txn.get(self.entries, id.as_ref()) != Err(Error::NotFound) {
             return Err(Error::EntryAlreadyExists);
         }
 
-        if txn.get(self.directories, &parent_id.as_bytes()) != Err(Error::NotFound) &&
+        if txn.get(self.directories, parent_id.as_ref()) != Err(Error::NotFound) &&
            self.find_child(txn, parent_id, name) != Err(Error::NotFound) {
             return Err(Error::EntryAlreadyExists);
         }
@@ -156,12 +155,12 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
         };
 
         try!(txn.put(self.directories,
-                 &parent_id.as_bytes(),
+                 parent_id.as_ref(),
                  &direntry.to_bytes())
             .map_err(|_| Error::DbWrite));
 
         try!(txn.put(self.entries,
-                 &id.as_bytes(),
+                 id.as_ref(),
                  &objectclass.to_string().as_bytes())
             .map_err(|_| Error::DbWrite));
 
@@ -186,7 +185,7 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
                                                       -> Result<Entry> {
         let direntry = try!(self.find_direntry(txn, path));
 
-        let entry_bytes = try!(txn.get(self.entries, &direntry.id.as_bytes())
+        let entry_bytes = try!(txn.get(self.entries, direntry.id.as_ref())
             .map_err(|_| Error::DbCorrupt));
 
         let objectclass = try!(ObjectClass::from_bytes(&entry_bytes).map_err(|_| Error::DbCorrupt));
@@ -249,8 +248,8 @@ impl<'a> RwTransaction<'a> {
 mod tests {
     use adapter::{Adapter, Transaction};
     use block;
+    use entry::Id;
     use error::Error;
-    use id::Id;
     use lmdb_adapter::LmdbAdapter;
     use objectclass::ObjectClass;
     use path::Path;
@@ -283,7 +282,7 @@ mod tests {
         {
             let mut txn = adapter.rw_transaction().unwrap();
 
-            let domain_id = adapter.next_available_id(&txn).unwrap();
+            let domain_id = adapter.next_free_entry_id(&txn).unwrap();
             adapter.add_entry(&mut txn,
                            domain_id,
                            Id::root(),
@@ -327,7 +326,7 @@ mod tests {
 
         let mut txn = adapter.rw_transaction().unwrap();
 
-        let domain_id = adapter.next_available_id(&txn).unwrap();
+        let domain_id = adapter.next_free_entry_id(&txn).unwrap();
         adapter.add_entry(&mut txn,
                        domain_id,
                        Id::root(),
@@ -349,7 +348,7 @@ mod tests {
 
         let mut txn = adapter.rw_transaction().unwrap();
 
-        let domain_id = adapter.next_available_id(&txn).unwrap();
+        let domain_id = adapter.next_free_entry_id(&txn).unwrap();
         adapter.add_entry(&mut txn,
                        domain_id,
                        Id::root(),

@@ -1,8 +1,7 @@
 use block::Block;
 use direntry::DirEntry;
-use entry::Entry;
+use entry::{self, Entry};
 use error::Result;
-use id::Id;
 use objectclass::ObjectClass;
 use path::Path;
 
@@ -15,12 +14,12 @@ pub trait Transaction<D> {
 pub trait Adapter<'a, D, R: Transaction<D>, W: Transaction<D>> {
     fn ro_transaction(&'a self) -> Result<R>;
     fn rw_transaction(&'a self) -> Result<W>;
-    fn next_available_id(&self, txn: &W) -> Result<Id>;
+    fn next_free_entry_id(&self, txn: &W) -> Result<entry::Id>;
     fn add_block<'b>(&'b self, txn: &'b mut W, block: &Block) -> Result<()>;
     fn add_entry<'b>(&'b self,
                      txn: &'b mut W,
-                     id: Id,
-                     parent_id: Id,
+                     id: entry::Id,
+                     parent_id: entry::Id,
                      name: &'b str,
                      objectclass: ObjectClass)
                      -> Result<Entry>;

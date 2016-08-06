@@ -5,8 +5,8 @@ use ring::rand;
 
 use adapter::{Adapter, Transaction};
 use block::{Block, DigestAlgorithm};
+use entry;
 use error::{Error, Result};
-use id::Id;
 use lmdb_adapter::LmdbAdapter;
 use op::OpType;
 use password::{self, PasswordAlgorithm};
@@ -60,7 +60,7 @@ impl Server {
     // Commit a block without first checking its signature
     fn commit_unverified_block(&self, block: &Block) -> Result<()> {
         let mut txn = try!(self.adapter.rw_transaction());
-        let mut id = try!(self.adapter.next_available_id(&txn));
+        let mut id = try!(self.adapter.next_free_entry_id(&txn));
         let mut new_entries = HashMap::new();
 
         // Process the operations in the block and apply them to the database
@@ -68,7 +68,7 @@ impl Server {
             match op.optype {
                 OpType::Add => {
                     let parent_id = if op.path.is_root() {
-                        Id::root()
+                        entry::Id::root()
                     } else {
                         match new_entries.get(&op.path.parent()) {
                             Some(&id) => id,

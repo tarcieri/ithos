@@ -1,7 +1,7 @@
 use std::str;
 
+use entry::Id;
 use error::{Error, Result};
-use id::Id;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct DirEntry<'a> {
@@ -36,7 +36,7 @@ impl<'a> DirEntry<'a> {
 
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(8 + self.name.len());
-        bytes.extend_from_slice(&self.id.as_bytes());
+        bytes.extend_from_slice(self.id.as_ref());
         bytes.extend_from_slice(self.name.as_bytes());
         bytes
     }
