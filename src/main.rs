@@ -13,7 +13,6 @@ mod block;
 mod direntry;
 mod entry;
 mod error;
-mod id;
 mod lmdb_adapter;
 mod objectclass;
 mod objecthash;

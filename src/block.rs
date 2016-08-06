@@ -8,6 +8,7 @@ use serde_json;
 use serde_json::builder::ObjectBuilder;
 use time;
 
+use error::{Error, Result};
 use objectclass::ObjectClass;
 use objecthash::{ObjectHash, DIGEST_ALG};
 use op::{Op, OpType};
@@ -22,18 +23,51 @@ pub enum DigestAlgorithm {
     SHA256,
 }
 
+// Block IDs are presently SHA-256 only
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+pub struct Id([u8; DIGEST_SIZE]);
+
+impl Id {
+    // ID of the genesis block (256-bits of zero)
+    pub fn root() -> Id {
+        Id([0u8; 32])
+    }
+
+    pub fn from_bytes(bytes: &[u8]) -> Result<Id> {
+        if bytes.len() != DIGEST_SIZE {
+            return Err(Error::Parse);
+        }
+
+        let mut id = [0u8; DIGEST_SIZE];
+        id.copy_from_slice(&bytes[0..DIGEST_SIZE]);
+
+        Ok(Id(id))
+    }
+}
+
+impl AsRef<[u8]> for Id {
+    #[inline(always)]
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl ObjectHash for Id {
+    #[inline]
+    fn objecthash(&self) -> digest::Digest {
+        self.0.objecthash()
+    }
+}
+
 pub struct Block {
-    pub id: Option<[u8; DIGEST_SIZE]>,
-    pub parent: [u8; DIGEST_SIZE],
+    pub id: Option<Id>,
+    pub parent: Id,
     pub timestamp: u64,
     pub ops: Vec<Op>,
     pub comment: String,
     pub signed_by: Option<[u8; DIGEST_SIZE]>,
     pub signature: Option<[u8; SIGNATURE_SIZE]>,
 }
-
-// ID of the genesis block (256-bits of zero)
-pub const GENESIS_BLOCK_ID: &'static [u8; 32] = &[0u8; 32];
 
 impl Block {
     // Create the "genesis block": the first block in the log
@@ -47,7 +81,7 @@ impl Block {
                          comment: &str,
                          digest_alg: DigestAlgorithm)
                          -> Block {
-        let mut block = Block::new(GENESIS_BLOCK_ID);
+        let mut block = Block::new(Id::root());
 
         // TODO: use a real type for the root entry
         block.op(OpType::Add,
@@ -90,10 +124,10 @@ impl Block {
         block
     }
 
-    pub fn new(parent: &[u8; 32]) -> Block {
+    pub fn new(parent: Id) -> Block {
         Block {
             id: None,
-            parent: *parent,
+            parent: parent,
             timestamp: time::now_utc().to_timespec().sec as u64,
             ops: Vec::new(),
             comment: String::new(),
@@ -114,12 +148,11 @@ impl Block {
         signed_by.copy_from_slice(&keypair.public_key_bytes());
         self.signed_by = Some(signed_by);
 
-        let mut id = [0u8; 32];
-        id.copy_from_slice(self.objecthash().as_ref());
+        let id = Id::from_bytes(self.objecthash().as_ref()).unwrap();
         self.id = Some(id);
 
         let mut signature = [0u8; 64];
-        signature.copy_from_slice(keypair.sign(&id).as_slice());
+        signature.copy_from_slice(&keypair.sign(id.as_ref()).as_slice());
         self.signature = Some(signature);
     }
 
@@ -128,8 +161,9 @@ impl Block {
             .insert("id",
                     self.id
                         .expect("id missing")
+                        .as_ref()
                         .to_base64(base64::URL_SAFE))
-            .insert("parent", self.parent.to_base64(base64::URL_SAFE))
+            .insert("parent", self.parent.as_ref().to_base64(base64::URL_SAFE))
             .insert("timestamp", self.timestamp)
             .insert_array("ops", |builder| {
                 self.ops.iter().fold(builder, |b, op| {
@@ -155,8 +189,8 @@ impl Block {
 
 impl Serialize for Block {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
-        try!(out.write(1, &self.id.expect("id missing")[..]));
-        try!(out.write(2, &self.parent[..]));
+        try!(out.write(1, self.id.expect("id missing").as_ref()));
+        try!(out.write(2, self.parent.as_ref()));
         try!(out.write(3, &self.timestamp));
         try!(out.write_repeated(4, &self.ops));
         try!(out.write(5, &self.comment));

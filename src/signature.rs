@@ -49,10 +49,6 @@ impl<'a> KeyPair {
         (KeyPair(keypair), buffer)
     }
 
-    pub fn algorithm(&self) -> SignatureAlgorithm {
-        SignatureAlgorithm::Ed25519
-    }
-
     pub fn public_key_bytes(&'a self) -> &'a [u8] {
         self.0.public_key_bytes()
     }
