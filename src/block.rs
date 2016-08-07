@@ -11,7 +11,7 @@ use time;
 use algorithm::DigestAlgorithm;
 use error::{Error, Result};
 use log;
-use objectclass::ObjectClass;
+use objectclass::{self, ObjectClass};
 use objectclass::root::Root;
 use objecthash::{ObjectHash, DIGEST_ALG};
 use op::{Op, OpType};
@@ -85,17 +85,15 @@ impl Block {
         let mut ops = Vec::new();
 
         // TODO: Don't Panic
-        ops.push(Op::new(
-            OpType::Add,
-            Path::new("/").unwrap(),
-            ObjectClass::Root,
-            &Root::new(*logid).to_proto().unwrap())); // TODO: avoid serializing here
+        ops.push(Op::new(OpType::Add,
+                         Path::new("/").unwrap(),
+                         objectclass::Type::Root,
+                         &Root::new(*logid).to_proto().unwrap())); // TODO: avoid serializing here
 
-        ops.push(Op::new(
-            OpType::Add,
-            Path::new("/system").unwrap(),
-            ObjectClass::Ou,
-            b""));
+        ops.push(Op::new(OpType::Add,
+                         Path::new("/system").unwrap(),
+                         objectclass::Type::Ou,
+                         b""));
 
         let public_key_bytes = admin_keypair.public_key_bytes();
 
@@ -108,30 +106,31 @@ impl Block {
         // TODO: add features for path concatenation to the Path type!
         let admin_path = format!("/system/{username}", username = admin_username);
 
-        ops.push(Op::new(
-            OpType::Add,
-            Path::new(&admin_path).unwrap(),
-            ObjectClass::System,
-            &admin_user));
+        ops.push(Op::new(OpType::Add,
+                         Path::new(&admin_path).unwrap(),
+                         objectclass::Type::System,
+                         &admin_user));
 
         let admin_keypair_path = format!("{base}/keypair", base = admin_path);
 
-        ops.push(Op::new(
-            OpType::Add,
-            Path::new(&admin_keypair_path).unwrap(),
-            ObjectClass::Credential,
-            &admin_keypair_sealed));
+        ops.push(Op::new(OpType::Add,
+                         Path::new(&admin_keypair_path).unwrap(),
+                         objectclass::Type::Credential,
+                         &admin_keypair_sealed));
 
-        Block::new(
-            Id::root(),
-            time::now_utc().to_timespec().sec as u64,
-            ops,
-            comment,
-            admin_keypair
-        )
+        Block::new(Id::root(),
+                   time::now_utc().to_timespec().sec as u64,
+                   ops,
+                   comment,
+                   admin_keypair)
     }
 
-    pub fn new(parent: Id, timestamp: u64, ops: Vec<Op>, comment: &str, keypair: &KeyPair) -> Block {
+    pub fn new(parent: Id,
+               timestamp: u64,
+               ops: Vec<Op>,
+               comment: &str,
+               keypair: &KeyPair)
+               -> Block {
         let mut signed_by = [0u8; 32];
         signed_by.copy_from_slice(&keypair.public_key_bytes());
 
@@ -175,7 +174,7 @@ impl Block {
             })
             .insert("comment", self.comment.clone())
             .insert("signed_by", self.signed_by.to_base64(base64::URL_SAFE))
-            .insert("signature",self.signature.to_base64(base64::URL_SAFE))
+            .insert("signature", self.signature.to_base64(base64::URL_SAFE))
             .build();
 
         serde_json::to_string(&value).unwrap()

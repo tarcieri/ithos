@@ -4,10 +4,10 @@ use buffoon::{self, Serialize, Deserialize, OutputStream, InputStream};
 
 use block;
 use error::{Error, Result};
-use objectclass::ObjectClass;
+use objectclass;
 
 pub struct Metadata {
-    pub objectclass: ObjectClass,
+    pub objectclass: objectclass::Type,
     pub created_id: block::Id,
     pub updated_id: block::Id,
     pub created_at: u64,
@@ -16,7 +16,7 @@ pub struct Metadata {
 }
 
 impl Metadata {
-    pub fn new(objectclass: ObjectClass, id: block::Id, timestamp: u64) -> Metadata {
+    pub fn new(objectclass: objectclass::Type, id: block::Id, timestamp: u64) -> Metadata {
         Metadata {
             objectclass: objectclass,
             created_id: id,

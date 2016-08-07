@@ -10,7 +10,7 @@ use block::Block;
 use entry;
 use error::Result;
 use metadata::Metadata;
-use objectclass::ObjectClass;
+use objectclass;
 use objecthash::{ObjectHash, DIGEST_ALG};
 use path::Path;
 
@@ -22,13 +22,13 @@ pub enum OpType {
 pub struct Op {
     pub optype: OpType,
     pub path: Path,
-    pub objectclass: ObjectClass,
+    pub objectclass: objectclass::Type,
     pub data: Vec<u8>,
 }
 
 pub struct State {
     pub next_entry_id: entry::Id,
-    pub new_entries: HashMap<Path, entry::Id>
+    pub new_entries: HashMap<Path, entry::Id>,
 }
 
 impl ToString for OpType {
@@ -50,7 +50,7 @@ impl Serialize for OpType {
 }
 
 impl Op {
-    pub fn new(optype: OpType, path: Path, objectclass: ObjectClass, data: &[u8]) -> Op {
+    pub fn new(optype: OpType, path: Path, objectclass: objectclass::Type, data: &[u8]) -> Op {
         Op {
             optype: optype,
             path: path,
@@ -59,13 +59,24 @@ impl Op {
         }
     }
 
-    pub fn apply<'a, A: Adapter<'a, D, R, W>, D, R: Transaction<D>, W: Transaction<D>>(&self, adapter: &A, txn: &mut W, state: &mut State, block: &Block) -> Result<()> {
+    pub fn apply<'a, A: Adapter<'a, D, R, W>, D, R: Transaction<D>, W: Transaction<D>>
+        (&self,
+         adapter: &A,
+         txn: &mut W,
+         state: &mut State,
+         block: &Block)
+         -> Result<()> {
         match self.optype {
-            OpType::Add => self.add(adapter, txn, state, block)
+            OpType::Add => self.add(adapter, txn, state, block),
         }
     }
 
-    fn add<'a, A: Adapter<'a, D, R, W>, D, R: Transaction<D>, W: Transaction<D>>(&self, adapter: &A, txn: &mut W, state: &mut State, block: &Block) -> Result<()> {
+    fn add<'a, A: Adapter<'a, D, R, W>, D, R: Transaction<D>, W: Transaction<D>>(&self,
+                                                                                 adapter: &A,
+                                                                                 txn: &mut W,
+                                                                                 state: &mut State,
+                                                                                 block: &Block)
+                                                                                 -> Result<()> {
         let entry_id = state.get_entry_id();
 
         let parent_id = if self.path.is_root() {
@@ -128,7 +139,7 @@ impl State {
     pub fn new(next_entry_id: entry::Id) -> State {
         State {
             next_entry_id: next_entry_id,
-            new_entries: HashMap::new()
+            new_entries: HashMap::new(),
         }
     }
 
