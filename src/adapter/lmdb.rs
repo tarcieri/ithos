@@ -1,9 +1,6 @@
 extern crate lmdb;
 extern crate lmdb_sys;
 
-#[cfg(test)]
-extern crate tempdir;
-
 use std::{self, str};
 
 use self::lmdb::{Environment, Database, DatabaseFlags, Cursor, WriteFlags, DUP_SORT, INTEGER_KEY};
@@ -245,13 +242,13 @@ mod tests {
     use block;
     use entry::Id;
     use error::Error;
-    use lmdb_adapter::LmdbAdapter;
+    use adapter::lmdb::LmdbAdapter;
     use metadata::Metadata;
     use objectclass::ObjectClass;
     use objectclass::domain::DomainObject;
     use path::Path;
 
-    use lmdb_adapter::tempdir::TempDir;
+    use tempdir::TempDir;
 
     fn create_database() -> LmdbAdapter {
         let dir = TempDir::new("ithos-test").unwrap();

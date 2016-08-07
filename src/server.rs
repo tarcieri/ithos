@@ -3,10 +3,10 @@ use std::{self, str};
 use ring::rand;
 
 use adapter::{Adapter, Transaction};
+use adapter::lmdb::LmdbAdapter;
 use algorithm::{DigestAlgorithm, SignatureAlgorithm};
 use block::Block;
 use error::Result;
-use lmdb_adapter::LmdbAdapter;
 use log;
 use op;
 use password::{self, PasswordAlgorithm};

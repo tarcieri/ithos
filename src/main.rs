@@ -12,13 +12,15 @@ extern crate rustc_serialize;
 extern crate serde_json;
 extern crate time;
 
+#[cfg(test)]
+extern crate tempdir;
+
 mod adapter;
 mod algorithm;
 mod block;
 mod direntry;
 mod entry;
 mod error;
-mod lmdb_adapter;
 mod log;
 mod metadata;
 mod objectclass;
@@ -30,7 +32,7 @@ mod proto;
 mod server;
 mod signature;
 
-use lmdb_adapter::LmdbAdapter;
+use adapter::lmdb::LmdbAdapter;
 
 fn main() {
     let version = "v0.1";
