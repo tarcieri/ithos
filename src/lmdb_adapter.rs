@@ -245,7 +245,8 @@ mod tests {
     use error::Error;
     use lmdb_adapter::LmdbAdapter;
     use metadata::Metadata;
-    use objectclass;
+    use objectclass::{self, ObjectClass};
+    use objectclass::domain::Domain;
     use path::Path;
 
     use lmdb_adapter::tempdir::TempDir;
@@ -257,6 +258,10 @@ mod tests {
 
     fn example_metadata(objectclass: objectclass::Type) -> Metadata {
         Metadata::new(objectclass, block::Id::root(), 42)
+    }
+
+    fn example_domain() -> Domain {
+        Domain::new(None)
     }
 
     #[test]
@@ -287,7 +292,7 @@ mod tests {
                            Id::root(),
                            "example.com",
                            &example_metadata(objectclass::Type::Domain),
-                           b"")
+                           &example_domain().to_proto().unwrap())
                 .unwrap();
 
             let hosts_id = domain_id.next();
@@ -343,7 +348,7 @@ mod tests {
                        Id::root(),
                        "example.com",
                        &example_metadata(objectclass::Type::Domain),
-                       b"")
+                       &example_domain().to_proto().unwrap())
             .unwrap();
 
         let result = adapter.add_entry(&mut txn,
@@ -351,7 +356,7 @@ mod tests {
                                        Id::root(),
                                        "another.com",
                                        &example_metadata(objectclass::Type::Domain),
-                                       b"");
+                                       &example_domain().to_proto().unwrap());
 
         assert_eq!(result, Err(Error::EntryAlreadyExists));
     }
@@ -376,7 +381,7 @@ mod tests {
                                        Id::root(),
                                        "example.com",
                                        &example_metadata(objectclass::Type::Domain),
-                                       b"");
+                                       &example_domain().to_proto().unwrap());
 
         assert_eq!(result, Err(Error::EntryAlreadyExists));
     }
