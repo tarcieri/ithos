@@ -1,6 +1,7 @@
 extern crate clap;
 use clap::{App, Arg, SubCommand};
 
+#[macro_use]
 extern crate buffoon;
 extern crate ring;
 extern crate ring_pwhash as pwhash;
