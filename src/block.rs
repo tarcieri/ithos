@@ -58,13 +58,13 @@ impl ObjectHash for Id {
 }
 
 pub struct Block {
-    pub id: Option<Id>,
+    pub id: Id,
     pub parent: Id,
     pub timestamp: u64,
     pub ops: Vec<Op>,
     pub comment: String,
-    pub signed_by: Option<[u8; DIGEST_SIZE]>,
-    pub signature: Option<[u8; SIGNATURE_SIZE]>,
+    pub signed_by: [u8; DIGEST_SIZE],
+    pub signature: [u8; SIGNATURE_SIZE],
 }
 
 impl Block {
@@ -79,18 +79,23 @@ impl Block {
                          comment: &str,
                          digest_alg: DigestAlgorithm)
                          -> Block {
-        let mut block = Block::new(Id::root());
+        // SHA256 is the only algorithm we presently support
+        assert!(digest_alg == DigestAlgorithm::SHA256);
+
+        let mut ops = Vec::new();
 
         // TODO: Don't Panic
-        block.op(OpType::Add,
-                 Path::new("/").unwrap(),
-                 ObjectClass::Root,
-                 &Root::new(*logid).to_proto().unwrap()); // TODO: avoid serializing here
+        ops.push(Op::new(
+            OpType::Add,
+            Path::new("/").unwrap(),
+            ObjectClass::Root,
+            &Root::new(*logid).to_proto().unwrap())); // TODO: avoid serializing here
 
-        block.op(OpType::Add,
-                 Path::new("/system").unwrap(),
-                 ObjectClass::Ou,
-                 b"");
+        ops.push(Op::new(
+            OpType::Add,
+            Path::new("/system").unwrap(),
+            ObjectClass::Ou,
+            b""));
 
         let public_key_bytes = admin_keypair.public_key_bytes();
 
@@ -103,55 +108,49 @@ impl Block {
         // TODO: add features for path concatenation to the Path type!
         let admin_path = format!("/system/{username}", username = admin_username);
 
-        block.op(OpType::Add,
-                 Path::new(&admin_path).unwrap(),
-                 ObjectClass::System,
-                 &admin_user);
+        ops.push(Op::new(
+            OpType::Add,
+            Path::new(&admin_path).unwrap(),
+            ObjectClass::System,
+            &admin_user));
 
         let admin_keypair_path = format!("{base}/keypair", base = admin_path);
 
-        block.op(OpType::Add,
-                 Path::new(&admin_keypair_path).unwrap(),
-                 ObjectClass::Credential,
-                 &admin_keypair_sealed);
+        ops.push(Op::new(
+            OpType::Add,
+            Path::new(&admin_keypair_path).unwrap(),
+            ObjectClass::Credential,
+            &admin_keypair_sealed));
 
-        block.comment.push_str(comment);
-
-        block.sign(admin_keypair, digest_alg);
-
-        block
+        Block::new(
+            Id::root(),
+            time::now_utc().to_timespec().sec as u64,
+            ops,
+            comment,
+            admin_keypair
+        )
     }
 
-    pub fn new(parent: Id) -> Block {
-        Block {
-            id: None,
-            parent: parent,
-            timestamp: time::now_utc().to_timespec().sec as u64,
-            ops: Vec::new(),
-            comment: String::new(),
-            signed_by: None,
-            signature: None,
-        }
-    }
-
-    pub fn op(&mut self, optype: OpType, path: Path, objectclass: ObjectClass, data: &[u8]) {
-        self.ops.push(Op::new(optype, path, objectclass, data));
-    }
-
-    pub fn sign(&mut self, keypair: &KeyPair, digest_alg: DigestAlgorithm) {
-        // SHA-256 is the only digest algorithm we support for now
-        assert!(digest_alg == DigestAlgorithm::SHA256);
-
+    pub fn new(parent: Id, timestamp: u64, ops: Vec<Op>, comment: &str, keypair: &KeyPair) -> Block {
         let mut signed_by = [0u8; 32];
         signed_by.copy_from_slice(&keypair.public_key_bytes());
-        self.signed_by = Some(signed_by);
 
-        let id = Id::from_bytes(self.objecthash().as_ref()).unwrap();
-        self.id = Some(id);
+        let mut block = Block {
+            id: Id::root(),
+            parent: parent,
+            timestamp: timestamp,
+            ops: ops,
+            comment: String::from(comment),
+            signed_by: signed_by,
+            signature: [0u8; SIGNATURE_SIZE],
+        };
 
-        let mut signature = [0u8; 64];
-        signature.copy_from_slice(&keypair.sign(id.as_ref()).as_slice());
-        self.signature = Some(signature);
+        let id = Id::from_bytes(block.objecthash().as_ref()).unwrap();
+
+        block.id = id;
+        block.signature.copy_from_slice(&keypair.sign(id.as_ref()).as_slice());
+
+        block
     }
 
     pub fn to_proto(&self) -> Result<Vec<u8>> {
@@ -160,11 +159,7 @@ impl Block {
 
     pub fn to_json(&self) -> String {
         let value = ObjectBuilder::new()
-            .insert("id",
-                    self.id
-                        .expect("id missing")
-                        .as_ref()
-                        .to_base64(base64::URL_SAFE))
+            .insert("id", self.id.as_ref().to_base64(base64::URL_SAFE))
             .insert("parent", self.parent.as_ref().to_base64(base64::URL_SAFE))
             .insert("timestamp", self.timestamp)
             .insert_array("ops", |builder| {
@@ -179,10 +174,8 @@ impl Block {
 
             })
             .insert("comment", self.comment.clone())
-            .insert("signed_by",
-                    self.signed_by.expect("signed_by missing").to_base64(base64::URL_SAFE))
-            .insert("signature",
-                    self.signature.expect("signature missing").to_base64(base64::URL_SAFE))
+            .insert("signed_by", self.signed_by.to_base64(base64::URL_SAFE))
+            .insert("signature",self.signature.to_base64(base64::URL_SAFE))
             .build();
 
         serde_json::to_string(&value).unwrap()
@@ -191,13 +184,13 @@ impl Block {
 
 impl Serialize for Block {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
-        try!(out.write(1, self.id.expect("id missing").as_ref()));
+        try!(out.write(1, self.id.as_ref()));
         try!(out.write(2, self.parent.as_ref()));
         try!(out.write(3, &self.timestamp));
         try!(out.write_repeated(4, &self.ops));
         try!(out.write(5, &self.comment));
-        try!(out.write(6, &self.signed_by.expect("signed_by missing")[..]));
-        try!(out.write(7, &self.signature.expect("signature missing")[..]));
+        try!(out.write(6, &self.signed_by[..]));
+        try!(out.write(7, &self.signature[..]));
         Ok(())
     }
 }
@@ -223,7 +216,7 @@ impl ObjectHash for Block {
         block_ctx.update(self.comment.objecthash().as_ref());
 
         block_ctx.update("signed_by".objecthash().as_ref());
-        block_ctx.update(self.signed_by.expect("signed_by missing").objecthash().as_ref());
+        block_ctx.update(self.signed_by.objecthash().as_ref());
 
         block_ctx.finish()
     }
