@@ -1,0 +1,6 @@
+package ithos.objectclass;
+
+// Toplevel domain for an organization (i.e. DNS domain)
+message Domain {
+    optional string description = 1;
+}
