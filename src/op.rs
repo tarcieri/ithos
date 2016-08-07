@@ -28,6 +28,16 @@ impl ToString for OpType {
     }
 }
 
+impl Serialize for OpType {
+    fn serialize<O: OutputStream>(&self, _: &mut O) -> io::Result<()> {
+        unimplemented!();
+    }
+
+    fn serialize_nested<O: OutputStream>(&self, field: u32, out: &mut O) -> io::Result<()> {
+        out.write_varint(field, *self as u32 + 1)
+    }
+}
+
 impl Op {
     pub fn new(optype: OpType, path: Path, objectclass: ObjectClass, data: &[u8]) -> Op {
         Op {
@@ -41,9 +51,9 @@ impl Op {
 
 impl Serialize for Op {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
-        try!(out.write(1, &(self.optype as u32 + 1)));
+        try!(out.write(1, &self.optype));
         try!(out.write(2, &self.path.to_string()));
-        try!(out.write(3, &(self.objectclass as u32 + 1)));
+        try!(out.write(3, &self.objectclass));
         try!(out.write(4, &self.data));
         Ok(())
     }

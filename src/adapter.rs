@@ -25,5 +25,9 @@ pub trait Adapter<'a, D, R: Transaction<D>, W: Transaction<D>> {
                      data: &[u8])
                      -> Result<DirEntry>;
     fn find_direntry<'b, T: Transaction<D>>(&'b self, txn: &'b T, path: &Path) -> Result<DirEntry>;
+    fn find_metadata<'b, T: Transaction<D>>(&'b self,
+                                            txn: &'b T,
+                                            id: &entry::Id)
+                                            -> Result<Metadata>;
     fn find_entry<'b, T: Transaction<D>>(&'b self, txn: &'b T, id: &entry::Id) -> Result<&[u8]>;
 }

@@ -177,6 +177,14 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
         })
     }
 
+    fn find_metadata<'b, T: Transaction<lmdb::Database>>(&'b self,
+                                                         txn: &'b T,
+                                                         id: &entry::Id)
+                                                         -> Result<Metadata> {
+        let proto = try!(txn.get(self.metadata, id.as_ref()).map_err(|_| Error::NotFound));
+        Metadata::from_proto(proto)
+    }
+
     fn find_entry<'b, T: Transaction<lmdb::Database>>(&'b self,
                                                       txn: &'b T,
                                                       id: &entry::Id)
@@ -315,6 +323,8 @@ mod tests {
                 let direntry = adapter.find_direntry(&txn, &path).unwrap();
                 assert_eq!(direntry.name, "master.example.com");
 
+                let metadata = adapter.find_metadata(&txn, &direntry.id).unwrap();
+                assert_eq!(metadata.objectclass, ObjectClass::Host);
 
                 let entry = adapter.find_entry(&txn, &direntry.id).unwrap();
                 assert_eq!(entry, &example_data[..]);
