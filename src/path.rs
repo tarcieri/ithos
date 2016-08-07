@@ -7,10 +7,12 @@ pub struct Path {
     pub components: Vec<String>,
 }
 
+const SEPARATOR: &'static str = "/";
+
 impl Path {
     pub fn new(string: &str) -> Result<Path> {
         let mut components: Vec<String> =
-            string.split("/").map(|component| String::from(component)).collect();
+            string.split(SEPARATOR).map(|component| String::from(component)).collect();
 
         if components.is_empty() {
             return Err(Error::PathInvalid);
@@ -30,7 +32,7 @@ impl Path {
         let mut result = String::new();
 
         for component in self.components.clone() {
-            result.push_str("/");
+            result.push_str(SEPARATOR);
             result.push_str(&component);
         }
 
