@@ -1,9 +1,15 @@
+use std::collections::HashMap;
 use std::io;
 use std::string::ToString;
 
 use buffoon::{OutputStream, Serialize};
 use ring::digest;
 
+use adapter::{Adapter, Transaction};
+use block::Block;
+use entry;
+use error::Result;
+use metadata::Metadata;
 use objectclass::ObjectClass;
 use objecthash::{ObjectHash, DIGEST_ALG};
 use path::Path;
@@ -18,6 +24,11 @@ pub struct Op {
     pub path: Path,
     pub objectclass: ObjectClass,
     pub data: Vec<u8>,
+}
+
+pub struct State {
+    pub next_entry_id: entry::Id,
+    pub new_entries: HashMap<Path, entry::Id>
 }
 
 impl ToString for OpType {
@@ -46,6 +57,36 @@ impl Op {
             objectclass: objectclass,
             data: Vec::from(data),
         }
+    }
+
+    pub fn apply<'a, A: Adapter<'a, D, R, W>, D, R: Transaction<D>, W: Transaction<D>>(&self, adapter: &A, txn: &mut W, state: &mut State, block: &Block) -> Result<()> {
+        match self.optype {
+            OpType::Add => self.add(adapter, txn, state, block)
+        }
+    }
+
+    fn add<'a, A: Adapter<'a, D, R, W>, D, R: Transaction<D>, W: Transaction<D>>(&self, adapter: &A, txn: &mut W, state: &mut State, block: &Block) -> Result<()> {
+        let entry_id = state.get_entry_id();
+
+        let parent_id = if self.path.is_root() {
+            entry::Id::root()
+        } else {
+            match state.new_entries.get(&self.path.parent()) {
+                Some(&id) => id,
+                _ => try!(adapter.find_direntry(txn, &self.path.parent())).id,
+            }
+        };
+
+        let name = self.path.name();
+        let metadata = Metadata::new(self.objectclass,
+                                     block.id.expect("block id missing"),
+                                     block.timestamp);
+
+        // NOTE: The underlying adapter must handle Error::EntryAlreadyExists
+        try!(adapter.add_entry(txn, entry_id, parent_id, &name, &metadata, &self.data));
+        state.new_entries.insert(self.path.clone(), entry_id);
+
+        Ok(())
     }
 }
 
@@ -82,5 +123,20 @@ impl ObjectHash for Op {
         ctx.update(self.data.objecthash().as_ref());
 
         ctx.finish()
+    }
+}
+
+impl State {
+    pub fn new(next_entry_id: entry::Id) -> State {
+        State {
+            next_entry_id: next_entry_id,
+            new_entries: HashMap::new()
+        }
+    }
+
+    pub fn get_entry_id(&mut self) -> entry::Id {
+        let id = self.next_entry_id;
+        self.next_entry_id = id.next();
+        id
     }
 }
