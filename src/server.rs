@@ -1,17 +1,14 @@
 use std::{self, str};
-use std::collections::HashMap;
 
 use ring::rand;
 
 use adapter::{Adapter, Transaction};
 use algorithm::{DigestAlgorithm, SignatureAlgorithm};
 use block::Block;
-use entry;
 use error::Result;
 use lmdb_adapter::LmdbAdapter;
 use log;
-use metadata::Metadata;
-use op::OpType;
+use op;
 use password::{self, PasswordAlgorithm};
 use signature::KeyPair;
 
@@ -63,33 +60,11 @@ impl Server {
     // Commit a block without first checking its signature
     fn commit_unverified_block(&self, block: &Block) -> Result<()> {
         let mut txn = try!(self.adapter.rw_transaction());
-        let mut id = try!(self.adapter.next_free_entry_id(&txn));
-        let mut new_entries = HashMap::new();
+        let mut state = op::State::new(try!(self.adapter.next_free_entry_id(&txn)));
 
         // Process the operations in the block and apply them to the database
         for op in &block.ops {
-            match op.optype {
-                OpType::Add => {
-                    let parent_id = if op.path.is_root() {
-                        entry::Id::root()
-                    } else {
-                        match new_entries.get(&op.path.parent()) {
-                            Some(&id) => id,
-                            _ => try!(self.adapter.find_direntry(&txn, &op.path.parent())).id,
-                        }
-                    };
-
-                    let name = op.path.name();
-                    let metadata = Metadata::new(op.objectclass,
-                                                 block.id.expect("block id missing"),
-                                                 block.timestamp);
-
-                    // NOTE: The underlying adapter must handle Error::EntryAlreadyExists
-                    try!(self.adapter.add_entry(&mut txn, id, parent_id, &name, &metadata, b""));
-                    new_entries.insert(&op.path, id);
-                    id = id.next()
-                }
-            }
+            try!(op.apply(&self.adapter, &mut txn, &mut state, block));
         }
 
         // NOTE: This only stores the block in the database. It does not process it

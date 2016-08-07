@@ -2,7 +2,7 @@ use std::hash::{Hash, Hasher};
 
 use error::{Error, Result};
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Path {
     pub components: Vec<String>,
 }
