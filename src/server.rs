@@ -4,14 +4,16 @@ use std::collections::HashMap;
 use ring::rand;
 
 use adapter::{Adapter, Transaction};
-use block::{Block, DigestAlgorithm};
+use algorithm::{DigestAlgorithm, SignatureAlgorithm};
+use block::Block;
 use entry;
-use error::{Error, Result};
+use error::Result;
 use lmdb_adapter::LmdbAdapter;
+use log;
 use metadata::Metadata;
 use op::OpType;
 use password::{self, PasswordAlgorithm};
-use signature::{SignatureAlgorithm, KeyPair};
+use signature::KeyPair;
 
 #[cfg(test)]
 extern crate tempdir;
@@ -28,8 +30,8 @@ impl Server {
                            admin_password: &str)
                            -> Result<Server> {
         let rng = rand::SystemRandom::new();
-        let mut logid = [0u8; 16];
-        try!(rng.fill(&mut logid).map_err(|_| Error::Rng));
+
+        let logid = try!(log::Id::generate(&rng));
 
         let mut salt = Vec::with_capacity(16 + admin_username.as_bytes().len());
         salt.extend(logid.as_ref());

@@ -1,0 +1,9 @@
+package ithos;
+
+enum DigestAlgorithm {
+    SHA256 = 1;
+}
+
+enum SignatureAlgorithm {
+    Ed25519 = 1;
+}
