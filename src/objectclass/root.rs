@@ -5,6 +5,7 @@ use buffoon::{self, Serialize, Deserialize, OutputStream, InputStream};
 use algorithm::DigestAlgorithm;
 use error::{Error, Result};
 use log;
+use objectclass::ObjectClass;
 
 pub struct Root {
     pub logid: log::Id,
@@ -15,11 +16,13 @@ impl Root {
     pub fn new(logid: log::Id) -> Root {
         Root {
             logid: logid,
-            digest_alg: DigestAlgorithm::SHA256
+            digest_alg: DigestAlgorithm::SHA256,
         }
     }
+}
 
-    pub fn to_proto(&self) -> Result<Vec<u8>> {
+impl ObjectClass for Root {
+    fn to_proto(&self) -> Result<Vec<u8>> {
         buffoon::serialize(&self).map_err(|_| Error::Serialize)
     }
 }
@@ -50,7 +53,7 @@ impl Deserialize for Root {
 
         Ok(Root {
             logid: logid,
-            digest_alg: required!(digest_alg, "Root::digest_alg")
+            digest_alg: required!(digest_alg, "Root::digest_alg"),
         })
     }
 }

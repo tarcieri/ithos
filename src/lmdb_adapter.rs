@@ -245,7 +245,7 @@ mod tests {
     use error::Error;
     use lmdb_adapter::LmdbAdapter;
     use metadata::Metadata;
-    use objectclass::ObjectClass;
+    use objectclass;
     use path::Path;
 
     use lmdb_adapter::tempdir::TempDir;
@@ -255,7 +255,7 @@ mod tests {
         LmdbAdapter::create_database(dir.path()).unwrap()
     }
 
-    fn example_metadata(objectclass: ObjectClass) -> Metadata {
+    fn example_metadata(objectclass: objectclass::Type) -> Metadata {
         Metadata::new(objectclass, block::Id::root(), 42)
     }
 
@@ -286,7 +286,7 @@ mod tests {
                            domain_id,
                            Id::root(),
                            "example.com",
-                           &example_metadata(ObjectClass::Domain),
+                           &example_metadata(objectclass::Type::Domain),
                            b"")
                 .unwrap();
 
@@ -295,7 +295,7 @@ mod tests {
                            hosts_id,
                            domain_id,
                            "hosts",
-                           &example_metadata(ObjectClass::Ou),
+                           &example_metadata(objectclass::Type::Ou),
                            b"")
                 .unwrap();
 
@@ -304,7 +304,7 @@ mod tests {
                            host_id,
                            hosts_id,
                            "master.example.com",
-                           &example_metadata(ObjectClass::Host),
+                           &example_metadata(objectclass::Type::Host),
                            example_data)
                 .unwrap();
 
@@ -321,7 +321,7 @@ mod tests {
                 assert_eq!(direntry.name, "master.example.com");
 
                 let metadata = adapter.find_metadata(&txn, &direntry.id).unwrap();
-                assert_eq!(metadata.objectclass, ObjectClass::Host);
+                assert_eq!(metadata.objectclass, objectclass::Type::Host);
 
                 let entry = adapter.find_entry(&txn, &direntry.id).unwrap();
                 assert_eq!(entry, &example_data[..]);
@@ -342,7 +342,7 @@ mod tests {
                        domain_id,
                        Id::root(),
                        "example.com",
-                       &example_metadata(ObjectClass::Domain),
+                       &example_metadata(objectclass::Type::Domain),
                        b"")
             .unwrap();
 
@@ -350,7 +350,7 @@ mod tests {
                                        domain_id,
                                        Id::root(),
                                        "another.com",
-                                       &example_metadata(ObjectClass::Domain),
+                                       &example_metadata(objectclass::Type::Domain),
                                        b"");
 
         assert_eq!(result, Err(Error::EntryAlreadyExists));
@@ -367,7 +367,7 @@ mod tests {
                        domain_id,
                        Id::root(),
                        "example.com",
-                       &example_metadata(ObjectClass::Domain),
+                       &example_metadata(objectclass::Type::Domain),
                        b"")
             .unwrap();
 
@@ -375,7 +375,7 @@ mod tests {
                                        domain_id.next(),
                                        Id::root(),
                                        "example.com",
-                                       &example_metadata(ObjectClass::Domain),
+                                       &example_metadata(objectclass::Type::Domain),
                                        b"");
 
         assert_eq!(result, Err(Error::EntryAlreadyExists));
