@@ -120,14 +120,11 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
     }
 
     fn add_block<'b>(&'b self, txn: &'b mut RwTransaction, block: &Block) -> Result<()> {
-        // TODO: Don't Panic
-        let block_id = block.id.expect("block ID unset");
-
-        if txn.get(self.blocks, block_id.as_ref()) != Err(Error::NotFound) {
+        if txn.get(self.blocks, block.id.as_ref()) != Err(Error::NotFound) {
             return Err(Error::EntryAlreadyExists);
         }
 
-        try!(txn.put(self.blocks, block_id.as_ref(), &try!(block.to_proto()))
+        try!(txn.put(self.blocks, block.id.as_ref(), &try!(block.to_proto()))
             .map_err(|_| Error::DbWrite));
 
         Ok(())

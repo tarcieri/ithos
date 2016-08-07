@@ -78,9 +78,7 @@ impl Op {
         };
 
         let name = self.path.name();
-        let metadata = Metadata::new(self.objectclass,
-                                     block.id.expect("block id missing"),
-                                     block.timestamp);
+        let metadata = Metadata::new(self.objectclass, block.id, block.timestamp);
 
         // NOTE: The underlying adapter must handle Error::EntryAlreadyExists
         try!(adapter.add_entry(txn, entry_id, parent_id, &name, &metadata, &self.data));
