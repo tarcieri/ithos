@@ -15,7 +15,9 @@ use direntry::DirEntry;
 use entry;
 use error::{Error, Result};
 use metadata::Metadata;
+use objectclass::ObjectClass;
 use path::Path;
+use proto::{FromProto, ToProto};
 
 pub struct LmdbAdapter {
     env: Environment,
@@ -136,7 +138,7 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
                      parent_id: entry::Id,
                      name: &'b str,
                      metadata: &Metadata,
-                     data: &[u8])
+                     objectclass: &ObjectClass)
                      -> Result<DirEntry> {
         if txn.get(self.entries, id.as_ref()) != Err(Error::NotFound) {
             return Err(Error::EntryAlreadyExists);
@@ -159,7 +161,7 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
         try!(txn.put(self.metadata, id.as_ref(), &try!(metadata.to_proto()))
             .map_err(|_| Error::DbWrite));
 
-        try!(txn.put(self.entries, id.as_ref(), data)
+        try!(txn.put(self.entries, id.as_ref(), &try!(objectclass.to_proto()))
             .map_err(|_| Error::DbWrite));
 
         Ok(direntry)
@@ -245,8 +247,8 @@ mod tests {
     use error::Error;
     use lmdb_adapter::LmdbAdapter;
     use metadata::Metadata;
-    use objectclass::{self, ObjectClass};
-    use objectclass::domain::Domain;
+    use objectclass::ObjectClass;
+    use objectclass::domain::DomainObject;
     use path::Path;
 
     use lmdb_adapter::tempdir::TempDir;
@@ -256,12 +258,14 @@ mod tests {
         LmdbAdapter::create_database(dir.path()).unwrap()
     }
 
-    fn example_metadata(objectclass: objectclass::Type) -> Metadata {
-        Metadata::new(objectclass, block::Id::root(), 42)
+    const EXAMPLE_TIMESTAMP: u64 = 42;
+
+    fn example_metadata() -> Metadata {
+        Metadata::new(block::Id::root(), EXAMPLE_TIMESTAMP)
     }
 
-    fn example_domain() -> Domain {
-        Domain::new(None)
+    fn example_domain() -> DomainObject {
+        DomainObject::new(None)
     }
 
     #[test]
@@ -281,7 +285,6 @@ mod tests {
     #[test]
     fn test_entry_lookup() {
         let adapter = create_database();
-        let example_data = b"some data we stored in the host entry";
 
         {
             let mut txn = adapter.rw_transaction().unwrap();
@@ -291,8 +294,8 @@ mod tests {
                            domain_id,
                            Id::root(),
                            "example.com",
-                           &example_metadata(objectclass::Type::Domain),
-                           &example_domain().to_proto().unwrap())
+                           &example_metadata(),
+                           &ObjectClass::Domain(example_domain()))
                 .unwrap();
 
             let hosts_id = domain_id.next();
@@ -300,8 +303,8 @@ mod tests {
                            hosts_id,
                            domain_id,
                            "hosts",
-                           &example_metadata(objectclass::Type::Ou),
-                           b"")
+                           &example_metadata(),
+                           &ObjectClass::Ou)
                 .unwrap();
 
             let host_id = hosts_id.next();
@@ -309,8 +312,8 @@ mod tests {
                            host_id,
                            hosts_id,
                            "master.example.com",
-                           &example_metadata(objectclass::Type::Host),
-                           example_data)
+                           &example_metadata(),
+                           &ObjectClass::Host)
                 .unwrap();
 
             txn.commit().unwrap();
@@ -326,10 +329,10 @@ mod tests {
                 assert_eq!(direntry.name, "master.example.com");
 
                 let metadata = adapter.find_metadata(&txn, &direntry.id).unwrap();
-                assert_eq!(metadata.objectclass, objectclass::Type::Host);
+                assert_eq!(metadata.created_at, EXAMPLE_TIMESTAMP);
 
                 let entry = adapter.find_entry(&txn, &direntry.id).unwrap();
-                assert_eq!(entry, &example_data[..]);
+                //assert_eq!(entry, &example_data[..]);
             }
 
             txn.commit().unwrap();
@@ -347,16 +350,16 @@ mod tests {
                        domain_id,
                        Id::root(),
                        "example.com",
-                       &example_metadata(objectclass::Type::Domain),
-                       &example_domain().to_proto().unwrap())
+                       &example_metadata(),
+                       &ObjectClass::Domain(example_domain()))
             .unwrap();
 
         let result = adapter.add_entry(&mut txn,
                                        domain_id,
                                        Id::root(),
                                        "another.com",
-                                       &example_metadata(objectclass::Type::Domain),
-                                       &example_domain().to_proto().unwrap());
+                                       &example_metadata(),
+                                       &ObjectClass::Domain(example_domain()));
 
         assert_eq!(result, Err(Error::EntryAlreadyExists));
     }
@@ -372,16 +375,16 @@ mod tests {
                        domain_id,
                        Id::root(),
                        "example.com",
-                       &example_metadata(objectclass::Type::Domain),
-                       b"")
+                       &example_metadata(),
+                       &ObjectClass::Domain(example_domain()))
             .unwrap();
 
         let result = adapter.add_entry(&mut txn,
                                        domain_id.next(),
                                        Id::root(),
                                        "example.com",
-                                       &example_metadata(objectclass::Type::Domain),
-                                       &example_domain().to_proto().unwrap());
+                                       &example_metadata(),
+                                       &ObjectClass::Domain(example_domain())); // ObjectClass::Domain
 
         assert_eq!(result, Err(Error::EntryAlreadyExists));
     }

@@ -3,70 +3,83 @@ pub mod root;
 
 use std::io;
 use std::string::ToString;
+
+use buffoon::{Serialize, OutputStream};
 use ring::digest::Digest;
 
-use buffoon::{Serialize, Deserialize, OutputStream, InputStream, Field};
-
-use error::Result;
 use objecthash::ObjectHash;
+use proto::ToProto;
 
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub enum Type {
-    Root, // Root DSE
-    Domain, // ala DNS domain or Kerberos realm
+use self::root::RootObject;
+use self::domain::DomainObject;
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum ObjectClass {
+    Root(RootObject), // Root DSE
+    Domain(DomainObject), // ala DNS domain or Kerberos realm
     Ou, // Organizational unit
     Credential, // Encrypted access credential
     System, // System User (i.e. non-human account)
     Host, // an individual server
 }
 
-pub trait ObjectClass {
-    fn to_proto(&self) -> Result<Vec<u8>>;
-}
-
-impl ToString for Type {
-    fn to_string(&self) -> String {
+impl ObjectClass {
+    pub fn protobuf_id(&self) -> u32 {
         match *self {
-            Type::Root => "root".to_string(),
-            Type::Domain => "domain".to_string(),
-            Type::Ou => "ou".to_string(),
-            Type::Credential => "credential".to_string(),
-            Type::System => "system".to_string(),
-            Type::Host => "host".to_string(),
+            ObjectClass::Root(_) => 1,
+            ObjectClass::Domain(_) => 2,
+            ObjectClass::Ou => 3,
+            ObjectClass::Credential => 4,
+            ObjectClass::System => 5,
+            ObjectClass::Host => 6,
         }
     }
 }
 
-impl ObjectHash for Type {
+impl ToProto for ObjectClass {}
+
+impl ToString for ObjectClass {
+    fn to_string(&self) -> String {
+        match *self {
+            ObjectClass::Root(_) => "ROOT".to_string(),
+            ObjectClass::Domain(_) => "DOMAIN".to_string(),
+            ObjectClass::Ou => "OU".to_string(),
+            ObjectClass::Credential => "CREDENTIAL".to_string(),
+            ObjectClass::System => "SYSTEM".to_string(),
+            ObjectClass::Host => "HOST".to_string(),
+        }
+    }
+}
+
+impl Serialize for ObjectClass {
+    fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
+        try!(out.write(1, &self.protobuf_id()));
+
+        let object_proto = match self {
+            &ObjectClass::Root(ref root) => root.to_proto(),
+            &ObjectClass::Domain(ref domain) => domain.to_proto(),
+            _ => Ok(Vec::new()) // TODO
+        };
+
+        if !object_proto.is_ok() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("couldn't serialize {type}", type=self.to_string())
+            ))
+        }
+
+        try!(out.write(2, &object_proto.unwrap()));
+
+        Ok(())
+    }
+}
+
+impl ObjectHash for ObjectClass {
     fn objecthash(&self) -> Digest {
-        self.to_string().objecthash()
-    }
-}
-
-impl Serialize for Type {
-    fn serialize<O: OutputStream>(&self, _: &mut O) -> io::Result<()> {
-        unimplemented!();
-    }
-
-    fn serialize_nested<O: OutputStream>(&self, field: u32, out: &mut O) -> io::Result<()> {
-        out.write_varint(field, *self as u32 + 1)
-    }
-}
-
-impl Deserialize for Type {
-    fn deserialize<R: io::Read>(_: &mut InputStream<R>) -> io::Result<Type> {
-        unimplemented!();
-    }
-
-    fn deserialize_nested<R: io::Read>(field: Field<R>) -> io::Result<Type> {
-        match try!(u32::deserialize_nested(field)) {
-            1 => Ok(Type::Root),
-            2 => Ok(Type::Domain),
-            3 => Ok(Type::Ou),
-            4 => Ok(Type::Credential),
-            5 => Ok(Type::System),
-            6 => Ok(Type::Host),
-            _ => Err(io::Error::new(io::ErrorKind::InvalidInput, "unknown Type")),
+        match self {
+            &ObjectClass::Root(ref root) => root.objecthash(),
+            &ObjectClass::Domain(ref domain) => domain.objecthash(),
+            _ => "".objecthash() // TODO
         }
     }
 }

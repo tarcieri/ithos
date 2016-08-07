@@ -1,29 +1,27 @@
 use std::io;
 
-use buffoon::{self, Serialize, Deserialize, OutputStream, InputStream};
+use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
+use ring::digest;
 
-use error::{Error, Result};
-use objectclass::ObjectClass;
+use proto::ToProto;
+use objecthash::{ObjectHash, DIGEST_ALG};
 
-pub struct Domain {
+#[derive(Debug, Eq, PartialEq)]
+pub struct DomainObject {
     pub description: Option<String>,
 }
 
-impl Domain {
-    pub fn new(description: Option<String>) -> Domain {
-        Domain {
+impl DomainObject {
+    pub fn new(description: Option<String>) -> DomainObject {
+        DomainObject {
             description: description
         }
     }
 }
 
-impl ObjectClass for Domain {
-    fn to_proto(&self) -> Result<Vec<u8>> {
-        buffoon::serialize(&self).map_err(|_| Error::Serialize)
-    }
-}
+impl ToProto for DomainObject {}
 
-impl Serialize for Domain {
+impl Serialize for DomainObject {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
         match self.description {
             Some(ref description) => try!(out.write(1, &description)),
@@ -34,8 +32,8 @@ impl Serialize for Domain {
     }
 }
 
-impl Deserialize for Domain {
-    fn deserialize<R: io::Read>(i: &mut InputStream<R>) -> io::Result<Domain> {
+impl Deserialize for DomainObject {
+    fn deserialize<R: io::Read>(i: &mut InputStream<R>) -> io::Result<DomainObject> {
         let mut description: Option<String> = None;
 
         while let Some(f) = try!(i.read_field()) {
@@ -45,8 +43,27 @@ impl Deserialize for Domain {
             }
         }
 
-        Ok(Domain {
+        Ok(DomainObject {
             description: description
         })
+    }
+}
+
+impl ObjectHash for DomainObject {
+    fn objecthash(&self) -> digest::Digest {
+        let mut ctx = digest::Context::new(&DIGEST_ALG);
+
+        // objecthash qualifier for dictionaries
+        ctx.update(b"d");
+
+        match self.description {
+            Some(ref desc) => {
+                ctx.update("description".objecthash().as_ref());
+                ctx.update(desc.objecthash().as_ref());
+            },
+            None => ()
+        }
+
+        ctx.finish()
     }
 }
