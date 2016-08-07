@@ -1,3 +1,5 @@
+pub mod lmdb;
+
 use block::Block;
 use direntry::DirEntry;
 use entry;
