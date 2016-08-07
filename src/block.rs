@@ -1,7 +1,7 @@
 use std::io;
 use std::string::ToString;
 
-use buffoon::{self, OutputStream, Serialize};
+use buffoon::{OutputStream, Serialize};
 use ring::digest;
 use rustc_serialize::base64::{self, ToBase64};
 use serde_json;
@@ -11,11 +11,12 @@ use time;
 use algorithm::DigestAlgorithm;
 use error::{Error, Result};
 use log;
-use objectclass::{self, ObjectClass};
-use objectclass::root::Root;
+use objectclass::ObjectClass;
+use objectclass::root::RootObject;
 use objecthash::{ObjectHash, DIGEST_ALG};
 use op::{Op, OpType};
 use path::Path;
+use proto::ToProto;
 use signature::KeyPair;
 
 const DIGEST_SIZE: usize = 32;
@@ -84,39 +85,35 @@ impl Block {
 
         let mut ops = Vec::new();
 
-        // TODO: Don't Panic
         ops.push(Op::new(OpType::Add,
                          Path::new("/").unwrap(),
-                         objectclass::Type::Root,
-                         &Root::new(*logid).to_proto().unwrap())); // TODO: avoid serializing here
+                         ObjectClass::Root(RootObject::new(*logid))));
 
         ops.push(Op::new(OpType::Add,
                          Path::new("/system").unwrap(),
-                         objectclass::Type::Ou,
-                         b""));
+                         ObjectClass::Ou));
 
         let public_key_bytes = admin_keypair.public_key_bytes();
 
         // TODO: replace with e.g. protos
-        let mut admin_user = Vec::with_capacity(public_key_bytes.len() +
-                                                admin_username.as_bytes().len());
-        admin_user.extend(public_key_bytes);
-        admin_user.extend(admin_username.as_bytes());
+        //let mut admin_user = Vec::with_capacity(public_key_bytes.len() +
+        //                                        admin_username.as_bytes().len());
+        //admin_user.extend(public_key_bytes);
+        //admin_user.extend(admin_username.as_bytes());
 
         // TODO: add features for path concatenation to the Path type!
         let admin_path = format!("/system/{username}", username = admin_username);
 
         ops.push(Op::new(OpType::Add,
                          Path::new(&admin_path).unwrap(),
-                         objectclass::Type::System,
-                         &admin_user));
+                         ObjectClass::System));
 
         let admin_keypair_path = format!("{base}/keypair", base = admin_path);
 
         ops.push(Op::new(OpType::Add,
                          Path::new(&admin_keypair_path).unwrap(),
-                         objectclass::Type::Credential,
-                         &admin_keypair_sealed));
+                         ObjectClass::Credential));
+                         //&admin_keypair_sealed));
 
         Block::new(Id::root(),
                    time::now_utc().to_timespec().sec as u64,
@@ -152,10 +149,6 @@ impl Block {
         block
     }
 
-    pub fn to_proto(&self) -> Result<Vec<u8>> {
-        buffoon::serialize(&self).map_err(|_| Error::Serialize)
-    }
-
     pub fn to_json(&self) -> String {
         let value = ObjectBuilder::new()
             .insert("id", self.id.as_ref().to_base64(base64::URL_SAFE))
@@ -167,7 +160,8 @@ impl Block {
                         b.insert("optype", op.optype.to_string())
                             .insert("path", op.path.to_string())
                             .insert("objectclass", op.objectclass.to_string())
-                            .insert("data", op.data.to_base64(base64::URL_SAFE))
+                            // TODO: JSON serialization support
+                            //.insert("data", op.data.to_base64(base64::URL_SAFE))
                     })
                 })
 
@@ -180,6 +174,8 @@ impl Block {
         serde_json::to_string(&value).unwrap()
     }
 }
+
+impl ToProto for Block {}
 
 impl Serialize for Block {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {

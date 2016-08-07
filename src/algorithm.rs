@@ -1,6 +1,9 @@
 use std::io;
 
 use buffoon::{Serialize, Deserialize, OutputStream, InputStream, Field};
+use ring::digest::Digest;
+
+use objecthash::ObjectHash;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum DigestAlgorithm {
@@ -13,7 +16,19 @@ pub enum SignatureAlgorithm {
 }
 
 // TODO: Support more than one algorithm type per enum
-macro_rules! impl_algorithm (($algorithm:ident, $only:expr) => (
+macro_rules! impl_algorithm (($algorithm:ident, $only:expr, $string:expr) => (
+    impl ToString for $algorithm {
+        fn to_string(&self) -> String {
+            $string.to_string()
+        }
+    }
+
+    impl ObjectHash for $algorithm {
+        fn objecthash(&self) -> Digest {
+          self.to_string().objecthash()
+        }
+    }
+
     impl Serialize for $algorithm {
         fn serialize<O: OutputStream>(&self, _: &mut O) -> io::Result<()> {
             unimplemented!();
@@ -40,5 +55,5 @@ macro_rules! impl_algorithm (($algorithm:ident, $only:expr) => (
     }
 ));
 
-impl_algorithm!(DigestAlgorithm, DigestAlgorithm::SHA256);
-impl_algorithm!(SignatureAlgorithm, SignatureAlgorithm::Ed25519);
+impl_algorithm!(DigestAlgorithm, DigestAlgorithm::SHA256, "SHA256");
+impl_algorithm!(SignatureAlgorithm, SignatureAlgorithm::Ed25519, "Ed25519");

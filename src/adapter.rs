@@ -4,6 +4,7 @@ use entry;
 use error::Result;
 use metadata::Metadata;
 use path::Path;
+use objectclass::ObjectClass;
 
 pub trait Transaction<D> {
     fn commit(self) -> Result<()>;
@@ -22,7 +23,7 @@ pub trait Adapter<'a, D, R: Transaction<D>, W: Transaction<D>> {
                      parent_id: entry::Id,
                      name: &'b str,
                      metadata: &Metadata,
-                     data: &[u8])
+                     objectclass: &ObjectClass)
                      -> Result<DirEntry>;
     fn find_direntry<'b, T: Transaction<D>>(&'b self, txn: &'b T, path: &Path) -> Result<DirEntry>;
     fn find_metadata<'b, T: Transaction<D>>(&'b self,

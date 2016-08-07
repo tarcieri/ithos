@@ -26,6 +26,7 @@ mod objecthash;
 mod op;
 mod password;
 mod path;
+mod proto;
 mod server;
 mod signature;
 

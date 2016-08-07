@@ -10,7 +10,7 @@ use block::Block;
 use entry;
 use error::Result;
 use metadata::Metadata;
-use objectclass;
+use objectclass::ObjectClass;
 use objecthash::{ObjectHash, DIGEST_ALG};
 use path::Path;
 
@@ -22,8 +22,7 @@ pub enum OpType {
 pub struct Op {
     pub optype: OpType,
     pub path: Path,
-    pub objectclass: objectclass::Type,
-    pub data: Vec<u8>,
+    pub objectclass: ObjectClass
 }
 
 pub struct State {
@@ -34,7 +33,7 @@ pub struct State {
 impl ToString for OpType {
     fn to_string(&self) -> String {
         match *self {
-            OpType::Add => "add".to_string(),
+            OpType::Add => "ADD".to_string(),
         }
     }
 }
@@ -50,12 +49,11 @@ impl Serialize for OpType {
 }
 
 impl Op {
-    pub fn new(optype: OpType, path: Path, objectclass: objectclass::Type, data: &[u8]) -> Op {
+    pub fn new(optype: OpType, path: Path, objectclass: ObjectClass) -> Op {
         Op {
             optype: optype,
             path: path,
-            objectclass: objectclass,
-            data: Vec::from(data),
+            objectclass: objectclass
         }
     }
 
@@ -89,10 +87,10 @@ impl Op {
         };
 
         let name = self.path.name();
-        let metadata = Metadata::new(self.objectclass, block.id, block.timestamp);
+        let metadata = Metadata::new(block.id, block.timestamp);
 
         // NOTE: The underlying adapter must handle Error::EntryAlreadyExists
-        try!(adapter.add_entry(txn, entry_id, parent_id, &name, &metadata, &self.data));
+        try!(adapter.add_entry(txn, entry_id, parent_id, &name, &metadata, &self.objectclass));
         state.new_entries.insert(self.path.clone(), entry_id);
 
         Ok(())
@@ -104,7 +102,7 @@ impl Serialize for Op {
         try!(out.write(1, &self.optype));
         try!(out.write(2, &self.path.to_string()));
         try!(out.write(3, &self.objectclass));
-        try!(out.write(4, &self.data));
+
         Ok(())
     }
 }
@@ -127,9 +125,6 @@ impl ObjectHash for Op {
 
         ctx.update("objectclass".objecthash().as_ref());
         ctx.update(self.objectclass.objecthash().as_ref());
-
-        ctx.update("data".objecthash().as_ref());
-        ctx.update(self.data.objecthash().as_ref());
 
         ctx.finish()
     }
