@@ -1,3 +1,5 @@
+pub mod root;
+
 use std::io;
 use std::string::ToString;
 use ring::digest::Digest;

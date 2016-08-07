@@ -1,4 +1,4 @@
-package ithos.objectclasses;
+package ithos.objectclass;
 
 import "algorithm.proto";
 

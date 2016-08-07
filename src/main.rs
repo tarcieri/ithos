@@ -29,10 +29,6 @@ mod path;
 mod server;
 mod signature;
 
-mod objectclasses {
-    pub mod root;
-}
-
 use lmdb_adapter::LmdbAdapter;
 
 fn main() {

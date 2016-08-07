@@ -12,7 +12,7 @@ use algorithm::DigestAlgorithm;
 use error::{Error, Result};
 use log;
 use objectclass::ObjectClass;
-use objectclasses::root::Root;
+use objectclass::root::Root;
 use objecthash::{ObjectHash, DIGEST_ALG};
 use op::{Op, OpType};
 use path::Path;
