@@ -1,10 +1,7 @@
 use ring::{signature, aead};
 use ring::rand::SecureRandom;
 
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub enum SignatureAlgorithm {
-    Ed25519,
-}
+use algorithm::SignatureAlgorithm;
 
 pub struct KeyPair(signature::Ed25519KeyPair);
 
@@ -18,7 +15,7 @@ impl<'a> KeyPair {
                              rng: &SecureRandom,
                              symmetric_key_bytes: &[u8])
                              -> (KeyPair, Vec<u8>) {
-        // Ed25519 is the only password hashing algorithm we support for now
+        // Ed25519 is the only signature algorithm we presently support
         assert!(alg == SignatureAlgorithm::Ed25519);
 
         let (keypair, serializable_keypair) = signature::Ed25519KeyPair::generate_serializable(rng)

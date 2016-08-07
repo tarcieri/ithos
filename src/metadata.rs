@@ -38,7 +38,7 @@ impl Metadata {
 
 impl Serialize for Metadata {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
-        try!(out.write(1, &(self.objectclass as u32 + 1)));
+        try!(out.write(1, &self.objectclass));
         try!(out.write(2, self.created_id.as_ref()));
         try!(out.write(3, self.updated_id.as_ref()));
         try!(out.write(4, &self.created_at));

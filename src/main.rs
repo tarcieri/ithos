@@ -1,3 +1,6 @@
+#![crate_name = "ithos"]
+#![crate_type = "bin"]
+
 extern crate clap;
 use clap::{App, Arg, SubCommand};
 
@@ -10,11 +13,13 @@ extern crate serde_json;
 extern crate time;
 
 mod adapter;
+mod algorithm;
 mod block;
 mod direntry;
 mod entry;
 mod error;
 mod lmdb_adapter;
+mod log;
 mod metadata;
 mod objectclass;
 mod objecthash;
@@ -23,6 +28,10 @@ mod password;
 mod path;
 mod server;
 mod signature;
+
+mod objectclasses {
+    pub mod root;
+}
 
 use lmdb_adapter::LmdbAdapter;
 

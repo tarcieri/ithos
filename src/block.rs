@@ -8,8 +8,11 @@ use serde_json;
 use serde_json::builder::ObjectBuilder;
 use time;
 
+use algorithm::DigestAlgorithm;
 use error::{Error, Result};
+use log;
 use objectclass::ObjectClass;
+use objectclasses::root::Root;
 use objecthash::{ObjectHash, DIGEST_ALG};
 use op::{Op, OpType};
 use path::Path;
@@ -17,11 +20,6 @@ use signature::KeyPair;
 
 const DIGEST_SIZE: usize = 32;
 const SIGNATURE_SIZE: usize = 64;
-
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub enum DigestAlgorithm {
-    SHA256,
-}
 
 // Block IDs are presently SHA-256 only
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
@@ -74,7 +72,7 @@ impl Block {
     // This block contains the initial administrative signature key which will
     // be used as the initial root authority for new blocks in the log
     // We also sign the genesis block using this key
-    pub fn genesis_block(logid: &[u8; 16],
+    pub fn genesis_block(logid: &log::Id,
                          admin_username: &str,
                          admin_keypair: &KeyPair,
                          admin_keypair_sealed: &[u8],
@@ -83,11 +81,11 @@ impl Block {
                          -> Block {
         let mut block = Block::new(Id::root());
 
-        // TODO: use a real type for the root entry
+        // TODO: Don't Panic
         block.op(OpType::Add,
                  Path::new("/").unwrap(),
                  ObjectClass::Root,
-                 logid);
+                 &Root::new(*logid).to_proto().unwrap()); // TODO: avoid serializing here
 
         block.op(OpType::Add,
                  Path::new("/system").unwrap(),
@@ -236,18 +234,23 @@ pub mod tests {
     use buffoon;
     use ring::rand;
 
-    use block::{Block, DigestAlgorithm};
+    use algorithm::DigestAlgorithm;
+    use block::Block;
+    use log;
     use signature::KeyPair;
 
-    const LOGID: &'static [u8; 16] = &[0u8; 16];
     const ADMIN_USERNAME: &'static str = "manager";
     const ADMIN_KEYPAIR_SEALED: &'static [u8; 11] = b"placeholder";
+
+    pub fn example_log_id() -> log::Id {
+        log::Id::from_bytes(&[0u8; 16]).unwrap()
+    }
 
     pub fn example_block() -> Block {
         let rng = rand::SystemRandom::new();
         let admin_keypair = KeyPair::generate(&rng);
 
-        Block::genesis_block(LOGID,
+        Block::genesis_block(&example_log_id(),
                              ADMIN_USERNAME,
                              &admin_keypair,
                              ADMIN_KEYPAIR_SEALED,
