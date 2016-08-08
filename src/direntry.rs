@@ -21,11 +21,11 @@ impl<'a> DirEntry<'a> {
 
     pub fn new(parent_id: Id, bytes: &[u8]) -> Result<DirEntry> {
         if bytes.len() < 8 {
-            return Err(Error::DbCorrupt);
+            return Err(Error::Parse);
         }
 
         let id = try!(Id::from_bytes(&bytes[0..8]));
-        let name = try!(str::from_utf8(&bytes[8..]).map_err(|_| Error::DbCorrupt));
+        let name = try!(str::from_utf8(&bytes[8..]).map_err(|_| Error::Parse));
 
         Ok(DirEntry {
             id: id,
