@@ -89,17 +89,15 @@ impl Block {
                          Path::new("/").unwrap(),
                          ObjectClass::Root(RootObject::new(*logid))));
 
-        ops.push(Op::new(OpType::Add,
-                         Path::new("/system").unwrap(),
-                         ObjectClass::Ou));
+        ops.push(Op::new(OpType::Add, Path::new("/system").unwrap(), ObjectClass::Ou));
 
         let public_key_bytes = admin_keypair.public_key_bytes();
 
         // TODO: replace with e.g. protos
-        //let mut admin_user = Vec::with_capacity(public_key_bytes.len() +
+        // let mut admin_user = Vec::with_capacity(public_key_bytes.len() +
         //                                        admin_username.as_bytes().len());
-        //admin_user.extend(public_key_bytes);
-        //admin_user.extend(admin_username.as_bytes());
+        // admin_user.extend(public_key_bytes);
+        // admin_user.extend(admin_username.as_bytes());
 
         // TODO: add features for path concatenation to the Path type!
         let admin_path = format!("/system/{username}", username = admin_username);
@@ -113,7 +111,7 @@ impl Block {
         ops.push(Op::new(OpType::Add,
                          Path::new(&admin_keypair_path).unwrap(),
                          ObjectClass::Credential));
-                         //&admin_keypair_sealed));
+        // &admin_keypair_sealed));
 
         Block::new(Id::root(),
                    time::now_utc().to_timespec().sec as u64,
@@ -160,8 +158,8 @@ impl Block {
                         b.insert("optype", op.optype.to_string())
                             .insert("path", op.path.to_string())
                             .insert("objectclass", op.objectclass.to_string())
-                            // TODO: JSON serialization support
-                            //.insert("data", op.data.to_base64(base64::URL_SAFE))
+                        // TODO: JSON serialization support
+                        // .insert("data", op.data.to_base64(base64::URL_SAFE))
                     })
                 })
 

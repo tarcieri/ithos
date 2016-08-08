@@ -13,9 +13,7 @@ pub struct DomainObject {
 
 impl DomainObject {
     pub fn new(description: Option<String>) -> DomainObject {
-        DomainObject {
-            description: description
-        }
+        DomainObject { description: description }
     }
 }
 
@@ -25,7 +23,7 @@ impl Serialize for DomainObject {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
         match self.description {
             Some(ref description) => try!(out.write(1, &description)),
-            None => ()
+            None => (),
         }
 
         Ok(())
@@ -43,9 +41,7 @@ impl Deserialize for DomainObject {
             }
         }
 
-        Ok(DomainObject {
-            description: description
-        })
+        Ok(DomainObject { description: description })
     }
 }
 
@@ -60,8 +56,8 @@ impl ObjectHash for DomainObject {
             Some(ref desc) => {
                 ctx.update("description".objecthash().as_ref());
                 ctx.update(desc.objecthash().as_ref());
-            },
-            None => ()
+            }
+            None => (),
         }
 
         ctx.finish()

@@ -58,14 +58,12 @@ impl Serialize for ObjectClass {
         let object_proto = match self {
             &ObjectClass::Root(ref root) => root.to_proto(),
             &ObjectClass::Domain(ref domain) => domain.to_proto(),
-            _ => Ok(Vec::new()) // TODO
+            _ => Ok(Vec::new()), // TODO
         };
 
         if !object_proto.is_ok() {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("couldn't serialize {type}", type=self.to_string())
-            ))
+            return Err(io::Error::new(io::ErrorKind::InvalidData,
+                                      format!("couldn't serialize {type}", type=self.to_string())));
         }
 
         try!(out.write(2, &object_proto.unwrap()));
@@ -79,7 +77,7 @@ impl ObjectHash for ObjectClass {
         match self {
             &ObjectClass::Root(ref root) => root.objecthash(),
             &ObjectClass::Domain(ref domain) => domain.objecthash(),
-            _ => "".objecthash() // TODO
+            _ => "".objecthash(), // TODO
         }
     }
 }
