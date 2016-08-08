@@ -7,12 +7,13 @@ use ring::digest;
 
 use adapter::Adapter;
 use block::Block;
-use entry;
+use entry::{self, Entry, TypeId};
 use error::Result;
 use metadata::Metadata;
 use objectclass::ObjectClass;
 use objecthash::{ObjectHash, DIGEST_ALG};
 use path::Path;
+use proto::ToProto;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum OpType {
@@ -87,14 +88,14 @@ impl Op {
 
         let name = self.path.name();
         let metadata = Metadata::new(block.id, block.timestamp);
+        let proto = try!(self.objectclass.to_proto());
+        let entry = Entry {
+            type_id: TypeId::from_objectclass(&self.objectclass),
+            data: &proto,
+        };
 
         // NOTE: The underlying adapter must handle Error::EntryAlreadyExists
-        try!(adapter.add_entry(txn,
-                               entry_id,
-                               parent_id,
-                               &name,
-                               &metadata,
-                               &self.objectclass));
+        try!(adapter.add_entry(txn, entry_id, parent_id, &name, &metadata, &entry));
         state.new_entries.insert(self.path.clone(), entry_id);
 
         Ok(())

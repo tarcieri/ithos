@@ -2,6 +2,7 @@ extern crate lmdb;
 extern crate lmdb_sys;
 
 use std::{self, str};
+use std::io::Write;
 
 use self::lmdb::{Environment, Database, DatabaseFlags, Cursor, WriteFlags, DUP_SORT, INTEGER_KEY};
 use self::lmdb::Transaction as LmdbTransaction;
@@ -9,10 +10,9 @@ use self::lmdb::Transaction as LmdbTransaction;
 use adapter::{Adapter, Transaction};
 use block::Block;
 use direntry::DirEntry;
-use entry;
+use entry::{self, Entry};
 use error::{Error, Result};
 use metadata::Metadata;
-use objectclass::ObjectClass;
 use path::Path;
 use proto::{FromProto, ToProto};
 
@@ -139,7 +139,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
                      parent_id: entry::Id,
                      name: &'b str,
                      metadata: &Metadata,
-                     objectclass: &ObjectClass)
+                     entry: &Entry)
                      -> Result<DirEntry> {
         if txn.get(self.entries, id.as_ref()) != Err(Error::NotFound) {
             return Err(Error::EntryAlreadyExists);
@@ -162,7 +162,10 @@ impl<'a> Adapter<'a> for LmdbAdapter {
         try!(txn.put(self.metadata, id.as_ref(), &try!(metadata.to_proto()))
             .map_err(|_| Error::DbWrite));
 
-        try!(txn.put(self.entries, id.as_ref(), &try!(objectclass.to_proto()))
+        let mut buffer = try!(txn.reserve(self.entries, id.as_ref(), 4 + entry.data.len()));
+        try!(buffer.write_all(entry.type_id.as_ref())
+            .map_err(|_| Error::DbWrite));
+        try!(buffer.write_all(entry.data)
             .map_err(|_| Error::DbWrite));
 
         Ok(direntry)
@@ -188,8 +191,9 @@ impl<'a> Adapter<'a> for LmdbAdapter {
     fn find_entry<'b, T: Transaction<D = Database>>(&'b self,
                                                     txn: &'b T,
                                                     id: &entry::Id)
-                                                    -> Result<&[u8]> {
-        txn.get(self.entries, id.as_ref()).map_err(|_| Error::NotFound)
+                                                    -> Result<Entry> {
+        let bytes = try!(txn.get(self.entries, id.as_ref()).map_err(|_| Error::NotFound));
+        Entry::from_bytes(bytes)
     }
 }
 
@@ -235,6 +239,12 @@ impl_transaction!(RwTransaction);
 impl_transaction!(RoTransaction);
 
 impl<'a> RwTransaction<'a> {
+    pub fn reserve(&mut self, database: Database, key: &[u8], len: usize) -> Result<&mut [u8]> {
+        self.0
+            .reserve(database, &key, len, WriteFlags::empty())
+            .map_err(|_| Error::Transaction)
+    }
+
     fn put(&mut self, database: Database, key: &[u8], data: &[u8]) -> Result<()> {
         self.0
             .put(database, &key, &data, WriteFlags::empty())
@@ -246,12 +256,10 @@ impl<'a> RwTransaction<'a> {
 mod tests {
     use adapter::{Adapter, Transaction};
     use block;
-    use entry::Id;
+    use entry::{Entry, Id, TypeId};
     use error::Error;
     use adapter::lmdb::LmdbAdapter;
     use metadata::Metadata;
-    use objectclass::ObjectClass;
-    use objectclass::domain::DomainObject;
     use path::Path;
 
     use tempdir::TempDir;
@@ -261,14 +269,18 @@ mod tests {
         LmdbAdapter::create_database(dir.path()).unwrap()
     }
 
-    const EXAMPLE_TIMESTAMP: u64 = 42;
+    const EXAMPLE_TYPE_ID: &'static [u8; 4] = &[0u8; 4];
+    const EXAMPLE_TIMESTAMP: u64 = 1234567890;
 
     fn example_metadata() -> Metadata {
         Metadata::new(block::Id::root(), EXAMPLE_TIMESTAMP)
     }
 
-    fn example_domain() -> DomainObject {
-        DomainObject::new(None)
+    fn example_entry(data: &[u8]) -> Entry {
+        Entry {
+            type_id: TypeId::from_bytes(EXAMPLE_TYPE_ID).unwrap(),
+            data: data,
+        }
     }
 
     #[test]
@@ -288,6 +300,7 @@ mod tests {
     #[test]
     fn test_entry_lookup() {
         let adapter = create_database();
+        let example_data = b"just an example host entry";
 
         {
             let mut txn = adapter.rw_transaction().unwrap();
@@ -298,7 +311,7 @@ mod tests {
                            Id::root(),
                            "example.com",
                            &example_metadata(),
-                           &ObjectClass::Domain(example_domain()))
+                           &example_entry(b"example domain entry"))
                 .unwrap();
 
             let hosts_id = domain_id.next();
@@ -307,7 +320,7 @@ mod tests {
                            domain_id,
                            "hosts",
                            &example_metadata(),
-                           &ObjectClass::Ou)
+                           &example_entry(b"example hosts ou"))
                 .unwrap();
 
             let host_id = hosts_id.next();
@@ -316,7 +329,7 @@ mod tests {
                            hosts_id,
                            "master.example.com",
                            &example_metadata(),
-                           &ObjectClass::Host)
+                           &example_entry(example_data))
                 .unwrap();
 
             txn.commit().unwrap();
@@ -335,7 +348,7 @@ mod tests {
                 assert_eq!(metadata.created_at, EXAMPLE_TIMESTAMP);
 
                 let entry = adapter.find_entry(&txn, &direntry.id).unwrap();
-                // assert_eq!(entry, &example_data[..]);
+                assert_eq!(entry.data, &example_data[..]);
             }
 
             txn.commit().unwrap();
@@ -354,7 +367,7 @@ mod tests {
                        Id::root(),
                        "example.com",
                        &example_metadata(),
-                       &ObjectClass::Domain(example_domain()))
+                       &example_entry(b"domain"))
             .unwrap();
 
         let result = adapter.add_entry(&mut txn,
@@ -362,7 +375,7 @@ mod tests {
                                        Id::root(),
                                        "another.com",
                                        &example_metadata(),
-                                       &ObjectClass::Domain(example_domain()));
+                                       &example_entry(b"domain"));
 
         assert_eq!(result, Err(Error::EntryAlreadyExists));
     }
@@ -379,7 +392,7 @@ mod tests {
                        Id::root(),
                        "example.com",
                        &example_metadata(),
-                       &ObjectClass::Domain(example_domain()))
+                       &example_entry(b"domain"))
             .unwrap();
 
         let result = adapter.add_entry(&mut txn,
@@ -387,7 +400,7 @@ mod tests {
                                        Id::root(),
                                        "example.com",
                                        &example_metadata(),
-                                       &ObjectClass::Domain(example_domain()));
+                                       &example_entry(b"domain"));
 
         assert_eq!(result, Err(Error::EntryAlreadyExists));
     }

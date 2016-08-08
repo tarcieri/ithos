@@ -2,11 +2,10 @@ pub mod lmdb;
 
 use block::Block;
 use direntry::DirEntry;
-use entry;
+use entry::{self, Entry};
 use error::Result;
 use metadata::Metadata;
 use path::Path;
-use objectclass::ObjectClass;
 
 pub trait Transaction {
     type D;
@@ -32,7 +31,7 @@ pub trait Adapter<'a> {
                      parent_id: entry::Id,
                      name: &'b str,
                      metadata: &Metadata,
-                     objectclass: &ObjectClass)
+                     entry: &Entry)
                      -> Result<DirEntry>;
     fn find_direntry<'b, T: Transaction<D = Self::D>>(&'b self,
                                                       txn: &'b T,
@@ -45,5 +44,5 @@ pub trait Adapter<'a> {
     fn find_entry<'b, T: Transaction<D = Self::D>>(&'b self,
                                                    txn: &'b T,
                                                    id: &entry::Id)
-                                                   -> Result<&[u8]>;
+                                                   -> Result<Entry>;
 }
