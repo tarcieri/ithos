@@ -5,7 +5,7 @@ use std::string::ToString;
 use buffoon::{OutputStream, Serialize};
 use ring::digest;
 
-use adapter::{Adapter, Transaction};
+use adapter::Adapter;
 use block::Block;
 use entry;
 use error::Result;
@@ -22,7 +22,7 @@ pub enum OpType {
 pub struct Op {
     pub optype: OpType,
     pub path: Path,
-    pub objectclass: ObjectClass
+    pub objectclass: ObjectClass,
 }
 
 pub struct State {
@@ -53,28 +53,27 @@ impl Op {
         Op {
             optype: optype,
             path: path,
-            objectclass: objectclass
+            objectclass: objectclass,
         }
     }
 
-    pub fn apply<'a, A: Adapter<'a, D, R, W>, D, R: Transaction<D>, W: Transaction<D>>
-        (&self,
-         adapter: &A,
-         txn: &mut W,
-         state: &mut State,
-         block: &Block)
-         -> Result<()> {
+    pub fn apply<'a, A: Adapter<'a>>(&self,
+                                     adapter: &A,
+                                     txn: &mut A::W,
+                                     state: &mut State,
+                                     block: &Block)
+                                     -> Result<()> {
         match self.optype {
             OpType::Add => self.add(adapter, txn, state, block),
         }
     }
 
-    fn add<'a, A: Adapter<'a, D, R, W>, D, R: Transaction<D>, W: Transaction<D>>(&self,
-                                                                                 adapter: &A,
-                                                                                 txn: &mut W,
-                                                                                 state: &mut State,
-                                                                                 block: &Block)
-                                                                                 -> Result<()> {
+    fn add<'a, A: Adapter<'a>>(&self,
+                               adapter: &A,
+                               txn: &mut A::W,
+                               state: &mut State,
+                               block: &Block)
+                               -> Result<()> {
         let entry_id = state.get_entry_id();
 
         let parent_id = if self.path.is_root() {
@@ -90,7 +89,12 @@ impl Op {
         let metadata = Metadata::new(block.id, block.timestamp);
 
         // NOTE: The underlying adapter must handle Error::EntryAlreadyExists
-        try!(adapter.add_entry(txn, entry_id, parent_id, &name, &metadata, &self.objectclass));
+        try!(adapter.add_entry(txn,
+                               entry_id,
+                               parent_id,
+                               &name,
+                               &metadata,
+                               &self.objectclass));
         state.new_entries.insert(self.path.clone(), entry_id);
 
         Ok(())

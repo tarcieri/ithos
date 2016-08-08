@@ -74,11 +74,11 @@ impl LmdbAdapter {
         })
     }
 
-    fn find_child<'a, T: Transaction<lmdb::Database>>(&'a self,
-                                                      txn: &'a T,
-                                                      parent_id: entry::Id,
-                                                      name: &str)
-                                                      -> Result<DirEntry> {
+    fn find_child<'a, T: Transaction<D = Database>>(&'a self,
+                                                    txn: &'a T,
+                                                    parent_id: entry::Id,
+                                                    name: &str)
+                                                    -> Result<DirEntry> {
         let direntry_bytes = try!(txn.find(self.directories, parent_id.as_ref(), |direntry_bytes| {
                 match DirEntry::new(parent_id, direntry_bytes) {
                     Ok(direntry) => direntry.name == name,
@@ -90,7 +90,11 @@ impl LmdbAdapter {
     }
 }
 
-impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for LmdbAdapter {
+impl<'a> Adapter<'a> for LmdbAdapter {
+    type D = Database;
+    type R = RoTransaction<'a>;
+    type W = RwTransaction<'a>;
+
     fn rw_transaction(&'a self) -> Result<RwTransaction<'a>> {
         match self.env.begin_rw_txn() {
             Ok(txn) => Ok(RwTransaction(txn)),
@@ -164,36 +168,38 @@ impl<'a> Adapter<'a, lmdb::Database, RoTransaction<'a>, RwTransaction<'a>> for L
         Ok(direntry)
     }
 
-    fn find_direntry<'b, T: Transaction<lmdb::Database>>(&'b self,
-                                                         txn: &'b T,
-                                                         path: &Path)
-                                                         -> Result<DirEntry> {
+    fn find_direntry<'b, T: Transaction<D = Database>>(&'b self,
+                                                       txn: &'b T,
+                                                       path: &Path)
+                                                       -> Result<DirEntry> {
         path.components.iter().fold(Ok(DirEntry::root()), |parent_direntry, component| {
             self.find_child(txn, try!(parent_direntry).id, component)
         })
     }
 
-    fn find_metadata<'b, T: Transaction<lmdb::Database>>(&'b self,
-                                                         txn: &'b T,
-                                                         id: &entry::Id)
-                                                         -> Result<Metadata> {
+    fn find_metadata<'b, T: Transaction<D = Database>>(&'b self,
+                                                       txn: &'b T,
+                                                       id: &entry::Id)
+                                                       -> Result<Metadata> {
         let proto = try!(txn.get(self.metadata, id.as_ref()).map_err(|_| Error::NotFound));
         Metadata::from_proto(proto)
     }
 
-    fn find_entry<'b, T: Transaction<lmdb::Database>>(&'b self,
-                                                      txn: &'b T,
-                                                      id: &entry::Id)
-                                                      -> Result<&[u8]> {
+    fn find_entry<'b, T: Transaction<D = Database>>(&'b self,
+                                                    txn: &'b T,
+                                                    id: &entry::Id)
+                                                    -> Result<&[u8]> {
         txn.get(self.entries, id.as_ref()).map_err(|_| Error::NotFound)
     }
 }
 
 // TODO: since LMDB is ordered, we could e.g. perform a binary search for find
 macro_rules! impl_transaction (($newtype:ident) => (
-    impl<'a> Transaction<lmdb::Database> for $newtype<'a> {
-        fn get(&self, database: Database, key: &[u8]) -> Result<&[u8]> {
-            self.0.get(database, &key).map_err(|_| Error::NotFound)
+    impl<'a> Transaction for $newtype<'a> {
+        type D = Database;
+
+        fn get(&self, db: Database, key: &[u8]) -> Result<&[u8]> {
+            self.0.get(db, &key).map_err(|_| Error::NotFound)
         }
 
         fn find<P>(&self, db: Database, key: &[u8], predicate: P) -> Result<&[u8]>
@@ -329,7 +335,7 @@ mod tests {
                 assert_eq!(metadata.created_at, EXAMPLE_TIMESTAMP);
 
                 let entry = adapter.find_entry(&txn, &direntry.id).unwrap();
-                //assert_eq!(entry, &example_data[..]);
+                // assert_eq!(entry, &example_data[..]);
             }
 
             txn.commit().unwrap();
@@ -381,7 +387,7 @@ mod tests {
                                        Id::root(),
                                        "example.com",
                                        &example_metadata(),
-                                       &ObjectClass::Domain(example_domain())); // ObjectClass::Domain
+                                       &ObjectClass::Domain(example_domain()));
 
         assert_eq!(result, Err(Error::EntryAlreadyExists));
     }
