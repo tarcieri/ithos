@@ -20,6 +20,10 @@ time            = ">= 0.1.35"
 [dependencies.buffoon]
 git = "https://github.com/carllerche/buffoon.git"
 
+[dependencies.objecthash]
+git = "https://github.com/cryptosphere/rust-objecthash.git"
+features = ["octet-strings"]
+
 [dependencies.ring]
 git = "https://github.com/briansmith/ring"
 

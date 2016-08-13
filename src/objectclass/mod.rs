@@ -5,9 +5,8 @@ use std::io;
 use std::string::ToString;
 
 use buffoon::{Serialize, OutputStream};
-use ring::digest::Digest;
 
-use objecthash::ObjectHash;
+use objecthash::{ObjectHash, ObjectHasher};
 use proto::ToProto;
 
 use self::root::RootObject;
@@ -73,11 +72,11 @@ impl Serialize for ObjectClass {
 }
 
 impl ObjectHash for ObjectClass {
-    fn objecthash(&self) -> Digest {
+    fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
         match self {
-            &ObjectClass::Root(ref root) => root.objecthash(),
-            &ObjectClass::Domain(ref domain) => domain.objecthash(),
-            _ => "".objecthash(), // TODO
+            &ObjectClass::Root(ref root) => root.objecthash(hasher),
+            &ObjectClass::Domain(ref domain) => domain.objecthash(hasher),
+            _ => (), // TODO
         }
     }
 }

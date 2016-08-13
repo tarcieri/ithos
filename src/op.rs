@@ -3,7 +3,6 @@ use std::io;
 use std::string::ToString;
 
 use buffoon::{OutputStream, Serialize};
-use ring::digest;
 
 use adapter::Adapter;
 use block::Block;
@@ -11,7 +10,7 @@ use entry::{self, Entry, TypeId};
 use error::Result;
 use metadata::Metadata;
 use objectclass::ObjectClass;
-use objecthash::{ObjectHash, DIGEST_ALG};
+use objecthash::{self, ObjectHash, ObjectHasher};
 use path::Path;
 use proto::ToProto;
 
@@ -36,6 +35,13 @@ impl ToString for OpType {
         match *self {
             OpType::Add => "ADD".to_string(),
         }
+    }
+}
+
+impl ObjectHash for OpType {
+    #[inline]
+    fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
+        self.to_string().objecthash(hasher);
     }
 }
 
@@ -113,25 +119,14 @@ impl Serialize for Op {
 }
 
 impl ObjectHash for Op {
-    fn objecthash(&self) -> digest::Digest {
-        let mut ctx = digest::Context::new(&DIGEST_ALG);
-
-        // objecthash qualifier for dictionaries
-        ctx.update(b"d");
-
-        // OpType::Add is the only op we support right now
-        assert!(self.optype == OpType::Add);
-
-        ctx.update("optype".objecthash().as_ref());
-        ctx.update(self.optype.to_string().objecthash().as_ref());
-
-        ctx.update("path".objecthash().as_ref());
-        ctx.update(self.path.to_string().objecthash().as_ref());
-
-        ctx.update("objectclass".objecthash().as_ref());
-        ctx.update(self.objectclass.objecthash().as_ref());
-
-        ctx.finish()
+    #[inline]
+    fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
+        objecthash_struct!(
+            hasher,
+            "optype" => self.optype,
+            "path" => self.path,
+            "objectclass" => self.objectclass
+        )
     }
 }
 

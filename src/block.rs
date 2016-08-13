@@ -2,7 +2,6 @@ use std::io;
 use std::string::ToString;
 
 use buffoon::{OutputStream, Serialize};
-use ring::digest;
 use rustc_serialize::base64::{self, ToBase64};
 use serde_json;
 use serde_json::builder::ObjectBuilder;
@@ -13,7 +12,7 @@ use error::{Error, Result};
 use log;
 use objectclass::ObjectClass;
 use objectclass::root::RootObject;
-use objecthash::{ObjectHash, DIGEST_ALG};
+use objecthash::{self, ObjectHash, ObjectHasher};
 use op::{Op, OpType};
 use path::Path;
 use proto::ToProto;
@@ -52,9 +51,8 @@ impl AsRef<[u8]> for Id {
 }
 
 impl ObjectHash for Id {
-    #[inline]
-    fn objecthash(&self) -> digest::Digest {
-        self.0.objecthash()
+    fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
+        self.0.objecthash(hasher);
     }
 }
 
@@ -139,7 +137,7 @@ impl Block {
             signature: [0u8; SIGNATURE_SIZE],
         };
 
-        let id = Id::from_bytes(block.objecthash().as_ref()).unwrap();
+        let id = Id::from_bytes(objecthash::digest(&block).as_ref()).unwrap();
 
         block.id = id;
         block.signature.copy_from_slice(&keypair.sign(id.as_ref()).as_slice());
@@ -190,28 +188,14 @@ impl Serialize for Block {
 
 impl ObjectHash for Block {
     #[inline]
-    fn objecthash(&self) -> digest::Digest {
-        let mut block_ctx = digest::Context::new(&DIGEST_ALG);
-
-        // objecthash qualifier for dictionaries
-        block_ctx.update(b"d");
-
-        block_ctx.update("parent".objecthash().as_ref());
-        block_ctx.update(self.parent.objecthash().as_ref());
-
-        block_ctx.update("timestamp".objecthash().as_ref());
-        block_ctx.update(self.timestamp.objecthash().as_ref());
-
-        block_ctx.update("ops".objecthash().as_ref());
-        block_ctx.update(self.ops.objecthash().as_ref());
-
-        block_ctx.update("comment".objecthash().as_ref());
-        block_ctx.update(self.comment.objecthash().as_ref());
-
-        block_ctx.update("signed_by".objecthash().as_ref());
-        block_ctx.update(self.signed_by.objecthash().as_ref());
-
-        block_ctx.finish()
+    fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
+        objecthash_struct!(
+            hasher,
+            "parent" => self.parent,
+            "timestamp" => self.timestamp,
+            "ops" => self.ops,
+            "comment" => self.comment
+        )
     }
 }
 

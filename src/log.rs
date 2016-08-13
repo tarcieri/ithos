@@ -1,9 +1,7 @@
 use ring::rand::SecureRandom;
 
-use ring::digest::Digest;
-
 use error::{Error, Result};
-use objecthash::ObjectHash;
+use objecthash::{ObjectHash, ObjectHasher};
 
 pub const ID_SIZE: usize = 16;
 
@@ -37,7 +35,7 @@ impl AsRef<[u8]> for Id {
 }
 
 impl ObjectHash for Id {
-    fn objecthash(&self) -> Digest {
-        self.as_ref().objecthash()
+    fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
+        self.as_ref().objecthash(hasher);
     }
 }

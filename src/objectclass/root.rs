@@ -1,12 +1,11 @@
 use std::io;
 
 use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
-use ring::digest;
 
 use algorithm::DigestAlgorithm;
 use log;
 use proto::ToProto;
-use objecthash::{ObjectHash, DIGEST_ALG};
+use objecthash::{self, ObjectHash, ObjectHasher};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct RootObject {
@@ -57,18 +56,12 @@ impl Deserialize for RootObject {
 }
 
 impl ObjectHash for RootObject {
-    fn objecthash(&self) -> digest::Digest {
-        let mut ctx = digest::Context::new(&DIGEST_ALG);
-
-        // objecthash qualifier for dictionaries
-        ctx.update(b"d");
-
-        ctx.update("logid".objecthash().as_ref());
-        ctx.update(self.logid.objecthash().as_ref());
-
-        ctx.update("digest_alg".objecthash().as_ref());
-        ctx.update(self.digest_alg.objecthash().as_ref());
-
-        ctx.finish()
+    #[inline]
+    fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
+        objecthash_struct!(
+            hasher,
+            "logid" => self.logid,
+            "digest_alg" => self.digest_alg
+        )
     }
 }
