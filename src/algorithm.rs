@@ -1,9 +1,8 @@
 use std::io;
 
 use buffoon::{Serialize, Deserialize, OutputStream, InputStream, Field};
-use ring::digest::Digest;
 
-use objecthash::ObjectHash;
+use objecthash::{ObjectHash, ObjectHasher};
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum DigestAlgorithm {
@@ -24,8 +23,8 @@ macro_rules! impl_algorithm (($algorithm:ident, $only:expr, $string:expr) => (
     }
 
     impl ObjectHash for $algorithm {
-        fn objecthash(&self) -> Digest {
-          self.to_string().objecthash()
+        fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
+            self.to_string().objecthash(hasher);
         }
     }
 

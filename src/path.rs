@@ -1,6 +1,7 @@
 use std::hash::{Hash, Hasher};
 
 use error::{Error, Result};
+use objecthash::{ObjectHash, ObjectHasher};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Path {
@@ -28,17 +29,6 @@ impl Path {
         Ok(Path { components: components })
     }
 
-    pub fn to_string(&self) -> String {
-        let mut result = String::new();
-
-        for component in self.components.clone() {
-            result.push_str(SEPARATOR);
-            result.push_str(&component);
-        }
-
-        result
-    }
-
     pub fn parent(&self) -> Path {
         if self.is_root() {
             return Path { components: vec![String::from("")] };
@@ -59,10 +49,30 @@ impl Path {
     }
 }
 
+impl ToString for Path {
+    fn to_string(&self) -> String {
+        let mut result = String::new();
+
+        for component in self.components.clone() {
+            result.push_str(SEPARATOR);
+            result.push_str(&component);
+        }
+
+        result
+    }
+}
+
 impl Hash for Path {
     fn hash<H: Hasher>(&self, state: &mut H) {
         for component in &self.components {
             component.hash(state);
         }
+    }
+}
+
+impl ObjectHash for Path {
+    #[inline]
+    fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
+        self.to_string().objecthash(hasher);
     }
 }

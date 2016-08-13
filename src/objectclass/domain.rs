@@ -1,10 +1,9 @@
 use std::io;
 
 use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
-use ring::digest;
 
 use proto::ToProto;
-use objecthash::{ObjectHash, DIGEST_ALG};
+use objecthash::{self, ObjectHash, ObjectHasher};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct DomainObject {
@@ -46,20 +45,16 @@ impl Deserialize for DomainObject {
 }
 
 impl ObjectHash for DomainObject {
-    fn objecthash(&self) -> digest::Digest {
-        let mut ctx = digest::Context::new(&DIGEST_ALG);
-
-        // objecthash qualifier for dictionaries
-        ctx.update(b"d");
-
+    #[inline]
+    fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
         match self.description {
             Some(ref desc) => {
-                ctx.update("description".objecthash().as_ref());
-                ctx.update(desc.objecthash().as_ref());
+                objecthash_struct!(
+                    hasher,
+                    "description" => *desc
+                )
             }
             None => (),
         }
-
-        ctx.finish()
     }
 }
