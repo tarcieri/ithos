@@ -5,8 +5,8 @@ message ObjectClass {
     ROOT = 1;                // Root entry in the tree (ala LDAP root DSE)
     DOMAIN = 2;              // Administrative Domain (ala DNS domain or Kerberos realm)
     ORGANIZATIONAL_UNIT = 3; // Unit/department within an organization or other logical grouping
-    CREDENTIAL = 4;          // Encrypted access credentials
     SYSTEM = 5;              // System User (i.e. non-human account)
+    CREDENTIAL = 4;          // Encrypted access credentials
     HOST = 6;                // Individual server within a domain
   }
 

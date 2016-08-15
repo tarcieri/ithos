@@ -1,6 +1,7 @@
 pub mod domain;
 pub mod ou;
 pub mod root;
+pub mod system;
 
 use std::io;
 use std::string::ToString;
@@ -13,14 +14,15 @@ use proto::ToProto;
 use self::domain::DomainObject;
 use self::ou::OrganizationalUnitObject;
 use self::root::RootObject;
+use self::system::SystemObject;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum ObjectClass {
     Root(RootObject), // Root entry in the tree (ala LDAP root DSE)
     Domain(DomainObject), // Administrative Domain (ala DNS domain or Kerberos realm)
     OrganizationalUnit(OrganizationalUnitObject), // Unit/department within an organization
+    System(SystemObject), // System User (i.e. non-human account)
     Credential, // Encrypted access credential
-    System, // System User (i.e. non-human account)
     Host, // Individual server within a domain
 }
 
@@ -30,8 +32,8 @@ impl ObjectClass {
             ObjectClass::Root(_) => 1,
             ObjectClass::Domain(_) => 2,
             ObjectClass::OrganizationalUnit(_) => 3,
-            ObjectClass::Credential => 4,
-            ObjectClass::System => 5,
+            ObjectClass::System(_) => 4,
+            ObjectClass::Credential => 5,
             ObjectClass::Host => 6,
         }
     }
@@ -45,8 +47,8 @@ impl ToString for ObjectClass {
             ObjectClass::Root(_) => "ROOT".to_string(),
             ObjectClass::Domain(_) => "DOMAIN".to_string(),
             ObjectClass::OrganizationalUnit(_) => "ORGANIZATIONAL_UNIT".to_string(),
+            ObjectClass::System(_) => "SYSTEM".to_string(),
             ObjectClass::Credential => "CREDENTIAL".to_string(),
-            ObjectClass::System => "SYSTEM".to_string(),
             ObjectClass::Host => "HOST".to_string(),
         }
     }
@@ -60,6 +62,7 @@ impl Serialize for ObjectClass {
             &ObjectClass::Root(ref root) => root.to_proto(),
             &ObjectClass::Domain(ref domain) => domain.to_proto(),
             &ObjectClass::OrganizationalUnit(ref ou) => ou.to_proto(),
+            &ObjectClass::System(ref ou) => ou.to_proto(),
             _ => Ok(Vec::new()), // TODO
         };
 

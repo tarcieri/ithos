@@ -13,6 +13,7 @@ use log;
 use objectclass::ObjectClass;
 use objectclass::ou::OrganizationalUnitObject;
 use objectclass::root::RootObject;
+use objectclass::system::SystemObject;
 use objecthash::{self, ObjectHash, ObjectHasher};
 use op::{Op, OpType};
 use path::Path;
@@ -104,9 +105,10 @@ impl Block {
         // TODO: add features for path concatenation to the Path type!
         let admin_path = format!("/system/{username}", username = admin_username);
 
+        let admin_user = SystemObject::new(String::from(admin_username));
         ops.push(Op::new(OpType::Add,
                          Path::new(&admin_path).unwrap(),
-                         ObjectClass::System));
+                         ObjectClass::System(admin_user)));
 
         let admin_keypair_path = format!("{base}/keypair", base = admin_path);
 
