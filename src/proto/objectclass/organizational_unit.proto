@@ -1,6 +1,6 @@
 package ithos.objectclass;
 
-// Organizational Unit
+// Unit/department within an organization or other logical grouping
 message OrganizationalUnit {
     optional string description = 1;
 }

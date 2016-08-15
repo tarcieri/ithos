@@ -1,0 +1,6 @@
+package ithos.objectclass;
+
+// System User (i.e. non-human account)
+message System {
+    required string username = 1;
+}
