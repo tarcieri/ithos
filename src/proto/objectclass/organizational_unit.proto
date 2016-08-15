@@ -1,0 +1,6 @@
+package ithos.objectclass;
+
+// Organizational Unit
+message OrganizationalUnit {
+    optional string description = 1;
+}

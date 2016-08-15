@@ -11,6 +11,7 @@ use algorithm::DigestAlgorithm;
 use error::{Error, Result};
 use log;
 use objectclass::ObjectClass;
+use objectclass::ou::OrganizationalUnitObject;
 use objectclass::root::RootObject;
 use objecthash::{self, ObjectHash, ObjectHasher};
 use op::{Op, OpType};
@@ -87,7 +88,10 @@ impl Block {
                          Path::new("/").unwrap(),
                          ObjectClass::Root(RootObject::new(*logid))));
 
-        ops.push(Op::new(OpType::Add, Path::new("/system").unwrap(), ObjectClass::Ou));
+        let system_ou = OrganizationalUnitObject::new(Some(String::from("Core system users")));
+        ops.push(Op::new(OpType::Add,
+                         Path::new("/system").unwrap(),
+                         ObjectClass::OrganizationalUnit(system_ou)));
 
         let public_key_bytes = admin_keypair.public_key_bytes();
 
