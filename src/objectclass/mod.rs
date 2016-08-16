@@ -1,3 +1,4 @@
+pub mod credential;
 pub mod domain;
 pub mod ou;
 pub mod root;
@@ -11,6 +12,7 @@ use buffoon::{Serialize, OutputStream};
 use objecthash::{ObjectHash, ObjectHasher};
 use proto::ToProto;
 
+use self::credential::CredentialObject;
 use self::domain::DomainObject;
 use self::ou::OrganizationalUnitObject;
 use self::root::RootObject;
@@ -22,8 +24,7 @@ pub enum ObjectClass {
     Domain(DomainObject), // Administrative Domain (ala DNS domain or Kerberos realm)
     OrganizationalUnit(OrganizationalUnitObject), // Unit/department within an organization
     System(SystemObject), // System User (i.e. non-human account)
-    Credential, // Encrypted access credential
-    Host, // Individual server within a domain
+    Credential(CredentialObject), // Encrypted access credential
 }
 
 impl ObjectClass {
@@ -33,8 +34,7 @@ impl ObjectClass {
             ObjectClass::Domain(_) => 2,
             ObjectClass::OrganizationalUnit(_) => 3,
             ObjectClass::System(_) => 4,
-            ObjectClass::Credential => 5,
-            ObjectClass::Host => 6,
+            ObjectClass::Credential(_) => 5,
         }
     }
 }
@@ -48,8 +48,7 @@ impl ToString for ObjectClass {
             ObjectClass::Domain(_) => "DOMAIN".to_string(),
             ObjectClass::OrganizationalUnit(_) => "ORGANIZATIONAL_UNIT".to_string(),
             ObjectClass::System(_) => "SYSTEM".to_string(),
-            ObjectClass::Credential => "CREDENTIAL".to_string(),
-            ObjectClass::Host => "HOST".to_string(),
+            ObjectClass::Credential(_) => "CREDENTIAL".to_string(),
         }
     }
 }
@@ -62,8 +61,8 @@ impl Serialize for ObjectClass {
             &ObjectClass::Root(ref root) => root.to_proto(),
             &ObjectClass::Domain(ref domain) => domain.to_proto(),
             &ObjectClass::OrganizationalUnit(ref ou) => ou.to_proto(),
-            &ObjectClass::System(ref ou) => ou.to_proto(),
-            _ => Ok(Vec::new()), // TODO
+            &ObjectClass::System(ref system) => system.to_proto(),
+            &ObjectClass::Credential(ref credential) => credential.to_proto(),
         };
 
         if !object_proto.is_ok() {
@@ -82,7 +81,9 @@ impl ObjectHash for ObjectClass {
         match self {
             &ObjectClass::Root(ref root) => root.objecthash(hasher),
             &ObjectClass::Domain(ref domain) => domain.objecthash(hasher),
-            _ => (), // TODO
+            &ObjectClass::OrganizationalUnit(ref ou) => ou.objecthash(hasher),
+            &ObjectClass::System(ref system) => system.objecthash(hasher),
+            &ObjectClass::Credential(ref credential) => credential.objecthash(hasher),
         }
     }
 }

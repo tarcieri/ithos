@@ -17,7 +17,7 @@ impl RootObject {
     pub fn new(logid: log::Id) -> RootObject {
         RootObject {
             logid: logid,
-            digest_alg: DigestAlgorithm::SHA256,
+            digest_alg: DigestAlgorithm::Sha256,
         }
     }
 }

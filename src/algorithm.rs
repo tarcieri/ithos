@@ -6,7 +6,12 @@ use objecthash::{ObjectHash, ObjectHasher};
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum DigestAlgorithm {
-    SHA256,
+    Sha256,
+}
+
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+pub enum EncryptionAlgorithm {
+    Aes128Gcm,
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
@@ -16,6 +21,13 @@ pub enum SignatureAlgorithm {
 
 // TODO: Support more than one algorithm type per enum
 macro_rules! impl_algorithm (($algorithm:ident, $only:expr, $string:expr) => (
+    impl $algorithm {
+        #[allow(dead_code)]
+        pub fn protobuf_id(&self) -> u32 {
+            *self as u32 + 1
+        }
+    }
+
     impl ToString for $algorithm {
         fn to_string(&self) -> String {
             $string.to_string()
@@ -54,5 +66,6 @@ macro_rules! impl_algorithm (($algorithm:ident, $only:expr, $string:expr) => (
     }
 ));
 
-impl_algorithm!(DigestAlgorithm, DigestAlgorithm::SHA256, "SHA256");
+impl_algorithm!(DigestAlgorithm, DigestAlgorithm::Sha256, "SHA256");
+impl_algorithm!(EncryptionAlgorithm, EncryptionAlgorithm::Aes128Gcm, "AES128GCM");
 impl_algorithm!(SignatureAlgorithm, SignatureAlgorithm::Ed25519, "Ed25519");

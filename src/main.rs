@@ -17,18 +17,26 @@ extern crate time;
 #[cfg(test)]
 extern crate tempdir;
 
+macro_rules! objecthash_struct_member {
+    ($key:expr, $value:expr) => {
+        {
+            let kd = objecthash::digest(&String::from($key));
+            let vd = objecthash::digest(&$value);
+            let mut d = Vec::with_capacity(kd.as_ref().len() + vd.as_ref().len());
+            d.extend_from_slice(&kd.as_ref());
+            d.extend_from_slice(&vd.as_ref());
+            d
+        }
+    }
+}
+
 macro_rules! objecthash_struct(
     { $hasher:expr, $($key:expr => $value:expr),+ } => {
         {
             let mut digests: Vec<Vec<u8>> = Vec::new();
 
             $(
-                let kd = objecthash::digest(&String::from($key));
-                let vd = objecthash::digest(&$value);
-                let mut d = Vec::with_capacity(kd.as_ref().len() + vd.as_ref().len());
-                d.extend_from_slice(&kd.as_ref());
-                d.extend_from_slice(&vd.as_ref());
-                digests.push(d);
+                digests.push(objecthash_struct_member!($key, $value));
             )+
 
             digests.sort();

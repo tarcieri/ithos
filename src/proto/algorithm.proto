@@ -4,6 +4,10 @@ enum DigestAlgorithm {
     SHA256 = 1;
 }
 
+enum EncryptionAlgorithm {
+    AES128GCM = 1;
+}
+
 enum SignatureAlgorithm {
     Ed25519 = 1;
 }

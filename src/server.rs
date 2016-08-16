@@ -48,7 +48,7 @@ impl Server {
                                                  &admin_keypair,
                                                  &admin_keypair_sealed,
                                                  DEFAULT_GENESIS_MESSAGE,
-                                                 DigestAlgorithm::SHA256);
+                                                 DigestAlgorithm::Sha256);
 
         let adapter = LmdbAdapter::create_database(path).unwrap();
         let server = Server { adapter: adapter };

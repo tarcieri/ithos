@@ -1,5 +1,7 @@
 package ithos.objectclass;
 
+import "algorithm.proto";
+
 // Root entry of the directory tree (Root DSE in LDAP parlance)
 //
 // This entry is the home for central identifiers and policy configuration
