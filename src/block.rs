@@ -7,10 +7,11 @@ use serde_json;
 use serde_json::builder::ObjectBuilder;
 use time;
 
-use algorithm::DigestAlgorithm;
+use algorithm::{DigestAlgorithm, EncryptionAlgorithm};
 use error::{Error, Result};
 use log;
 use objectclass::ObjectClass;
+use objectclass::credential::CredentialObject;
 use objectclass::ou::OrganizationalUnitObject;
 use objectclass::root::RootObject;
 use objectclass::system::SystemObject;
@@ -22,6 +23,7 @@ use signature::KeyPair;
 
 const DIGEST_SIZE: usize = 32;
 const SIGNATURE_SIZE: usize = 64;
+const ADMIN_KEYPAIR_LIFETIME: u64 = 315_532_800; // 10 years
 
 // Block IDs are presently SHA-256 only
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
@@ -81,9 +83,10 @@ impl Block {
                          digest_alg: DigestAlgorithm)
                          -> Block {
         // SHA256 is the only algorithm we presently support
-        assert!(digest_alg == DigestAlgorithm::SHA256);
+        assert!(digest_alg == DigestAlgorithm::Sha256);
 
         let mut ops = Vec::new();
+        let genesis_timestamp = time::now_utc().to_timespec().sec as u64;
 
         ops.push(Op::new(OpType::Add,
                          Path::new("/").unwrap(),
@@ -94,34 +97,39 @@ impl Block {
                          Path::new("/system").unwrap(),
                          ObjectClass::OrganizationalUnit(system_ou)));
 
-        let public_key_bytes = admin_keypair.public_key_bytes();
-
-        // TODO: replace with e.g. protos
-        // let mut admin_user = Vec::with_capacity(public_key_bytes.len() +
-        //                                        admin_username.as_bytes().len());
-        // admin_user.extend(public_key_bytes);
-        // admin_user.extend(admin_username.as_bytes());
+        let admin_user = SystemObject::new(String::from(admin_username));
 
         // TODO: add features for path concatenation to the Path type!
         let admin_path = format!("/system/{username}", username = admin_username);
 
-        let admin_user = SystemObject::new(String::from(admin_username));
         ops.push(Op::new(OpType::Add,
                          Path::new(&admin_path).unwrap(),
                          ObjectClass::System(admin_user)));
 
-        let admin_keypair_path = format!("{base}/keypair", base = admin_path);
+        // TODO: possibly add a "keyring" objectclass
+        let admin_keys_ou = OrganizationalUnitObject::new(Some(String::from("Admin credentials")));
+
+        let admin_keys_path = format!("{base}/keys", base = admin_path);
 
         ops.push(Op::new(OpType::Add,
-                         Path::new(&admin_keypair_path).unwrap(),
-                         ObjectClass::Credential));
-        // &admin_keypair_sealed));
+                         Path::new(&admin_keys_path).unwrap(),
+                         ObjectClass::OrganizationalUnit(admin_keys_ou)));
 
-        Block::new(Id::root(),
-                   time::now_utc().to_timespec().sec as u64,
-                   ops,
-                   comment,
-                   admin_keypair)
+        let admin_signing_credential =
+            CredentialObject::signature_keypair(EncryptionAlgorithm::Aes128Gcm,
+                                                admin_keypair_sealed,
+                                                admin_keypair.public_key_bytes(),
+                                                genesis_timestamp,
+                                                genesis_timestamp + ADMIN_KEYPAIR_LIFETIME,
+                                                Some(String::from("Root signing key")));
+
+        let admin_signing_path = format!("{keys}/signing", keys = admin_keys_path);
+
+        ops.push(Op::new(OpType::Add,
+                         Path::new(&admin_signing_path).unwrap(),
+                         ObjectClass::Credential(admin_signing_credential)));
+
+        Block::new(Id::root(), genesis_timestamp, ops, comment, admin_keypair)
     }
 
     pub fn new(parent: Id,
@@ -231,7 +239,7 @@ pub mod tests {
                              &admin_keypair,
                              ADMIN_KEYPAIR_SEALED,
                              "Initial block",
-                             DigestAlgorithm::SHA256)
+                             DigestAlgorithm::Sha256)
     }
 
     #[test]
