@@ -6,9 +6,17 @@ pub enum PasswordAlgorithm {
     SCRYPT,
 }
 
+#[cfg(not(test))]
 #[inline(always)]
 fn params() -> ScryptParams {
     ScryptParams::new(16, 8, 1)
+}
+
+// Use a weak set of parameters when running tests to reduce test times
+// WARNING: do not use these params in release versions of this software!
+#[cfg(test)]
+fn params() -> ScryptParams {
+    ScryptParams::new(1, 1, 1)
 }
 
 pub fn derive(alg: PasswordAlgorithm, salt: &[u8], password: &str, out: &mut [u8]) {
