@@ -21,14 +21,14 @@ time            = ">= 0.1.35"
 git = "https://github.com/carllerche/buffoon.git"
 
 [dependencies.objecthash]
-git = "https://github.com/cryptosphere/rust-objecthash.git"
+version = ">= 0.1.1"
 features = ["octet-strings"]
 
 [dependencies.ring]
-git = "https://github.com/briansmith/ring"
+version = ">= 0.2.3"
 
 [dependencies.ring-pwhash]
-git = "https://github.com/cryptosphere/ring-pwhash"
+version = ">= 0.1.0"
 
 [dev-dependencies]
 tempdir = "0.3"
