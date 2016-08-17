@@ -3,6 +3,7 @@ use std::io;
 use std::string::ToString;
 
 use buffoon::{OutputStream, Serialize};
+use serde_json::builder::ObjectBuilder;
 
 use adapter::Adapter;
 use block::Block;
@@ -73,6 +74,12 @@ impl Op {
         match self.optype {
             OpType::Add => self.add(adapter, txn, state, block),
         }
+    }
+
+    pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
+        builder.insert("optype", self.optype.to_string())
+            .insert("path", self.path.to_string())
+            .insert_object("objectclass", |b| self.objectclass.build_json(b))
     }
 
     fn add<'a, A: Adapter<'a>>(&self,

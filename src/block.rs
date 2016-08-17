@@ -1,5 +1,4 @@
 use std::io;
-use std::string::ToString;
 
 use buffoon::{OutputStream, Serialize};
 use rustc_serialize::base64::{self, ToBase64};
@@ -159,27 +158,20 @@ impl Block {
         block
     }
 
-    pub fn to_json(&self) -> String {
-        let value = ObjectBuilder::new()
-            .insert("id", self.id.as_ref().to_base64(base64::URL_SAFE))
+    pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
+        builder.insert("id", self.id.as_ref().to_base64(base64::URL_SAFE))
             .insert("parent", self.parent.as_ref().to_base64(base64::URL_SAFE))
             .insert("timestamp", self.timestamp)
             .insert_array("ops", |builder| {
-                self.ops.iter().fold(builder, |b, op| {
-                    b.push_object(|b| {
-                        b.insert("optype", op.optype.to_string())
-                            .insert("path", op.path.to_string())
-                            .insert("objectclass", op.objectclass.to_string())
-                        // TODO: JSON serialization support
-                        // .insert("data", op.data.to_base64(base64::URL_SAFE))
-                    })
-                })
-
+                self.ops.iter().fold(builder, |b, op| b.push_object(|b| op.build_json(b)))
             })
             .insert("comment", self.comment.clone())
             .insert("signed_by", self.signed_by.to_base64(base64::URL_SAFE))
             .insert("signature", self.signature.to_base64(base64::URL_SAFE))
-            .build();
+    }
+
+    pub fn to_json(&self) -> String {
+        let value = self.build_json(ObjectBuilder::new()).build();
 
         serde_json::to_string(&value).unwrap()
     }

@@ -1,6 +1,8 @@
 use std::io;
 
 use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
+use serde_json::builder::ObjectBuilder;
+use rustc_serialize::base64::{self, ToBase64};
 
 use algorithm::DigestAlgorithm;
 use log;
@@ -19,6 +21,11 @@ impl RootObject {
             logid: logid,
             digest_alg: DigestAlgorithm::Sha256,
         }
+    }
+
+    pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
+        builder.insert("logid", self.logid.as_ref().to_base64(base64::URL_SAFE))
+            .insert("digest_alg", self.digest_alg.to_string())
     }
 }
 

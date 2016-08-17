@@ -1,6 +1,7 @@
 use std::io;
 
 use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
+use serde_json::builder::ObjectBuilder;
 
 use proto::ToProto;
 use objecthash::{self, ObjectHash, ObjectHasher};
@@ -13,6 +14,10 @@ pub struct DomainObject {
 impl DomainObject {
     pub fn new(description: Option<String>) -> DomainObject {
         DomainObject { description: description }
+    }
+
+    pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
+        builder.insert("description", &self.description)
     }
 }
 

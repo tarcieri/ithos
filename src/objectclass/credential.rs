@@ -1,6 +1,8 @@
 use std::io;
 
 use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
+use rustc_serialize::base64::{self, ToBase64};
+use serde_json::builder::ObjectBuilder;
 
 use algorithm::{EncryptionAlgorithm, SignatureAlgorithm};
 use error::{Error, Result};
@@ -78,6 +80,39 @@ impl CredentialObject {
             not_after: Some(not_after),
             description: description,
         }
+    }
+
+    pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
+        let builder = builder.insert("keyid", self.keyid.to_base64(base64::URL_SAFE))
+            .insert("credential_type", self.credential_type.to_string())
+            .insert("credential_alg", self.credential_type.protobuf_alg())
+            .insert("sealing_alg", self.sealing_alg.to_string())
+            .insert("encrypted_value",
+                    self.encrypted_value.to_base64(base64::URL_SAFE));
+
+        let builder = match self.public_key {
+            Some(ref public_key) => {
+                builder.insert("public_key", public_key.to_base64(base64::URL_SAFE))
+            }
+            None => builder,
+        };
+
+        let builder = match self.not_before {
+            Some(ref not_before) => builder.insert("not_before", not_before),
+            None => builder,
+        };
+
+        let builder = match self.not_after {
+            Some(ref not_after) => builder.insert("not_after", not_after),
+            None => builder,
+        };
+
+        let builder = match self.description {
+            Some(ref description) => builder.insert("description", description),
+            None => builder,
+        };
+
+        builder
     }
 }
 

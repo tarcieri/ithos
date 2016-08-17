@@ -1,6 +1,7 @@
 use std::io;
 
 use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
+use serde_json::builder::ObjectBuilder;
 
 use proto::ToProto;
 use objecthash::{self, ObjectHash, ObjectHasher};
@@ -13,6 +14,10 @@ pub struct SystemObject {
 impl SystemObject {
     pub fn new(username: String) -> SystemObject {
         SystemObject { username: username }
+    }
+
+    pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
+        builder.insert("username", &self.username)
     }
 }
 
