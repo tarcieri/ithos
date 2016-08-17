@@ -8,8 +8,9 @@ use std::io;
 use std::string::ToString;
 
 use buffoon::{Serialize, OutputStream};
-
+use serde_json::builder::ObjectBuilder;
 use objecthash::{ObjectHash, ObjectHasher};
+
 use proto::ToProto;
 
 use self::credential::CredentialObject;
@@ -36,6 +37,17 @@ impl ObjectClass {
             ObjectClass::System(_) => 4,
             ObjectClass::Credential(_) => 5,
         }
+    }
+
+    pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
+        builder.insert("type", self.to_string())
+            .insert_object("value", |b| match *self {
+                ObjectClass::Root(ref root) => root.build_json(b),
+                ObjectClass::Domain(ref domain) => domain.build_json(b),
+                ObjectClass::OrganizationalUnit(ref ou) => ou.build_json(b),
+                ObjectClass::System(ref system) => system.build_json(b),
+                ObjectClass::Credential(ref credential) => credential.build_json(b),
+            })
     }
 }
 
