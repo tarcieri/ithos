@@ -15,7 +15,7 @@ use objectclass::ou::OrganizationalUnitObject;
 use objectclass::root::RootObject;
 use objectclass::system::SystemObject;
 use objecthash::{self, ObjectHash, ObjectHasher};
-use op::{Op, OpType};
+use op::{self, Op};
 use path::Path;
 use proto::ToProto;
 use signature::KeyPair;
@@ -87,12 +87,12 @@ impl Block {
         let mut ops = Vec::new();
         let genesis_timestamp = time::now_utc().to_timespec().sec as u64;
 
-        ops.push(Op::new(OpType::Add,
+        ops.push(Op::new(op::Type::Add,
                          Path::new("/").unwrap(),
                          ObjectClass::Root(RootObject::new(*logid))));
 
         let system_ou = OrganizationalUnitObject::new(Some(String::from("Core system users")));
-        ops.push(Op::new(OpType::Add,
+        ops.push(Op::new(op::Type::Add,
                          Path::new("/system").unwrap(),
                          ObjectClass::OrganizationalUnit(system_ou)));
 
@@ -101,7 +101,7 @@ impl Block {
         // TODO: add features for path concatenation to the Path type!
         let admin_path = format!("/system/{username}", username = admin_username);
 
-        ops.push(Op::new(OpType::Add,
+        ops.push(Op::new(op::Type::Add,
                          Path::new(&admin_path).unwrap(),
                          ObjectClass::System(admin_user)));
 
@@ -110,7 +110,7 @@ impl Block {
 
         let admin_keys_path = format!("{base}/keys", base = admin_path);
 
-        ops.push(Op::new(OpType::Add,
+        ops.push(Op::new(op::Type::Add,
                          Path::new(&admin_keys_path).unwrap(),
                          ObjectClass::OrganizationalUnit(admin_keys_ou)));
 
@@ -124,7 +124,7 @@ impl Block {
 
         let admin_signing_path = format!("{keys}/signing", keys = admin_keys_path);
 
-        ops.push(Op::new(OpType::Add,
+        ops.push(Op::new(op::Type::Add,
                          Path::new(&admin_signing_path).unwrap(),
                          ObjectClass::Credential(admin_signing_credential)));
 

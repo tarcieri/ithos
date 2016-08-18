@@ -16,12 +16,12 @@ use path::Path;
 use proto::ToProto;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub enum OpType {
+pub enum Type {
     Add,
 }
 
 pub struct Op {
-    pub optype: OpType,
+    pub optype: Type,
     pub path: Path,
     pub objectclass: ObjectClass,
 }
@@ -31,22 +31,22 @@ pub struct State {
     pub new_entries: HashMap<Path, entry::Id>,
 }
 
-impl ToString for OpType {
+impl ToString for Type {
     fn to_string(&self) -> String {
         match *self {
-            OpType::Add => "ADD".to_string(),
+            Type::Add => "ADD".to_string(),
         }
     }
 }
 
-impl ObjectHash for OpType {
+impl ObjectHash for Type {
     #[inline]
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
         self.to_string().objecthash(hasher);
     }
 }
 
-impl Serialize for OpType {
+impl Serialize for Type {
     fn serialize<O: OutputStream>(&self, _: &mut O) -> io::Result<()> {
         unimplemented!();
     }
@@ -57,7 +57,7 @@ impl Serialize for OpType {
 }
 
 impl Op {
-    pub fn new(optype: OpType, path: Path, objectclass: ObjectClass) -> Op {
+    pub fn new(optype: Type, path: Path, objectclass: ObjectClass) -> Op {
         Op {
             optype: optype,
             path: path,
@@ -72,7 +72,7 @@ impl Op {
                                      block: &Block)
                                      -> Result<()> {
         match self.optype {
-            OpType::Add => self.add(adapter, txn, state, block),
+            Type::Add => self.add(adapter, txn, state, block),
         }
     }
 
