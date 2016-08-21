@@ -8,11 +8,11 @@ use serde_json::builder::ObjectBuilder;
 use adapter::Adapter;
 use block::Block;
 use entry::{self, Entry, TypeId};
-use error::Result;
+use error::{Error, Result};
 use metadata::Metadata;
 use objectclass::ObjectClass;
 use objecthash::{self, ObjectHash, ObjectHasher};
-use path::Path;
+use path::{Path, PathBuf};
 use proto::ToProto;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
@@ -22,13 +22,13 @@ pub enum Type {
 
 pub struct Op {
     pub optype: Type,
-    pub path: Path,
+    pub path: PathBuf,
     pub objectclass: ObjectClass,
 }
 
-pub struct State {
+pub struct State<'a> {
     pub next_entry_id: entry::Id,
-    pub new_entries: HashMap<Path, entry::Id>,
+    pub new_entries: HashMap<&'a Path, entry::Id>,
 }
 
 impl ToString for Type {
@@ -57,7 +57,7 @@ impl Serialize for Type {
 }
 
 impl Op {
-    pub fn new(optype: Type, path: Path, objectclass: ObjectClass) -> Op {
+    pub fn new(optype: Type, path: PathBuf, objectclass: ObjectClass) -> Op {
         Op {
             optype: optype,
             path: path,
@@ -65,12 +65,12 @@ impl Op {
         }
     }
 
-    pub fn apply<'a, A: Adapter<'a>>(&self,
-                                     adapter: &A,
-                                     txn: &mut A::W,
-                                     state: &mut State,
-                                     block: &Block)
-                                     -> Result<()> {
+    pub fn apply<'a, 'b, A: Adapter<'a>>(&'b self,
+                                         adapter: &A,
+                                         txn: &mut A::W,
+                                         state: &mut State<'b>,
+                                         block: &Block)
+                                         -> Result<()> {
         match self.optype {
             Type::Add => self.add(adapter, txn, state, block),
         }
@@ -78,28 +78,29 @@ impl Op {
 
     pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
         builder.insert("optype", self.optype.to_string())
-            .insert("path", self.path.to_string())
+            .insert("path", self.path.as_path().to_string())
             .insert_object("objectclass", |b| self.objectclass.build_json(b))
     }
 
-    fn add<'a, A: Adapter<'a>>(&self,
-                               adapter: &A,
-                               txn: &mut A::W,
-                               state: &mut State,
-                               block: &Block)
-                               -> Result<()> {
+    fn add<'a, 'b, A: Adapter<'a>>(&'b self,
+                                   adapter: &A,
+                                   txn: &mut A::W,
+                                   state: &mut State<'b>,
+                                   block: &Block)
+                                   -> Result<()> {
         let entry_id = state.get_entry_id();
 
-        let parent_id = if self.path.is_root() {
-            entry::Id::root()
-        } else {
-            match state.new_entries.get(&self.path.parent()) {
-                Some(&id) => id,
-                _ => try!(adapter.find_direntry(txn, &self.path.parent())).id,
+        let parent_id = match self.path.as_path().parent() {
+            Some(parent) => {
+                match state.new_entries.get(parent) {
+                    Some(&id) => id,
+                    _ => try!(adapter.find_direntry(txn, parent)).id,
+                }
             }
+            None => entry::Id::root(),
         };
 
-        let name = self.path.name();
+        let name = try!(self.path.as_path().entry_name().ok_or(Error::PathInvalid));
         let metadata = Metadata::new(block.id, block.timestamp);
         let proto = try!(self.objectclass.to_proto());
         let entry = Entry {
@@ -109,7 +110,7 @@ impl Op {
 
         // NOTE: The underlying adapter must handle Error::EntryAlreadyExists
         try!(adapter.add_entry(txn, entry_id, parent_id, &name, &metadata, &entry));
-        state.new_entries.insert(self.path.clone(), entry_id);
+        state.new_entries.insert(self.path.as_path(), entry_id);
 
         Ok(())
     }
@@ -118,7 +119,7 @@ impl Op {
 impl Serialize for Op {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
         try!(out.write(1, &self.optype));
-        try!(out.write(2, &self.path.to_string()));
+        try!(out.write(2, &self.path.as_path().to_string()));
         try!(out.write(3, &self.objectclass));
 
         Ok(())
@@ -137,8 +138,8 @@ impl ObjectHash for Op {
     }
 }
 
-impl State {
-    pub fn new(next_entry_id: entry::Id) -> State {
+impl<'a> State<'a> {
+    pub fn new(next_entry_id: entry::Id) -> State<'a> {
         State {
             next_entry_id: next_entry_id,
             new_entries: HashMap::new(),

@@ -175,7 +175,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
                                                        txn: &'b T,
                                                        path: &Path)
                                                        -> Result<DirEntry> {
-        path.components.iter().fold(Ok(DirEntry::root()), |parent_direntry, component| {
+        path.components().iter().fold(Ok(DirEntry::root()), |parent_direntry, component| {
             self.find_child(txn, try!(parent_direntry).id, component)
         })
     }
