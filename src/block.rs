@@ -6,7 +6,7 @@ use serde_json;
 use serde_json::builder::ObjectBuilder;
 use time;
 
-use algorithm::{DigestAlgorithm, EncryptionAlgorithm};
+use algorithm::{DigestAlgorithm, EncryptionAlgorithm, SignatureAlgorithm};
 use error::{Error, Result};
 use log;
 use objectclass::ObjectClass;
@@ -79,7 +79,9 @@ impl Block {
                          admin_keypair: &KeyPair,
                          admin_keypair_sealed: &[u8],
                          comment: &str,
-                         digest_alg: DigestAlgorithm)
+                         digest_alg: DigestAlgorithm,
+                         encryption_alg: EncryptionAlgorithm,
+                         signature_alg: SignatureAlgorithm)
                          -> Block {
         // SHA256 is the only algorithm we presently support
         assert!(digest_alg == DigestAlgorithm::Sha256);
@@ -112,7 +114,8 @@ impl Block {
                          ObjectClass::OrganizationalUnit(admin_keys_ou)));
 
         let admin_signing_credential =
-            CredentialObject::signature_keypair(EncryptionAlgorithm::Aes128Gcm,
+            CredentialObject::signature_keypair(encryption_alg,
+                                                signature_alg,
                                                 admin_keypair_sealed,
                                                 admin_keypair.public_key_bytes(),
                                                 timestamp,
@@ -206,7 +209,7 @@ pub mod tests {
     use buffoon;
     use ring::rand;
 
-    use algorithm::DigestAlgorithm;
+    use algorithm::{DigestAlgorithm, EncryptionAlgorithm, SignatureAlgorithm};
     use block::Block;
     use log;
     use signature::KeyPair;
@@ -227,7 +230,9 @@ pub mod tests {
                              &admin_keypair,
                              ADMIN_KEYPAIR_SEALED,
                              "Initial block",
-                             DigestAlgorithm::Sha256)
+                             DigestAlgorithm::Sha256,
+                             EncryptionAlgorithm::Aes256Gcm,
+                             SignatureAlgorithm::Ed25519)
     }
 
     #[test]

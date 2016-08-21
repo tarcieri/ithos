@@ -11,7 +11,7 @@ pub enum DigestAlgorithm {
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum EncryptionAlgorithm {
-    Aes128Gcm,
+    Aes256Gcm,
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
@@ -67,5 +67,5 @@ macro_rules! impl_algorithm (($algorithm:ident, $only:expr, $string:expr) => (
 ));
 
 impl_algorithm!(DigestAlgorithm, DigestAlgorithm::Sha256, "SHA256");
-impl_algorithm!(EncryptionAlgorithm, EncryptionAlgorithm::Aes128Gcm, "AES128GCM");
+impl_algorithm!(EncryptionAlgorithm, EncryptionAlgorithm::Aes256Gcm, "AES256GCM");
 impl_algorithm!(SignatureAlgorithm, SignatureAlgorithm::Ed25519, "Ed25519");

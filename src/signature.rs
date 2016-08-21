@@ -1,7 +1,7 @@
 use ring::{signature, aead};
 use ring::rand::SecureRandom;
 
-use algorithm::SignatureAlgorithm;
+use algorithm::{EncryptionAlgorithm, SignatureAlgorithm};
 
 pub struct KeyPair(signature::Ed25519KeyPair);
 
@@ -11,12 +11,18 @@ impl<'a> KeyPair {
         KeyPair(signature::Ed25519KeyPair::generate(rng).unwrap())
     }
 
-    pub fn generate_and_seal(alg: SignatureAlgorithm,
+    // Generate a new keypair and seal it with the given encryption algorithm and key
+    pub fn generate_and_seal(signature_alg: SignatureAlgorithm,
+                             encryption_alg: EncryptionAlgorithm,
                              rng: &SecureRandom,
-                             symmetric_key_bytes: &[u8])
+                             symmetric_key_bytes: &[u8],
+                             nonce: &[u8])
                              -> (KeyPair, Vec<u8>) {
         // Ed25519 is the only signature algorithm we presently support
-        assert!(alg == SignatureAlgorithm::Ed25519);
+        assert!(signature_alg == SignatureAlgorithm::Ed25519);
+
+        // Aes256Gcm is the only encryption algorithm we presently support
+        assert!(encryption_alg == EncryptionAlgorithm::Aes256Gcm);
 
         let (keypair, serializable_keypair) = signature::Ed25519KeyPair::generate_serializable(rng)
             .unwrap();
@@ -32,9 +38,6 @@ impl<'a> KeyPair {
             buffer.push(0u8);
         }
 
-        // TODO: store a counter for the nonce and increment each time a password is changed
-        // This should ensure we never reuse a nonce, even if the user reuses a password
-        let nonce = [0u8; 12];
         aead::seal_in_place(&symmetric_key,
                             &nonce,
                             &mut buffer[..],
@@ -42,7 +45,6 @@ impl<'a> KeyPair {
                             &b""[..])
             .unwrap();
 
-        // TODO: protos for storing keypairs
         (KeyPair(keypair), buffer)
     }
 

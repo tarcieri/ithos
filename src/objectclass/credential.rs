@@ -64,12 +64,16 @@ impl ToString for Type {
 
 impl CredentialObject {
     pub fn signature_keypair(sealing_alg: EncryptionAlgorithm,
+                             signature_alg: SignatureAlgorithm,
                              sealed_keypair: &[u8],
                              public_key: &[u8],
                              not_before: u64,
                              not_after: u64,
                              description: Option<String>)
                              -> CredentialObject {
+        // Ed25519 is the only signature algorithm we presently support
+        assert!(signature_alg == SignatureAlgorithm::Ed25519);
+
         CredentialObject {
             keyid: Vec::from(public_key),
             credential_type: Type::SignatureKeyPair(SignatureAlgorithm::Ed25519),
@@ -179,7 +183,7 @@ impl Deserialize for CredentialObject {
         Ok(CredentialObject {
             keyid: required!(keyid, "CredentialObject::keyid"),
             credential_type: credential_type,
-            sealing_alg: EncryptionAlgorithm::Aes128Gcm, // TODO: actually parse this
+            sealing_alg: EncryptionAlgorithm::Aes256Gcm, // TODO: actually parse this
             encrypted_value: required!(encrypted_value, "CredentialObject::encrypted_value"),
             public_key: public_key,
             not_before: not_before,

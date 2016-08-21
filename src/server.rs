@@ -4,7 +4,7 @@ use ring::rand;
 
 use adapter::{Adapter, Transaction};
 use adapter::lmdb::LmdbAdapter;
-use algorithm::{DigestAlgorithm, SignatureAlgorithm};
+use algorithm::{DigestAlgorithm, EncryptionAlgorithm, SignatureAlgorithm};
 use block::Block;
 use error::Result;
 use log;
@@ -40,15 +40,26 @@ impl Server {
                          &admin_password,
                          &mut admin_symmetric_key);
 
+        let encryption_alg = EncryptionAlgorithm::Aes256Gcm;
+        let signature_alg = SignatureAlgorithm::Ed25519;
+
+        // NOTE: Fixed nonce. The admin password should be randomly generated and never reused
+        let nonce = [0u8; 12];
         let (admin_keypair, admin_keypair_sealed) =
-            KeyPair::generate_and_seal(SignatureAlgorithm::Ed25519, &rng, &admin_symmetric_key);
+            KeyPair::generate_and_seal(signature_alg,
+                                       encryption_alg,
+                                       &rng,
+                                       &admin_symmetric_key,
+                                       &nonce);
 
         let genesis_block = Block::genesis_block(&logid,
                                                  &admin_username,
                                                  &admin_keypair,
                                                  &admin_keypair_sealed,
                                                  DEFAULT_GENESIS_MESSAGE,
-                                                 DigestAlgorithm::Sha256);
+                                                 DigestAlgorithm::Sha256,
+                                                 encryption_alg,
+                                                 signature_alg);
 
         let adapter = LmdbAdapter::create_database(path).unwrap();
         let server = Server { adapter: adapter };

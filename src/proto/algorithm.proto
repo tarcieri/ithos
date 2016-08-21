@@ -5,7 +5,7 @@ enum DigestAlgorithm {
 }
 
 enum EncryptionAlgorithm {
-    AES128GCM = 1;
+    AES256GCM = 1;
 }
 
 enum SignatureAlgorithm {
