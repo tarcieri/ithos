@@ -16,7 +16,7 @@ use objectclass::root::RootObject;
 use objectclass::system::SystemObject;
 use objecthash::{self, ObjectHash, ObjectHasher};
 use op::{self, Op};
-use path::Path;
+use path::PathBuf;
 use proto::ToProto;
 use signature::KeyPair;
 
@@ -84,51 +84,47 @@ impl Block {
         // SHA256 is the only algorithm we presently support
         assert!(digest_alg == DigestAlgorithm::Sha256);
 
+        let timestamp = time::now_utc().to_timespec().sec as u64;
         let mut ops = Vec::new();
-        let genesis_timestamp = time::now_utc().to_timespec().sec as u64;
+        let mut path = PathBuf::new();
 
         ops.push(Op::new(op::Type::Add,
-                         Path::new("/").unwrap(),
+                         path.clone(),
                          ObjectClass::Root(RootObject::new(*logid))));
 
         let system_ou = OrganizationalUnitObject::new(Some(String::from("Core system users")));
+
+        path.push("system");
         ops.push(Op::new(op::Type::Add,
-                         Path::new("/system").unwrap(),
+                         path.clone(),
                          ObjectClass::OrganizationalUnit(system_ou)));
 
         let admin_user = SystemObject::new(String::from(admin_username));
 
-        // TODO: add features for path concatenation to the Path type!
-        let admin_path = format!("/system/{username}", username = admin_username);
+        path.push(&admin_username);
+        ops.push(Op::new(op::Type::Add, path.clone(), ObjectClass::System(admin_user)));
 
-        ops.push(Op::new(op::Type::Add,
-                         Path::new(&admin_path).unwrap(),
-                         ObjectClass::System(admin_user)));
-
-        // TODO: possibly add a "keyring" objectclass
         let admin_keys_ou = OrganizationalUnitObject::new(Some(String::from("Admin credentials")));
 
-        let admin_keys_path = format!("{base}/keys", base = admin_path);
-
+        path.push("keys");
         ops.push(Op::new(op::Type::Add,
-                         Path::new(&admin_keys_path).unwrap(),
+                         path.clone(),
                          ObjectClass::OrganizationalUnit(admin_keys_ou)));
 
         let admin_signing_credential =
             CredentialObject::signature_keypair(EncryptionAlgorithm::Aes128Gcm,
                                                 admin_keypair_sealed,
                                                 admin_keypair.public_key_bytes(),
-                                                genesis_timestamp,
-                                                genesis_timestamp + ADMIN_KEYPAIR_LIFETIME,
+                                                timestamp,
+                                                timestamp + ADMIN_KEYPAIR_LIFETIME,
                                                 Some(String::from("Root signing key")));
 
-        let admin_signing_path = format!("{keys}/signing", keys = admin_keys_path);
-
+        path.push("signing");
         ops.push(Op::new(op::Type::Add,
-                         Path::new(&admin_signing_path).unwrap(),
+                         path,
                          ObjectClass::Credential(admin_signing_credential)));
 
-        Block::new(Id::root(), genesis_timestamp, ops, comment, admin_keypair)
+        Block::new(Id::root(), timestamp, ops, comment, admin_keypair)
     }
 
     pub fn new(parent: Id,
