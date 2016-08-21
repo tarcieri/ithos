@@ -24,10 +24,10 @@ pub fn generate(rng: &SecureRandom) -> String {
     rng.fill(&mut bytes).unwrap();
 
     format!("{prefix}-{password}-{digits1:02}{digits2:03}",
-            prefix=GENPASS_PREFIX,
-            password=String::from_utf8(encode(&bytes[0..6])).unwrap(),
-            digits1=bytes[6] % 100,
-            digits2=bytes[7])
+            prefix = GENPASS_PREFIX,
+            password = String::from_utf8(encode(&bytes[0..6])).unwrap(),
+            digits1 = bytes[6] % 100,
+            digits2 = bytes[7])
 }
 
 // Use a weak set of parameters when running tests to reduce test times
@@ -44,6 +44,7 @@ pub fn derive(alg: PasswordAlgorithm, salt: &[u8], password: &str, out: &mut [u8
     scrypt::scrypt(password.as_bytes(), salt, &params(), out);
 }
 
+#[allow(dead_code)]
 pub fn verify(alg: PasswordAlgorithm,
               salt: &[u8],
               password: &str,

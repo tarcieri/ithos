@@ -65,7 +65,12 @@ mod proto;
 mod server;
 mod signature;
 
-use adapter::lmdb::LmdbAdapter;
+use ring::rand;
+
+use error::Error;
+use server::Server;
+
+const DEFAULT_ADMIN_USERNAME: &'static str = "manager";
 
 fn main() {
     let version = "v0.1";
@@ -75,7 +80,8 @@ fn main() {
         .arg(Arg::with_name("path")
             .help("Path where the database will be located")
             .index(1)
-            .required(true));
+            .required(true))
+        .arg_from_usage("-u, --username=[NAME] 'Username of the admin user (default: manager)'");
 
     let matches = App::new("ithos")
         .version(version)
@@ -83,9 +89,33 @@ fn main() {
         .get_matches();
 
     if let Some(ref matches) = matches.subcommand_matches("create") {
-        let path = matches.value_of("path").unwrap();
+        let database_path = matches.value_of("path").unwrap();
+        let admin_username = matches.value_of("username").unwrap_or(DEFAULT_ADMIN_USERNAME);
 
-        println!("Creating database at: {}", path);
-        LmdbAdapter::create_database(std::path::Path::new(path)).unwrap();
+        create(&database_path, &admin_username);
+    }
+}
+
+fn create(database_path: &str, admin_username: &str) {
+    println!("Creating database at: {path}", path = database_path);
+
+    let rng = rand::SystemRandom::new();
+    let admin_password = password::generate(&rng);
+
+    match Server::create_database(&std::path::Path::new(database_path),
+                                  &rng,
+                                  &admin_username,
+                                  &admin_password) {
+        Ok(_) => {
+            println!("\nDatabase created! Below is the password for the admin user: '{admin}'",
+                     admin = admin_username);
+            println!("Don't lose it! You will need it to perform administrative actions:\n");
+
+            println!("{password}", password = admin_password);
+        }
+        Err(Error::EntryAlreadyExists) => {
+            println!("*** Error: a database already exists at {path}", path = database_path);
+        }
+        Err(err) => panic!(err),
     }
 }

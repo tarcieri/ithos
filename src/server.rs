@@ -1,6 +1,6 @@
 use std::{self, str};
 
-use ring::rand;
+use ring::rand::SecureRandom;
 
 use adapter::{Adapter, Transaction};
 use adapter::lmdb::LmdbAdapter;
@@ -23,12 +23,11 @@ pub struct Server {
 
 impl Server {
     pub fn create_database(path: &std::path::Path,
+                           rng: &SecureRandom,
                            admin_username: &str,
                            admin_password: &str)
                            -> Result<Server> {
-        let rng = rand::SystemRandom::new();
-
-        let logid = try!(log::Id::generate(&rng));
+        let logid = try!(log::Id::generate(rng));
 
         let mut salt = Vec::with_capacity(16 + admin_username.as_bytes().len());
         salt.extend(logid.as_ref());
@@ -48,7 +47,7 @@ impl Server {
         let (admin_keypair, admin_keypair_sealed) =
             KeyPair::generate_and_seal(signature_alg,
                                        encryption_alg,
-                                       &rng,
+                                       rng,
                                        &admin_symmetric_key,
                                        &nonce);
 
@@ -87,6 +86,8 @@ impl Server {
 
 #[cfg(test)]
 mod tests {
+    use ring::rand;
+
     use server::Server;
     use server::tempdir::TempDir;
 
@@ -95,7 +96,8 @@ mod tests {
 
     #[test]
     fn test_create_database() {
+        let rng = rand::SystemRandom::new();
         let dir = TempDir::new("ithos-test").unwrap();
-        Server::create_database(dir.path(), ADMIN_USERNAME, ADMIN_PASSWORD).unwrap();
+        Server::create_database(dir.path(), &rng, ADMIN_USERNAME, ADMIN_PASSWORD).unwrap();
     }
 }
