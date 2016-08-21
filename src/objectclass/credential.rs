@@ -155,7 +155,7 @@ impl Deserialize for CredentialObject {
         let mut keyid: Option<Vec<u8>> = None;
         let mut credential_id: Option<u32> = None;
         let mut credential_alg: Option<String> = None;
-        let mut _sealing_alg: Option<u32> = None;
+        let mut sealing_alg: Option<u32> = None;
         let mut encrypted_value: Option<Vec<u8>> = None;
         let mut public_key: Option<Vec<u8>> = None;
         let mut not_before: Option<u64> = None;
@@ -167,7 +167,7 @@ impl Deserialize for CredentialObject {
                 1 => keyid = Some(try!(f.read())),
                 2 => credential_id = Some(try!(f.read())),
                 3 => credential_alg = Some(try!(f.read())),
-                4 => _sealing_alg = Some(try!(f.read())),
+                4 => sealing_alg = Some(try!(f.read())),
                 5 => encrypted_value = Some(try!(f.read())),
                 6 => public_key = Some(try!(f.read())),
                 7 => not_before = Some(try!(f.read())),
@@ -180,10 +180,15 @@ impl Deserialize for CredentialObject {
         let credential_type = try!(Type::from_id_and_alg(credential_id, credential_alg)
             .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid credential type")));
 
+        // Ensure sealing algorithm is Aes256Gcm
+        if sealing_alg != Some(EncryptionAlgorithm::Aes256Gcm.protobuf_id()) {
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid sealing algorithm"));
+        }
+
         Ok(CredentialObject {
             keyid: required!(keyid, "CredentialObject::keyid"),
             credential_type: credential_type,
-            sealing_alg: EncryptionAlgorithm::Aes256Gcm, // TODO: actually parse this
+            sealing_alg: EncryptionAlgorithm::Aes256Gcm,
             encrypted_value: required!(encrypted_value, "CredentialObject::encrypted_value"),
             public_key: public_key,
             not_before: not_before,
