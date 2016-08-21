@@ -21,7 +21,7 @@ time            = ">= 0.1.35"
 git = "https://github.com/carllerche/buffoon.git"
 
 [dependencies.objecthash]
-version = ">= 0.1.1"
+version = ">= 0.3"
 features = ["octet-strings"]
 
 [dependencies.ring]

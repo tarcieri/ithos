@@ -7,7 +7,9 @@ use clap::{App, Arg, SubCommand};
 #[macro_use]
 extern crate buffoon;
 
+#[macro_use]
 extern crate objecthash;
+
 extern crate ring;
 extern crate ring_pwhash as pwhash;
 extern crate rustc_serialize;
@@ -16,38 +18,6 @@ extern crate time;
 
 #[cfg(test)]
 extern crate tempdir;
-
-macro_rules! objecthash_struct_member {
-    ($key:expr, $value:expr) => {
-        {
-            let kd = objecthash::digest(&String::from($key));
-            let vd = objecthash::digest(&$value);
-            let mut d = Vec::with_capacity(kd.as_ref().len() + vd.as_ref().len());
-            d.extend_from_slice(&kd.as_ref());
-            d.extend_from_slice(&vd.as_ref());
-            d
-        }
-    }
-}
-
-macro_rules! objecthash_struct(
-    { $hasher:expr, $($key:expr => $value:expr),+ } => {
-        {
-            let mut digests: Vec<Vec<u8>> = Vec::new();
-
-            $(
-                digests.push(objecthash_struct_member!($key, $value));
-            )+
-
-            digests.sort();
-
-            $hasher.update(objecthash::types::DICT_TAG);
-            for value in &digests {
-                $hasher.update(&value);
-            }
-        }
-     };
-);
 
 mod adapter;
 mod algorithm;
