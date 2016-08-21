@@ -196,9 +196,6 @@ impl Deserialize for CredentialObject {
 impl ObjectHash for CredentialObject {
     #[inline]
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
-        // TODO: make this actually work
-        objecthash_struct!(hasher, "keyid" => self.keyid);
-
         let mut digests: Vec<Vec<u8>> = Vec::new();
 
         let credential_id_string = self.credential_type.to_string();
