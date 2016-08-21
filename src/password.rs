@@ -23,11 +23,11 @@ pub fn generate(rng: &SecureRandom) -> String {
     // TODO: Don't Panic
     rng.fill(&mut bytes).unwrap();
 
-    format!("{}-{}-{:02}{:03}",
-            GENPASS_PREFIX,
-            String::from_utf8(encode(&bytes[0..6])).unwrap(),
-            bytes[6] % 100,
-            bytes[7])
+    format!("{prefix}-{password}-{digits1:02}{digits2:03}",
+            prefix=GENPASS_PREFIX,
+            password=String::from_utf8(encode(&bytes[0..6])).unwrap(),
+            digits1=bytes[6] % 100,
+            digits2=bytes[7])
 }
 
 // Use a weak set of parameters when running tests to reduce test times
