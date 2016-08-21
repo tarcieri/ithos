@@ -1,5 +1,8 @@
 use pwhash::scrypt::{self, ScryptParams};
 use ring::constant_time;
+use ring::rand::SecureRandom;
+
+const GENPASS_PREFIX: &'static str = "ithos-genpass";
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum PasswordAlgorithm {
@@ -10,6 +13,20 @@ pub enum PasswordAlgorithm {
 #[inline(always)]
 fn params() -> ScryptParams {
     ScryptParams::new(16, 8, 1)
+}
+
+// Generate a password from a random number generator
+pub fn generate(rng: &SecureRandom) -> String {
+    let mut bytes = [0u8; 8];
+
+    // TODO: Don't Panic
+    rng.fill(&mut bytes).unwrap();
+
+    format!("{}-{}-{:02}{:03}",
+            GENPASS_PREFIX,
+            String::from_utf8(encode(&bytes[0..6])).unwrap(),
+            bytes[6] % 100,
+            bytes[7])
 }
 
 // Use a weak set of parameters when running tests to reduce test times
@@ -40,10 +57,55 @@ pub fn verify(alg: PasswordAlgorithm,
     constant_time::verify_slices_are_equal(&previously_derived, &out).is_ok()
 }
 
+// Encode random data with the Bubble Babble encoding
+fn encode(bytes: &[u8]) -> Vec<u8> {
+    let vowels = b"aeiouy";
+    let consonants = b"bcdfghklmnprstvzx";
+
+    let mut result = Vec::new();
+    let mut c: usize = 1;
+
+    result.push(b'x');
+
+    for i in 0..(bytes.len() + 1) {
+        if i % 2 != 0 {
+            continue;
+        }
+
+        if i >= bytes.len() {
+            result.push(vowels[c % 6]);
+            result.push(consonants[16]);
+            result.push(vowels[c / 6]);
+            break;
+        }
+
+        let byte1 = bytes[i] as usize;
+        result.push(vowels[(((byte1 >> 6) & 3) + c) % 6]);
+        result.push(consonants[(byte1 >> 2) & 15]);
+        result.push(vowels[((byte1 & 3) + (c / 6)) % 6]);
+
+        if i + 1 >= bytes.len() {
+            break;
+        }
+
+        let byte2 = bytes[i + 1] as usize;
+        result.push(consonants[(byte2 >> 4) & 15]);
+        result.push(b'-');
+        result.push(consonants[byte2 & 15]);
+
+        c = (c * 5 + byte1 * 7 + byte2) % 36;
+    }
+
+    result.push(b'x');
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use password;
     use password::PasswordAlgorithm;
+
+    use ring::rand;
 
     const PASSWORD: &'static str = "The Magic Words are Squeamish Ossifrage";
 
@@ -56,5 +118,25 @@ mod tests {
 
         assert!(password::verify(PasswordAlgorithm::SCRYPT, &salt, PASSWORD, &derived_buf));
         assert!(!password::verify(PasswordAlgorithm::SCRYPT, &salt, "WRONG", &derived_buf));
+    }
+
+    #[test]
+    fn test_generator() {
+        password::generate(&rand::SystemRandom::new());
+    }
+
+    #[test]
+    fn test_bubblebabble() {
+        assert_eq!(&*password::encode(b""), b"xexax".as_ref());
+        assert_eq!(&*password::encode(b"abcd"), b"ximek-domek-gyxox".as_ref());
+        assert_eq!(&*password::encode(b"asdf"), b"ximel-finek-koxex".as_ref());
+        assert_eq!(&*password::encode(b"0123456789"),
+                   b"xesaf-casef-fytef-hutif-lovof-nixix".as_ref());
+        assert_eq!(&*password::encode(b"Testing a sentence."),
+                   b"xihak-hysul-gapak-venyd-bumud-besek-heryl-gynek-vumuk-hyrox".as_ref());
+        assert_eq!(&*password::encode(b"1234567890"),
+                   b"xesef-disof-gytuf-katof-movif-baxux".as_ref());
+        assert_eq!(&*password::encode(b"Pineapple"),
+                   b"xigak-nyryk-humil-bosek-sonax".as_ref());
     }
 }
