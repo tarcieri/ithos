@@ -14,18 +14,6 @@ pub enum Type {
     SignatureKeyPair(SignatureAlgorithm),
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct CredentialObject {
-    keyid: Vec<u8>,
-    credential_type: Type,
-    sealing_alg: EncryptionAlgorithm,
-    encrypted_value: Vec<u8>,
-    public_key: Option<Vec<u8>>,
-    not_before: Option<u64>,
-    not_after: Option<u64>,
-    description: Option<String>,
-}
-
 impl Type {
     fn protobuf_id(&self) -> u32 {
         match *self {
@@ -60,6 +48,18 @@ impl ToString for Type {
             Type::SignatureKeyPair(_) => String::from("SIGNATURE_KEY_PAIR"),
         }
     }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct CredentialObject {
+    keyid: Vec<u8>,
+    credential_type: Type,
+    sealing_alg: EncryptionAlgorithm,
+    encrypted_value: Vec<u8>,
+    public_key: Option<Vec<u8>>,
+    not_before: Option<u64>,
+    not_after: Option<u64>,
+    description: Option<String>,
 }
 
 impl CredentialObject {

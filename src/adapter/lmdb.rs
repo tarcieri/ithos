@@ -24,9 +24,6 @@ pub struct LmdbAdapter {
     entries: Database,
 }
 
-pub struct RwTransaction<'a>(self::lmdb::RwTransaction<'a>);
-pub struct RoTransaction<'a>(self::lmdb::RoTransaction<'a>);
-
 impl LmdbAdapter {
     pub fn create_database(path: &std::path::Path) -> Result<LmdbAdapter> {
         let env = try!(Environment::new()
@@ -196,6 +193,9 @@ impl<'a> Adapter<'a> for LmdbAdapter {
         Entry::from_bytes(bytes)
     }
 }
+
+pub struct RwTransaction<'a>(self::lmdb::RwTransaction<'a>);
+pub struct RoTransaction<'a>(self::lmdb::RoTransaction<'a>);
 
 // TODO: since LMDB is ordered, we could e.g. perform a binary search for find
 macro_rules! impl_transaction (($newtype:ident) => (

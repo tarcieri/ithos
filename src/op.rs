@@ -20,25 +20,6 @@ pub enum Type {
     Add,
 }
 
-pub struct Op {
-    pub optype: Type,
-    pub path: PathBuf,
-    pub objectclass: ObjectClass,
-}
-
-pub struct State<'a> {
-    pub next_entry_id: entry::Id,
-    pub new_entries: HashMap<&'a Path, entry::Id>,
-}
-
-impl ToString for Type {
-    fn to_string(&self) -> String {
-        match *self {
-            Type::Add => "ADD".to_string(),
-        }
-    }
-}
-
 impl ObjectHash for Type {
     #[inline]
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
@@ -54,6 +35,20 @@ impl Serialize for Type {
     fn serialize_nested<O: OutputStream>(&self, field: u32, out: &mut O) -> io::Result<()> {
         out.write_varint(field, *self as u32 + 1)
     }
+}
+
+impl ToString for Type {
+    fn to_string(&self) -> String {
+        match *self {
+            Type::Add => "ADD".to_string(),
+        }
+    }
+}
+
+pub struct Op {
+    pub optype: Type,
+    pub path: PathBuf,
+    pub objectclass: ObjectClass,
 }
 
 impl Op {
@@ -136,6 +131,11 @@ impl ObjectHash for Op {
             "objectclass" => self.objectclass
         )
     }
+}
+
+pub struct State<'a> {
+    pub next_entry_id: entry::Id,
+    pub new_entries: HashMap<&'a Path, entry::Id>,
 }
 
 impl<'a> State<'a> {

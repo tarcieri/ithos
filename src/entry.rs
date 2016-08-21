@@ -9,11 +9,6 @@ pub struct Id(u64);
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct TypeId(u32);
 
-pub struct Entry<'a> {
-    pub type_id: TypeId,
-    pub data: &'a [u8],
-}
-
 // Ids are 64-bit integers in host-native byte order
 // LMDB has special optimizations for host-native integers as keys
 impl Id {
@@ -66,6 +61,11 @@ impl AsRef<[u8; 4]> for TypeId {
     fn as_ref(&self) -> &[u8; 4] {
         unsafe { mem::transmute(&self.0) }
     }
+}
+
+pub struct Entry<'a> {
+    pub type_id: TypeId,
+    pub data: &'a [u8],
 }
 
 impl<'a> Entry<'a> {

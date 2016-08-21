@@ -2,6 +2,7 @@ use pwhash::scrypt::{self, ScryptParams};
 use ring::constant_time;
 use ring::rand::SecureRandom;
 
+// Prefix added to all randomly generated passwords
 const GENPASS_PREFIX: &'static str = "ithos-genpass";
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
