@@ -3,10 +3,11 @@ use std::io;
 use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
 use serde_json::builder::ObjectBuilder;
 
-use proto::ToProto;
+use proto::{ToProto, FromProto};
+use objectclass::{AllowsChild, ObjectClass};
 use objecthash::{self, ObjectHash, ObjectHasher};
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct DomainObject {
     pub description: Option<String>,
 }
@@ -21,7 +22,16 @@ impl DomainObject {
     }
 }
 
-impl ToProto for DomainObject {}
+impl AllowsChild for DomainObject {
+    #[inline]
+    fn allows_child(&self, child: &ObjectClass) -> bool {
+        match *child {
+            ObjectClass::Domain(_) => true,
+            ObjectClass::OrganizationalUnit(_) => true,
+            _ => false,
+        }
+    }
+}
 
 impl Serialize for DomainObject {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
@@ -48,6 +58,9 @@ impl Deserialize for DomainObject {
         Ok(DomainObject { description: description })
     }
 }
+
+impl ToProto for DomainObject {}
+impl FromProto for DomainObject {}
 
 impl ObjectHash for DomainObject {
     #[inline]

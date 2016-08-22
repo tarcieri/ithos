@@ -11,7 +11,9 @@ use buffoon::{Serialize, OutputStream};
 use serde_json::builder::ObjectBuilder;
 use objecthash::{ObjectHash, ObjectHasher};
 
-use proto::ToProto;
+use entry::{self, Entry};
+use error::{Error, Result};
+use proto::{ToProto, FromProto};
 
 use self::credential::CredentialObject;
 use self::domain::DomainObject;
@@ -19,7 +21,7 @@ use self::ou::OrganizationalUnitObject;
 use self::root::RootObject;
 use self::system::SystemObject;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub enum ObjectClass {
     Root(RootObject), // Root entry in the tree (ala LDAP root DSE)
     Domain(DomainObject), // Administrative Domain (ala DNS domain or Kerberos realm)
@@ -29,6 +31,22 @@ pub enum ObjectClass {
 }
 
 impl ObjectClass {
+    pub fn from_entry(entry: Entry) -> Result<ObjectClass> {
+        let entry::TypeId(type_id) = entry.type_id;
+
+        let result = match type_id {
+            1 => ObjectClass::Root(try!(RootObject::from_proto(entry.data))),
+            2 => ObjectClass::Domain(try!(DomainObject::from_proto(entry.data))),
+            3 => ObjectClass::OrganizationalUnit(try!(OrganizationalUnitObject::from_proto(entry.data))),
+            4 => ObjectClass::System(try!(SystemObject::from_proto(entry.data))),
+            5 => ObjectClass::Credential(try!(CredentialObject::from_proto(entry.data))),
+            _ => return Err(Error::Parse),
+        };
+
+        Ok(result)
+    }
+
+    #[inline]
     pub fn protobuf_id(&self) -> u32 {
         match *self {
             ObjectClass::Root(_) => 1,
@@ -51,7 +69,22 @@ impl ObjectClass {
     }
 }
 
-impl ToProto for ObjectClass {}
+pub trait AllowsChild {
+    fn allows_child(&self, child: &ObjectClass) -> bool;
+}
+
+impl AllowsChild for ObjectClass {
+    #[inline]
+    fn allows_child(&self, child: &ObjectClass) -> bool {
+        match *self {
+            ObjectClass::Root(ref root) => root.allows_child(child),
+            ObjectClass::Domain(ref domain) => domain.allows_child(child),
+            ObjectClass::OrganizationalUnit(ref ou) => ou.allows_child(child),
+            ObjectClass::System(ref system) => system.allows_child(child),
+            ObjectClass::Credential(ref credential) => credential.allows_child(child),
+        }
+    }
+}
 
 impl ToString for ObjectClass {
     fn to_string(&self) -> String {
@@ -87,6 +120,8 @@ impl Serialize for ObjectClass {
         Ok(())
     }
 }
+
+impl ToProto for ObjectClass {}
 
 impl ObjectHash for ObjectClass {
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
