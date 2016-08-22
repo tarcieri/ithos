@@ -6,7 +6,8 @@ use serde_json::builder::ObjectBuilder;
 
 use algorithm::{EncryptionAlgorithm, SignatureAlgorithm};
 use error::{Error, Result};
-use proto::ToProto;
+use proto::{ToProto, FromProto};
+use objectclass::{AllowsChild, ObjectClass};
 use objecthash::{self, ObjectHash, ObjectHasher};
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
@@ -50,7 +51,7 @@ impl ToString for Type {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct CredentialObject {
     keyid: Vec<u8>,
     credential_type: Type,
@@ -120,7 +121,12 @@ impl CredentialObject {
     }
 }
 
-impl ToProto for CredentialObject {}
+impl AllowsChild for CredentialObject {
+    #[inline]
+    fn allows_child(&self, _child: &ObjectClass) -> bool {
+        false
+    }
+}
 
 impl Serialize for CredentialObject {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
@@ -197,6 +203,9 @@ impl Deserialize for CredentialObject {
         })
     }
 }
+
+impl ToProto for CredentialObject {}
+impl FromProto for CredentialObject {}
 
 impl ObjectHash for CredentialObject {
     #[inline]

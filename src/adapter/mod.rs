@@ -27,11 +27,10 @@ pub trait Adapter<'a> {
     fn add_block<'b>(&'b self, txn: &'b mut Self::W, block: &Block) -> Result<()>;
     fn add_entry<'b>(&'b self,
                      txn: &'b mut Self::W,
-                     id: entry::Id,
-                     parent_id: entry::Id,
+                     entry: &Entry,
                      name: &'b str,
-                     metadata: &Metadata,
-                     entry: &Entry)
+                     parent_id: entry::Id,
+                     metadata: &Metadata)
                      -> Result<DirEntry>;
     fn find_direntry<'b, T: Transaction<D = Self::D>>(&'b self,
                                                       txn: &'b T,

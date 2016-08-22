@@ -3,10 +3,11 @@ use std::io;
 use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
 use serde_json::builder::ObjectBuilder;
 
-use proto::ToProto;
+use proto::{ToProto, FromProto};
+use objectclass::{AllowsChild, ObjectClass};
 use objecthash::{self, ObjectHash, ObjectHasher};
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct SystemObject {
     pub username: String,
 }
@@ -21,7 +22,15 @@ impl SystemObject {
     }
 }
 
-impl ToProto for SystemObject {}
+impl AllowsChild for SystemObject {
+    #[inline]
+    fn allows_child(&self, child: &ObjectClass) -> bool {
+        match *child {
+            ObjectClass::OrganizationalUnit(_) => true,
+            _ => false,
+        }
+    }
+}
 
 impl Serialize for SystemObject {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
@@ -44,6 +53,9 @@ impl Deserialize for SystemObject {
         Ok(SystemObject { username: required!(username, "SystemObject::username") })
     }
 }
+
+impl ToProto for SystemObject {}
+impl FromProto for SystemObject {}
 
 impl ObjectHash for SystemObject {
     #[inline]

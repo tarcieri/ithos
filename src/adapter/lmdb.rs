@@ -132,13 +132,12 @@ impl<'a> Adapter<'a> for LmdbAdapter {
 
     fn add_entry<'b>(&'b self,
                      txn: &'b mut RwTransaction,
-                     id: entry::Id,
-                     parent_id: entry::Id,
+                     entry: &Entry,
                      name: &'b str,
-                     metadata: &Metadata,
-                     entry: &Entry)
+                     parent_id: entry::Id,
+                     metadata: &Metadata)
                      -> Result<DirEntry> {
-        if txn.get(self.entries, id.as_ref()) != Err(Error::NotFound) {
+        if txn.get(self.entries, entry.id.as_ref()) != Err(Error::NotFound) {
             return Err(Error::EntryAlreadyExists);
         }
 
@@ -148,7 +147,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
         }
 
         let direntry = DirEntry {
-            id: id,
+            id: entry.id,
             parent_id: parent_id,
             name: name,
         };
@@ -156,10 +155,10 @@ impl<'a> Adapter<'a> for LmdbAdapter {
         try!(txn.put(self.directories, parent_id.as_ref(), &direntry.to_bytes())
             .map_err(|_| Error::DbWrite));
 
-        try!(txn.put(self.metadata, id.as_ref(), &try!(metadata.to_proto()))
+        try!(txn.put(self.metadata, entry.id.as_ref(), &try!(metadata.to_proto()))
             .map_err(|_| Error::DbWrite));
 
-        let mut buffer = try!(txn.reserve(self.entries, id.as_ref(), 4 + entry.data.len()));
+        let mut buffer = try!(txn.reserve(self.entries, entry.id.as_ref(), 4 + entry.data.len()));
         try!(buffer.write_all(entry.type_id.as_ref())
             .map_err(|_| Error::DbWrite));
         try!(buffer.write_all(entry.data)
@@ -190,7 +189,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
                                                     id: &entry::Id)
                                                     -> Result<Entry> {
         let bytes = try!(txn.get(self.entries, id.as_ref()).map_err(|_| Error::NotFound));
-        Entry::from_bytes(bytes)
+        Entry::from_bytes(*id, bytes)
     }
 }
 
@@ -276,15 +275,16 @@ mod tests {
         Metadata::new(block::Id::root(), EXAMPLE_TIMESTAMP)
     }
 
-    fn example_entry(data: &[u8]) -> Entry {
+    fn example_entry(id: Id, data: &[u8]) -> Entry {
         Entry {
+            id: id,
             type_id: TypeId::from_bytes(EXAMPLE_TYPE_ID).unwrap(),
             data: data,
         }
     }
 
     #[test]
-    fn test_duplicate_block() {
+    fn duplicate_block() {
         let adapter = create_database();
         let block = block::tests::example_block();
 
@@ -298,7 +298,7 @@ mod tests {
     }
 
     #[test]
-    fn test_entry_lookup() {
+    fn entry_lookup() {
         let adapter = create_database();
         let example_data = b"just an example host entry";
 
@@ -307,29 +307,26 @@ mod tests {
 
             let domain_id = adapter.next_free_entry_id(&txn).unwrap();
             adapter.add_entry(&mut txn,
-                           domain_id,
-                           Id::root(),
+                           &example_entry(domain_id, b"example domain entry"),
                            "example.com",
-                           &example_metadata(),
-                           &example_entry(b"example domain entry"))
+                           Id::root(),
+                           &example_metadata())
                 .unwrap();
 
             let hosts_id = domain_id.next();
             adapter.add_entry(&mut txn,
-                           hosts_id,
-                           domain_id,
+                           &example_entry(hosts_id, b"example hosts ou"),
                            "hosts",
-                           &example_metadata(),
-                           &example_entry(b"example hosts ou"))
+                           domain_id,
+                           &example_metadata())
                 .unwrap();
 
             let host_id = hosts_id.next();
             adapter.add_entry(&mut txn,
-                           host_id,
-                           hosts_id,
+                           &example_entry(host_id, example_data),
                            "master.example.com",
-                           &example_metadata(),
-                           &example_entry(example_data))
+                           hosts_id,
+                           &example_metadata())
                 .unwrap();
 
             txn.commit().unwrap();
@@ -356,51 +353,47 @@ mod tests {
     }
 
     #[test]
-    fn test_duplicate_entry_id() {
+    fn duplicate_entry_id() {
         let adapter = create_database();
 
         let mut txn = adapter.rw_transaction().unwrap();
 
         let domain_id = adapter.next_free_entry_id(&txn).unwrap();
         adapter.add_entry(&mut txn,
-                       domain_id,
-                       Id::root(),
+                       &example_entry(domain_id, b"domain"),
                        "example.com",
-                       &example_metadata(),
-                       &example_entry(b"domain"))
+                       Id::root(),
+                       &example_metadata())
             .unwrap();
 
         let result = adapter.add_entry(&mut txn,
-                                       domain_id,
-                                       Id::root(),
+                                       &example_entry(domain_id, b"domain"),
                                        "another.com",
-                                       &example_metadata(),
-                                       &example_entry(b"domain"));
+                                       Id::root(),
+                                       &example_metadata());
 
         assert_eq!(result, Err(Error::EntryAlreadyExists));
     }
 
     #[test]
-    fn test_duplicate_entry_name() {
+    fn duplicate_entry_name() {
         let adapter = create_database();
 
         let mut txn = adapter.rw_transaction().unwrap();
 
         let domain_id = adapter.next_free_entry_id(&txn).unwrap();
         adapter.add_entry(&mut txn,
-                       domain_id,
-                       Id::root(),
+                       &example_entry(domain_id, b"domain"),
                        "example.com",
-                       &example_metadata(),
-                       &example_entry(b"domain"))
+                       Id::root(),
+                       &example_metadata())
             .unwrap();
 
         let result = adapter.add_entry(&mut txn,
-                                       domain_id.next(),
-                                       Id::root(),
+                                       &example_entry(domain_id.next(), b"domain"),
                                        "example.com",
-                                       &example_metadata(),
-                                       &example_entry(b"domain"));
+                                       Id::root(),
+                                       &example_metadata());
 
         assert_eq!(result, Err(Error::EntryAlreadyExists));
     }

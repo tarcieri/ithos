@@ -3,10 +3,11 @@ use std::io;
 use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
 use serde_json::builder::ObjectBuilder;
 
-use proto::ToProto;
+use proto::{ToProto, FromProto};
+use objectclass::{AllowsChild, ObjectClass};
 use objecthash::{self, ObjectHash, ObjectHasher};
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct OrganizationalUnitObject {
     pub description: Option<String>,
 }
@@ -21,7 +22,17 @@ impl OrganizationalUnitObject {
     }
 }
 
-impl ToProto for OrganizationalUnitObject {}
+impl AllowsChild for OrganizationalUnitObject {
+    #[inline]
+    fn allows_child(&self, child: &ObjectClass) -> bool {
+        match *child {
+            ObjectClass::OrganizationalUnit(_) => true,
+            ObjectClass::System(_) => true,
+            ObjectClass::Credential(_) => true,
+            _ => false,
+        }
+    }
+}
 
 impl Serialize for OrganizationalUnitObject {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
@@ -48,6 +59,9 @@ impl Deserialize for OrganizationalUnitObject {
         Ok(OrganizationalUnitObject { description: description })
     }
 }
+
+impl ToProto for OrganizationalUnitObject {}
+impl FromProto for OrganizationalUnitObject {}
 
 impl ObjectHash for OrganizationalUnitObject {
     #[inline]

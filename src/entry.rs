@@ -6,9 +6,6 @@ use objectclass::ObjectClass;
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct Id(u64);
 
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub struct TypeId(u32);
-
 // Ids are 64-bit integers in host-native byte order
 // LMDB has special optimizations for host-native integers as keys
 impl Id {
@@ -39,6 +36,9 @@ impl AsRef<[u8; 8]> for Id {
     }
 }
 
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+pub struct TypeId(pub u32);
+
 impl TypeId {
     pub fn from_objectclass(objectclass: &ObjectClass) -> TypeId {
         TypeId(objectclass.protobuf_id())
@@ -64,17 +64,19 @@ impl AsRef<[u8; 4]> for TypeId {
 }
 
 pub struct Entry<'a> {
+    pub id: Id,
     pub type_id: TypeId,
     pub data: &'a [u8],
 }
 
 impl<'a> Entry<'a> {
-    pub fn from_bytes(bytes: &[u8]) -> Result<Entry> {
+    pub fn from_bytes(id: Id, bytes: &[u8]) -> Result<Entry> {
         if bytes.len() < 4 {
             return Err(Error::Parse);
         }
 
         Ok(Entry {
+            id: id,
             type_id: try!(TypeId::from_bytes(&bytes[0..4])),
             data: &bytes[4..],
         })

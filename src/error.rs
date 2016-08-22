@@ -14,6 +14,7 @@ pub enum Error {
     PathInvalid,
     NotFound,
     EntryAlreadyExists,
+    ObjectNestingError,
 }
 
 impl StdError for Error {
@@ -29,6 +30,7 @@ impl StdError for Error {
             Error::PathInvalid => "the given path is syntactically invalid",
             Error::NotFound => "the requested object was not found",
             Error::EntryAlreadyExists => "an attempt was made to insert a duplicate entry",
+            Error::ObjectNestingError => "cannot nest child object under the given parent",
         }
     }
 }

@@ -6,10 +6,11 @@ use rustc_serialize::base64::{self, ToBase64};
 
 use algorithm::DigestAlgorithm;
 use log;
-use proto::ToProto;
+use proto::{ToProto, FromProto};
+use objectclass::{AllowsChild, ObjectClass};
 use objecthash::{self, ObjectHash, ObjectHasher};
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct RootObject {
     pub logid: log::Id,
     pub digest_alg: DigestAlgorithm,
@@ -29,7 +30,18 @@ impl RootObject {
     }
 }
 
+impl AllowsChild for RootObject {
+    #[inline]
+    fn allows_child(&self, child: &ObjectClass) -> bool {
+        match *child {
+            ObjectClass::OrganizationalUnit(_) => true,
+            _ => false,
+        }
+    }
+}
+
 impl ToProto for RootObject {}
+impl FromProto for RootObject {}
 
 impl Serialize for RootObject {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {

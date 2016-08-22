@@ -10,7 +10,7 @@ use block::Block;
 use entry::{self, Entry, TypeId};
 use error::{Error, Result};
 use metadata::Metadata;
-use objectclass::ObjectClass;
+use objectclass::{AllowsChild, ObjectClass};
 use objecthash::{self, ObjectHash, ObjectHasher};
 use path::{Path, PathBuf};
 use proto::ToProto;
@@ -83,13 +83,29 @@ impl Op {
                                    state: &mut State<'b>,
                                    block: &Block)
                                    -> Result<()> {
-        let entry_id = state.get_entry_id();
+        let entry_id = state.get_next_entry_id();
 
-        let parent_id = match self.path.as_path().parent() {
+        let parent_path = self.path.as_path().parent();
+        let parent_id = match parent_path {
             Some(parent) => {
                 match state.new_entries.get(parent) {
-                    Some(&id) => id,
-                    _ => try!(adapter.find_direntry(txn, parent)).id,
+                    Some(&(id, ref parent)) => {
+                        if !parent.allows_child(&self.objectclass) {
+                            return Err(Error::ObjectNestingError);
+                        }
+                        id
+                    }
+                    _ => {
+                        let id = try!(adapter.find_direntry(txn, parent)).id;
+                        let entry = try!(adapter.find_entry(txn, &id));
+                        let parent = try!(ObjectClass::from_entry(entry));
+
+                        if !parent.allows_child(&self.objectclass) {
+                            return Err(Error::ObjectNestingError);
+                        }
+
+                        id
+                    }
                 }
             }
             None => entry::Id::root(),
@@ -99,13 +115,14 @@ impl Op {
         let metadata = Metadata::new(block.id, block.timestamp);
         let proto = try!(self.objectclass.to_proto());
         let entry = Entry {
+            id: entry_id,
             type_id: TypeId::from_objectclass(&self.objectclass),
             data: &proto,
         };
 
         // NOTE: The underlying adapter must handle Error::EntryAlreadyExists
-        try!(adapter.add_entry(txn, entry_id, parent_id, &name, &metadata, &entry));
-        state.new_entries.insert(self.path.as_path(), entry_id);
+        try!(adapter.add_entry(txn, &entry, &name, parent_id, &metadata));
+        state.new_entries.insert(self.path.as_path(), (entry_id, self.objectclass.clone()));
 
         Ok(())
     }
@@ -134,8 +151,8 @@ impl ObjectHash for Op {
 }
 
 pub struct State<'a> {
-    pub next_entry_id: entry::Id,
-    pub new_entries: HashMap<&'a Path, entry::Id>,
+    next_entry_id: entry::Id,
+    new_entries: HashMap<&'a Path, (entry::Id, ObjectClass)>,
 }
 
 impl<'a> State<'a> {
@@ -146,7 +163,7 @@ impl<'a> State<'a> {
         }
     }
 
-    pub fn get_entry_id(&mut self) -> entry::Id {
+    pub fn get_next_entry_id(&mut self) -> entry::Id {
         let id = self.next_entry_id;
         self.next_entry_id = id.next();
         id
