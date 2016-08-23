@@ -7,7 +7,7 @@ use serde_json::builder::ObjectBuilder;
 use algorithm::{EncryptionAlgorithm, SignatureAlgorithm};
 use error::{Error, Result};
 use proto::{ToProto, FromProto};
-use objectclass::{AllowsChild, ObjectClass};
+use object::{AllowsChild, Object};
 use objecthash::{self, ObjectHash, ObjectHasher};
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
@@ -16,13 +16,13 @@ pub enum Type {
 }
 
 impl Type {
-    fn protobuf_id(&self) -> u32 {
+    fn id(&self) -> u32 {
         match *self {
             Type::SignatureKeyPair(_) => 1,
         }
     }
 
-    fn protobuf_alg(&self) -> String {
+    fn alg(&self) -> String {
         match *self {
             // TODO: factor this into SignatureAlgorithm
             Type::SignatureKeyPair(SignatureAlgorithm::Ed25519) => String::from("Ed25519"),
@@ -52,7 +52,7 @@ impl ToString for Type {
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct CredentialObject {
+pub struct CredentialEntry {
     keyid: Vec<u8>,
     credential_type: Type,
     sealing_alg: EncryptionAlgorithm,
@@ -63,7 +63,7 @@ pub struct CredentialObject {
     description: Option<String>,
 }
 
-impl CredentialObject {
+impl CredentialEntry {
     pub fn signature_keypair(sealing_alg: EncryptionAlgorithm,
                              signature_alg: SignatureAlgorithm,
                              sealed_keypair: &[u8],
@@ -71,11 +71,11 @@ impl CredentialObject {
                              not_before: u64,
                              not_after: u64,
                              description: Option<String>)
-                             -> CredentialObject {
+                             -> CredentialEntry {
         // Ed25519 is the only signature algorithm we presently support
         assert!(signature_alg == SignatureAlgorithm::Ed25519);
 
-        CredentialObject {
+        CredentialEntry {
             keyid: Vec::from(public_key),
             credential_type: Type::SignatureKeyPair(SignatureAlgorithm::Ed25519),
             sealing_alg: sealing_alg,
@@ -90,7 +90,7 @@ impl CredentialObject {
     pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
         let builder = builder.insert("keyid", self.keyid.to_base64(base64::URL_SAFE))
             .insert("credential_type", self.credential_type.to_string())
-            .insert("credential_alg", self.credential_type.protobuf_alg())
+            .insert("credential_alg", self.credential_type.alg())
             .insert("sealing_alg", self.sealing_alg.to_string())
             .insert("encrypted_value",
                     self.encrypted_value.to_base64(base64::URL_SAFE));
@@ -121,19 +121,19 @@ impl CredentialObject {
     }
 }
 
-impl AllowsChild for CredentialObject {
+impl AllowsChild for CredentialEntry {
     #[inline]
-    fn allows_child(&self, _child: &ObjectClass) -> bool {
+    fn allows_child(_child: &Object) -> bool {
         false
     }
 }
 
-impl Serialize for CredentialObject {
+impl Serialize for CredentialEntry {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
         try!(out.write(1, &self.keyid));
-        try!(out.write(2, &self.credential_type.protobuf_id()));
-        try!(out.write(3, &self.credential_type.protobuf_alg()));
-        try!(out.write(4, &self.sealing_alg.protobuf_id()));
+        try!(out.write(2, &self.credential_type.id()));
+        try!(out.write(3, &self.credential_type.alg()));
+        try!(out.write(4, &self.sealing_alg.id()));
         try!(out.write(5, &self.encrypted_value));
 
         if let Some(ref public_key) = self.public_key {
@@ -156,8 +156,8 @@ impl Serialize for CredentialObject {
     }
 }
 
-impl Deserialize for CredentialObject {
-    fn deserialize<R: io::Read>(i: &mut InputStream<R>) -> io::Result<CredentialObject> {
+impl Deserialize for CredentialEntry {
+    fn deserialize<R: io::Read>(i: &mut InputStream<R>) -> io::Result<CredentialEntry> {
         let mut keyid: Option<Vec<u8>> = None;
         let mut credential_id: Option<u32> = None;
         let mut credential_alg: Option<String> = None;
@@ -187,11 +187,11 @@ impl Deserialize for CredentialObject {
             .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid credential type")));
 
         // Ensure sealing algorithm is Aes256Gcm
-        if sealing_alg != Some(EncryptionAlgorithm::Aes256Gcm.protobuf_id()) {
+        if sealing_alg != Some(EncryptionAlgorithm::Aes256Gcm.id()) {
             return Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid sealing algorithm"));
         }
 
-        Ok(CredentialObject {
+        Ok(CredentialEntry {
             keyid: required!(keyid, "CredentialObject::keyid"),
             credential_type: credential_type,
             sealing_alg: EncryptionAlgorithm::Aes256Gcm,
@@ -204,16 +204,16 @@ impl Deserialize for CredentialObject {
     }
 }
 
-impl ToProto for CredentialObject {}
-impl FromProto for CredentialObject {}
+impl ToProto for CredentialEntry {}
+impl FromProto for CredentialEntry {}
 
-impl ObjectHash for CredentialObject {
+impl ObjectHash for CredentialEntry {
     #[inline]
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
         let mut digests: Vec<Vec<u8>> = Vec::new();
 
         let credential_id_string = self.credential_type.to_string();
-        let credential_alg_string = self.credential_type.protobuf_alg();
+        let credential_alg_string = self.credential_type.alg();
 
         digests.push(objecthash_struct_member!("keyid", self.keyid));
         digests.push(objecthash_struct_member!("credential_type", credential_id_string));

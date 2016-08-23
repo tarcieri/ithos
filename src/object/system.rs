@@ -4,17 +4,17 @@ use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
 use serde_json::builder::ObjectBuilder;
 
 use proto::{ToProto, FromProto};
-use objectclass::{AllowsChild, ObjectClass};
+use object::{AllowsChild, Object};
 use objecthash::{self, ObjectHash, ObjectHasher};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct SystemObject {
+pub struct SystemEntry {
     pub username: String,
 }
 
-impl SystemObject {
-    pub fn new(username: String) -> SystemObject {
-        SystemObject { username: username }
+impl SystemEntry {
+    pub fn new(username: String) -> SystemEntry {
+        SystemEntry { username: username }
     }
 
     pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
@@ -22,25 +22,25 @@ impl SystemObject {
     }
 }
 
-impl AllowsChild for SystemObject {
+impl AllowsChild for SystemEntry {
     #[inline]
-    fn allows_child(&self, child: &ObjectClass) -> bool {
+    fn allows_child(child: &Object) -> bool {
         match *child {
-            ObjectClass::OrganizationalUnit(_) => true,
+            Object::OrganizationalUnit(_) => true,
             _ => false,
         }
     }
 }
 
-impl Serialize for SystemObject {
+impl Serialize for SystemEntry {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
         try!(out.write(1, &self.username));
         Ok(())
     }
 }
 
-impl Deserialize for SystemObject {
-    fn deserialize<R: io::Read>(i: &mut InputStream<R>) -> io::Result<SystemObject> {
+impl Deserialize for SystemEntry {
+    fn deserialize<R: io::Read>(i: &mut InputStream<R>) -> io::Result<SystemEntry> {
         let mut username: Option<String> = None;
 
         while let Some(f) = try!(i.read_field()) {
@@ -50,14 +50,14 @@ impl Deserialize for SystemObject {
             }
         }
 
-        Ok(SystemObject { username: required!(username, "SystemObject::username") })
+        Ok(SystemEntry { username: required!(username, "SystemObject::username") })
     }
 }
 
-impl ToProto for SystemObject {}
-impl FromProto for SystemObject {}
+impl ToProto for SystemEntry {}
+impl FromProto for SystemEntry {}
 
-impl ObjectHash for SystemObject {
+impl ObjectHash for SystemEntry {
     #[inline]
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
         objecthash_struct!(hasher, "username" => self.username);

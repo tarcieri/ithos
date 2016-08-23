@@ -4,17 +4,17 @@ use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
 use serde_json::builder::ObjectBuilder;
 
 use proto::{ToProto, FromProto};
-use objectclass::{AllowsChild, ObjectClass};
+use object::{AllowsChild, Object};
 use objecthash::{self, ObjectHash, ObjectHasher};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct DomainObject {
+pub struct DomainEntry {
     pub description: Option<String>,
 }
 
-impl DomainObject {
-    pub fn new(description: Option<String>) -> DomainObject {
-        DomainObject { description: description }
+impl DomainEntry {
+    pub fn new(description: Option<String>) -> DomainEntry {
+        DomainEntry { description: description }
     }
 
     pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
@@ -22,18 +22,18 @@ impl DomainObject {
     }
 }
 
-impl AllowsChild for DomainObject {
+impl AllowsChild for DomainEntry {
     #[inline]
-    fn allows_child(&self, child: &ObjectClass) -> bool {
+    fn allows_child(child: &Object) -> bool {
         match *child {
-            ObjectClass::Domain(_) => true,
-            ObjectClass::OrganizationalUnit(_) => true,
+            Object::Domain(_) => true,
+            Object::OrganizationalUnit(_) => true,
             _ => false,
         }
     }
 }
 
-impl Serialize for DomainObject {
+impl Serialize for DomainEntry {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
         match self.description {
             Some(ref description) => try!(out.write(1, &description)),
@@ -44,8 +44,8 @@ impl Serialize for DomainObject {
     }
 }
 
-impl Deserialize for DomainObject {
-    fn deserialize<R: io::Read>(i: &mut InputStream<R>) -> io::Result<DomainObject> {
+impl Deserialize for DomainEntry {
+    fn deserialize<R: io::Read>(i: &mut InputStream<R>) -> io::Result<DomainEntry> {
         let mut description: Option<String> = None;
 
         while let Some(f) = try!(i.read_field()) {
@@ -55,14 +55,14 @@ impl Deserialize for DomainObject {
             }
         }
 
-        Ok(DomainObject { description: description })
+        Ok(DomainEntry { description: description })
     }
 }
 
-impl ToProto for DomainObject {}
-impl FromProto for DomainObject {}
+impl ToProto for DomainEntry {}
+impl FromProto for DomainEntry {}
 
-impl ObjectHash for DomainObject {
+impl ObjectHash for DomainEntry {
     #[inline]
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
         match self.description {

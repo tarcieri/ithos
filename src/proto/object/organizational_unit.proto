@@ -1,4 +1,4 @@
-package ithos.objectclass;
+package ithos.object;
 
 // Unit/department within an organization or other logical grouping
 message OrganizationalUnit {

@@ -27,7 +27,7 @@ mod entry;
 mod error;
 mod log;
 mod metadata;
-mod objectclass;
+mod object;
 mod op;
 mod password;
 mod path;
@@ -84,7 +84,8 @@ fn create(database_path: &str, admin_username: &str) {
             println!("{password}", password = admin_password);
         }
         Err(Error::EntryAlreadyExists) => {
-            println!("*** Error: a database already exists at {path}", path = database_path);
+            println!("*** Error: a database already exists at {path}",
+                     path = database_path);
         }
         Err(err) => panic!(err),
     }

@@ -1,6 +1,6 @@
 package ithos;
 
-import "objectclass.proto";
+import "object.proto";
 
 // Ops make modifications to the state of the database
 message Op {
@@ -8,7 +8,7 @@ message Op {
     ADD = 1;
   }
 
-  required Type        optype = 1;
-  required string      path = 2;
-  optional ObjectClass objectclass = 3;
+  required Type   optype = 1;
+  required string path = 2;
+  optional Object objectclass = 3;
 }

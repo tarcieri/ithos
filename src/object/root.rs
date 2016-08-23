@@ -7,18 +7,18 @@ use rustc_serialize::base64::{self, ToBase64};
 use algorithm::DigestAlgorithm;
 use log;
 use proto::{ToProto, FromProto};
-use objectclass::{AllowsChild, ObjectClass};
+use object::{AllowsChild, Object};
 use objecthash::{self, ObjectHash, ObjectHasher};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct RootObject {
+pub struct RootEntry {
     pub logid: log::Id,
     pub digest_alg: DigestAlgorithm,
 }
 
-impl RootObject {
-    pub fn new(logid: log::Id) -> RootObject {
-        RootObject {
+impl RootEntry {
+    pub fn new(logid: log::Id) -> RootEntry {
+        RootEntry {
             logid: logid,
             digest_alg: DigestAlgorithm::Sha256,
         }
@@ -30,20 +30,20 @@ impl RootObject {
     }
 }
 
-impl AllowsChild for RootObject {
+impl AllowsChild for RootEntry {
     #[inline]
-    fn allows_child(&self, child: &ObjectClass) -> bool {
+    fn allows_child(child: &Object) -> bool {
         match *child {
-            ObjectClass::OrganizationalUnit(_) => true,
+            Object::OrganizationalUnit(_) => true,
             _ => false,
         }
     }
 }
 
-impl ToProto for RootObject {}
-impl FromProto for RootObject {}
+impl ToProto for RootEntry {}
+impl FromProto for RootEntry {}
 
-impl Serialize for RootObject {
+impl Serialize for RootEntry {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
         try!(out.write(1, self.logid.as_ref()));
         try!(out.write(2, &self.digest_alg));
@@ -51,8 +51,8 @@ impl Serialize for RootObject {
     }
 }
 
-impl Deserialize for RootObject {
-    fn deserialize<R: io::Read>(i: &mut InputStream<R>) -> io::Result<RootObject> {
+impl Deserialize for RootEntry {
+    fn deserialize<R: io::Read>(i: &mut InputStream<R>) -> io::Result<RootEntry> {
         let mut logid_bytes: Option<Vec<u8>> = None;
         let mut digest_alg = None;
 
@@ -67,14 +67,14 @@ impl Deserialize for RootObject {
         let logid = try!(log::Id::from_bytes(&required!(logid_bytes, "Root::logid"))
             .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "error parsing logid")));
 
-        Ok(RootObject {
+        Ok(RootEntry {
             logid: logid,
             digest_alg: required!(digest_alg, "Root::digest_alg"),
         })
     }
 }
 
-impl ObjectHash for RootObject {
+impl ObjectHash for RootEntry {
     #[inline]
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
         objecthash_struct!(
