@@ -10,7 +10,7 @@ use proto::{ToProto, FromProto};
 use object::{AllowsChild, Object};
 use objecthash::{self, ObjectHash, ObjectHasher};
 
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct RootEntry {
     pub logid: log::Id,
     pub digest_alg: DigestAlgorithm,

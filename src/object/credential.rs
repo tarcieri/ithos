@@ -51,7 +51,7 @@ impl ToString for Type {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct CredentialEntry {
     keyid: Vec<u8>,
     credential_type: Type,

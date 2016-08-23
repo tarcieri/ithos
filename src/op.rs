@@ -10,7 +10,7 @@ use block::Block;
 use entry::{self, Entry};
 use error::{Error, Result};
 use metadata::Metadata;
-use object::Object;
+use object::{Class, Object};
 use objecthash::{self, ObjectHash, ObjectHasher};
 use path::{Path, PathBuf};
 use proto::ToProto;
@@ -89,18 +89,17 @@ impl Op {
         let parent_id = match parent_path {
             Some(parent) => {
                 match state.new_entries.get(parent) {
-                    Some(&(id, ref parent)) => {
-                        if !parent.class().allows_child(&self.object) {
+                    Some(&(id, parent_class)) => {
+                        if !parent_class.allows_child(&self.object) {
                             return Err(Error::ObjectNestingError);
                         }
                         id
                     }
                     _ => {
                         let id = try!(adapter.find_direntry(txn, parent)).id;
-                        let entry = try!(adapter.find_entry(txn, &id));
-                        let parent = try!(Object::from_entry(entry));
+                        let parent_entry = try!(adapter.find_entry(txn, &id));
 
-                        if !parent.class().allows_child(&self.object) {
+                        if !parent_entry.class.allows_child(&self.object) {
                             return Err(Error::ObjectNestingError);
                         }
 
@@ -116,13 +115,13 @@ impl Op {
         let proto = try!(self.object.to_proto());
         let entry = Entry {
             id: entry_id,
-            class_id: self.object.class().id(),
+            class: self.object.class(),
             data: &proto,
         };
 
         // NOTE: The underlying adapter must handle Error::EntryAlreadyExists
         try!(adapter.add_entry(txn, &entry, &name, parent_id, &metadata));
-        state.new_entries.insert(self.path.as_path(), (entry_id, self.object.clone()));
+        state.new_entries.insert(self.path.as_path(), (entry_id, self.object.class()));
 
         Ok(())
     }
@@ -152,7 +151,7 @@ impl ObjectHash for Op {
 
 pub struct State<'a> {
     next_entry_id: entry::Id,
-    new_entries: HashMap<&'a Path, (entry::Id, Object)>,
+    new_entries: HashMap<&'a Path, (entry::Id, Class)>,
 }
 
 impl<'a> State<'a> {

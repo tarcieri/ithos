@@ -12,7 +12,7 @@ use buffoon::{Serialize, OutputStream};
 use serde_json::builder::ObjectBuilder;
 use objecthash::{ObjectHash, ObjectHasher};
 
-use entry::{self, Entry};
+use entry::Entry;
 use error::{Error, Result};
 use proto::{ToProto, FromProto};
 
@@ -28,39 +28,6 @@ pub trait AllowsChild {
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub struct ClassId(u32);
-
-impl ClassId {
-    pub fn from_bytes(bytes: &[u8]) -> Result<ClassId> {
-        if bytes.len() != 4 {
-            return Err(Error::Parse);
-        }
-
-        let mut id = [0u8; 4];
-        id.copy_from_slice(&bytes[0..4]);
-
-        Ok(ClassId(unsafe { mem::transmute(id) }))
-    }
-}
-
-impl AsRef<[u8; 4]> for ClassId {
-    #[inline(always)]
-    fn as_ref(&self) -> &[u8; 4] {
-        unsafe { mem::transmute(&self.0) }
-    }
-}
-
-impl Serialize for ClassId {
-    fn serialize<O: OutputStream>(&self, _: &mut O) -> io::Result<()> {
-        unimplemented!();
-    }
-
-    fn serialize_nested<O: OutputStream>(&self, field: u32, out: &mut O) -> io::Result<()> {
-        out.write_varint(field, self.0)
-    }
-}
-
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum Class {
     Root, // Root entry in the tree (ala LDAP root DSE)
     Domain, // Administrative Domain (ala DNS domain or Kerberos realm)
@@ -70,10 +37,28 @@ pub enum Class {
 }
 
 impl Class {
-    #[inline]
-    pub fn id(&self) -> ClassId {
-        ClassId(*self as u32 + 1)
+    pub fn from_bytes(bytes: &[u8]) -> Result<Class> {
+        if bytes.len() != 4 {
+            return Err(Error::Parse);
+        }
+
+        let mut id_bytes = [0u8; 4];
+        id_bytes.copy_from_slice(&bytes[0..4]);
+
+        let id: u32 = unsafe { mem::transmute(id_bytes) };
+
+        let result = match id {
+            0 => Class::Root,
+            1 => Class::Domain,
+            2 => Class::OrganizationalUnit,
+            3 => Class::System,
+            4 => Class::Credential,
+            _ => return Err(Error::Parse),
+        };
+
+        Ok(result)
     }
+
 
     #[inline]
     pub fn allows_child(&self, child: &Object) -> bool {
@@ -84,6 +69,12 @@ impl Class {
             Class::System => SystemEntry::allows_child(child),
             Class::Credential => CredentialEntry::allows_child(child),
         }
+    }
+
+    #[inline]
+    pub fn as_bytes(&self) -> [u8; 4] {
+        let id = *self as u32 + 1;
+        unsafe { mem::transmute(id) }
     }
 }
 
@@ -99,7 +90,17 @@ impl ToString for Class {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Clone)]
+impl Serialize for Class {
+    fn serialize<O: OutputStream>(&self, _: &mut O) -> io::Result<()> {
+        unimplemented!();
+    }
+
+    fn serialize_nested<O: OutputStream>(&self, field: u32, out: &mut O) -> io::Result<()> {
+        out.write_varint(field, *self as u32 + 1)
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum Object {
     Root(RootEntry), // Root entry in the tree (ala LDAP root DSE)
     Domain(DomainEntry), // Administrative Domain (ala DNS domain or Kerberos realm)
@@ -121,15 +122,14 @@ impl Object {
     }
 
     pub fn from_entry(entry: Entry) -> Result<Object> {
-        let ClassId(class_id) = entry.class_id;
-
-        let result = match class_id {
-            1 => Object::Root(try!(RootEntry::from_proto(entry.data))),
-            2 => Object::Domain(try!(DomainEntry::from_proto(entry.data))),
-            3 => Object::OrganizationalUnit(try!(OrganizationalUnitEntry::from_proto(entry.data))),
-            4 => Object::System(try!(SystemEntry::from_proto(entry.data))),
-            5 => Object::Credential(try!(CredentialEntry::from_proto(entry.data))),
-            _ => return Err(Error::Parse),
+        let result = match entry.class {
+            Class::Root => Object::Root(try!(RootEntry::from_proto(entry.data))),
+            Class::Domain => Object::Domain(try!(DomainEntry::from_proto(entry.data))),
+            Class::OrganizationalUnit => {
+                Object::OrganizationalUnit(try!(OrganizationalUnitEntry::from_proto(entry.data)))
+            }
+            Class::System => Object::System(try!(SystemEntry::from_proto(entry.data))),
+            Class::Credential => Object::Credential(try!(CredentialEntry::from_proto(entry.data))),
         };
 
         Ok(result)
@@ -149,7 +149,7 @@ impl Object {
 
 impl Serialize for Object {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
-        try!(out.write(1, &self.class().id()));
+        try!(out.write(1, &self.class()));
 
         let object_proto = match self {
             &Object::Root(ref root) => root.to_proto(),

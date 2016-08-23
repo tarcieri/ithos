@@ -159,7 +159,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
             .map_err(|_| Error::DbWrite));
 
         let mut buffer = try!(txn.reserve(self.entries, entry.id.as_ref(), 4 + entry.data.len()));
-        try!(buffer.write_all(entry.class_id.as_ref())
+        try!(buffer.write_all(&entry.class.as_bytes())
             .map_err(|_| Error::DbWrite));
         try!(buffer.write_all(entry.data)
             .map_err(|_| Error::DbWrite));
@@ -259,7 +259,7 @@ mod tests {
     use entry::{Entry, Id};
     use error::Error;
     use metadata::Metadata;
-    use object::ClassId;
+    use object::Class;
     use path::Path;
 
     use tempdir::TempDir;
@@ -279,7 +279,7 @@ mod tests {
     fn example_entry(id: Id, data: &[u8]) -> Entry {
         Entry {
             id: id,
-            class_id: ClassId::from_bytes(EXAMPLE_TYPE_ID).unwrap(),
+            class: Class::from_bytes(EXAMPLE_TYPE_ID).unwrap(),
             data: data,
         }
     }

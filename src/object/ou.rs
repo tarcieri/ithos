@@ -7,7 +7,7 @@ use proto::{ToProto, FromProto};
 use object::{AllowsChild, Object};
 use objecthash::{self, ObjectHash, ObjectHasher};
 
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct OrganizationalUnitEntry {
     pub description: Option<String>,
 }

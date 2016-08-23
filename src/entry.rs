@@ -1,7 +1,7 @@
 use std::mem;
 
 use error::{Error, Result};
-use object::ClassId;
+use object::Class;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct Id(u64);
@@ -38,7 +38,7 @@ impl AsRef<[u8; 8]> for Id {
 
 pub struct Entry<'a> {
     pub id: Id,
-    pub class_id: ClassId,
+    pub class: Class,
     pub data: &'a [u8],
 }
 
@@ -50,7 +50,7 @@ impl<'a> Entry<'a> {
 
         Ok(Entry {
             id: id,
-            class_id: try!(ClassId::from_bytes(&bytes[0..4])),
+            class: try!(Class::from_bytes(&bytes[0..4])),
             data: &bytes[4..],
         })
     }
