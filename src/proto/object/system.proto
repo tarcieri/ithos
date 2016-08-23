@@ -1,4 +1,4 @@
-package ithos.objectclass;
+package ithos.object;
 
 // System User (i.e. non-human account)
 message System {

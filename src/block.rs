@@ -9,11 +9,11 @@ use time;
 use algorithm::{DigestAlgorithm, EncryptionAlgorithm, SignatureAlgorithm};
 use error::{Error, Result};
 use log;
-use objectclass::ObjectClass;
-use objectclass::credential::CredentialObject;
-use objectclass::ou::OrganizationalUnitObject;
-use objectclass::root::RootObject;
-use objectclass::system::SystemObject;
+use object::Object;
+use object::credential::CredentialEntry;
+use object::ou::OrganizationalUnitEntry;
+use object::root::RootEntry;
+use object::system::SystemEntry;
 use objecthash::{self, ObjectHash, ObjectHasher};
 use op::{self, Op};
 use path::PathBuf;
@@ -92,40 +92,40 @@ impl Block {
 
         ops.push(Op::new(op::Type::Add,
                          path.clone(),
-                         ObjectClass::Root(RootObject::new(*logid))));
+                         Object::Root(RootEntry::new(*logid))));
 
-        let system_ou = OrganizationalUnitObject::new(Some(String::from("Core system users")));
+        let system_ou = OrganizationalUnitEntry::new(Some(String::from("Core system users")));
 
         path.push("system");
         ops.push(Op::new(op::Type::Add,
                          path.clone(),
-                         ObjectClass::OrganizationalUnit(system_ou)));
+                         Object::OrganizationalUnit(system_ou)));
 
-        let admin_user = SystemObject::new(String::from(admin_username));
+        let admin_user = SystemEntry::new(String::from(admin_username));
 
         path.push(&admin_username);
-        ops.push(Op::new(op::Type::Add, path.clone(), ObjectClass::System(admin_user)));
+        ops.push(Op::new(op::Type::Add, path.clone(), Object::System(admin_user)));
 
-        let admin_keys_ou = OrganizationalUnitObject::new(Some(String::from("Admin credentials")));
+        let admin_keys_ou = OrganizationalUnitEntry::new(Some(String::from("Admin credentials")));
 
         path.push("keys");
         ops.push(Op::new(op::Type::Add,
                          path.clone(),
-                         ObjectClass::OrganizationalUnit(admin_keys_ou)));
+                         Object::OrganizationalUnit(admin_keys_ou)));
 
         let admin_signing_credential =
-            CredentialObject::signature_keypair(encryption_alg,
-                                                signature_alg,
-                                                admin_keypair_sealed,
-                                                admin_keypair.public_key_bytes(),
-                                                timestamp,
-                                                timestamp + ADMIN_KEYPAIR_LIFETIME,
-                                                Some(String::from("Root signing key")));
+            CredentialEntry::signature_keypair(encryption_alg,
+                                               signature_alg,
+                                               admin_keypair_sealed,
+                                               admin_keypair.public_key_bytes(),
+                                               timestamp,
+                                               timestamp + ADMIN_KEYPAIR_LIFETIME,
+                                               Some(String::from("Root signing key")));
 
         path.push("signing");
         ops.push(Op::new(op::Type::Add,
                          path,
-                         ObjectClass::Credential(admin_signing_credential)));
+                         Object::Credential(admin_signing_credential)));
 
         Block::new(Id::root(), timestamp, ops, comment, admin_keypair)
     }

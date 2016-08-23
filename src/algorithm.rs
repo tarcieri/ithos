@@ -23,7 +23,7 @@ pub enum SignatureAlgorithm {
 macro_rules! impl_algorithm (($algorithm:ident, $only:expr, $string:expr) => (
     impl $algorithm {
         #[allow(dead_code)]
-        pub fn protobuf_id(&self) -> u32 {
+        pub fn id(&self) -> u32 {
             *self as u32 + 1
         }
     }

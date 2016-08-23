@@ -4,17 +4,17 @@ use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
 use serde_json::builder::ObjectBuilder;
 
 use proto::{ToProto, FromProto};
-use objectclass::{AllowsChild, ObjectClass};
+use object::{AllowsChild, Object};
 use objecthash::{self, ObjectHash, ObjectHasher};
 
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub struct OrganizationalUnitObject {
+#[derive(Debug, Eq, PartialEq)]
+pub struct OrganizationalUnitEntry {
     pub description: Option<String>,
 }
 
-impl OrganizationalUnitObject {
-    pub fn new(description: Option<String>) -> OrganizationalUnitObject {
-        OrganizationalUnitObject { description: description }
+impl OrganizationalUnitEntry {
+    pub fn new(description: Option<String>) -> OrganizationalUnitEntry {
+        OrganizationalUnitEntry { description: description }
     }
 
     pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
@@ -22,19 +22,19 @@ impl OrganizationalUnitObject {
     }
 }
 
-impl AllowsChild for OrganizationalUnitObject {
+impl AllowsChild for OrganizationalUnitEntry {
     #[inline]
-    fn allows_child(&self, child: &ObjectClass) -> bool {
+    fn allows_child(child: &Object) -> bool {
         match *child {
-            ObjectClass::OrganizationalUnit(_) => true,
-            ObjectClass::System(_) => true,
-            ObjectClass::Credential(_) => true,
+            Object::OrganizationalUnit(_) => true,
+            Object::System(_) => true,
+            Object::Credential(_) => true,
             _ => false,
         }
     }
 }
 
-impl Serialize for OrganizationalUnitObject {
+impl Serialize for OrganizationalUnitEntry {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
         match self.description {
             Some(ref description) => try!(out.write(1, &description)),
@@ -45,8 +45,8 @@ impl Serialize for OrganizationalUnitObject {
     }
 }
 
-impl Deserialize for OrganizationalUnitObject {
-    fn deserialize<R: io::Read>(i: &mut InputStream<R>) -> io::Result<OrganizationalUnitObject> {
+impl Deserialize for OrganizationalUnitEntry {
+    fn deserialize<R: io::Read>(i: &mut InputStream<R>) -> io::Result<OrganizationalUnitEntry> {
         let mut description: Option<String> = None;
 
         while let Some(f) = try!(i.read_field()) {
@@ -56,14 +56,14 @@ impl Deserialize for OrganizationalUnitObject {
             }
         }
 
-        Ok(OrganizationalUnitObject { description: description })
+        Ok(OrganizationalUnitEntry { description: description })
     }
 }
 
-impl ToProto for OrganizationalUnitObject {}
-impl FromProto for OrganizationalUnitObject {}
+impl ToProto for OrganizationalUnitEntry {}
+impl FromProto for OrganizationalUnitEntry {}
 
-impl ObjectHash for OrganizationalUnitObject {
+impl ObjectHash for OrganizationalUnitEntry {
     #[inline]
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
         match self.description {

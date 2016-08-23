@@ -7,10 +7,10 @@ use serde_json::builder::ObjectBuilder;
 
 use adapter::Adapter;
 use block::Block;
-use entry::{self, Entry, TypeId};
+use entry::{self, Entry};
 use error::{Error, Result};
 use metadata::Metadata;
-use objectclass::{AllowsChild, ObjectClass};
+use object::{Class, Object};
 use objecthash::{self, ObjectHash, ObjectHasher};
 use path::{Path, PathBuf};
 use proto::ToProto;
@@ -48,15 +48,15 @@ impl ToString for Type {
 pub struct Op {
     pub optype: Type,
     pub path: PathBuf,
-    pub objectclass: ObjectClass,
+    pub object: Object,
 }
 
 impl Op {
-    pub fn new(optype: Type, path: PathBuf, objectclass: ObjectClass) -> Op {
+    pub fn new(optype: Type, path: PathBuf, objectclass: Object) -> Op {
         Op {
             optype: optype,
             path: path,
-            objectclass: objectclass,
+            object: objectclass,
         }
     }
 
@@ -74,7 +74,7 @@ impl Op {
     pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
         builder.insert("optype", self.optype.to_string())
             .insert("path", self.path.as_path().to_string())
-            .insert_object("objectclass", |b| self.objectclass.build_json(b))
+            .insert_object("objectclass", |b| self.object.build_json(b))
     }
 
     fn add<'a, 'b, A: Adapter<'a>>(&'b self,
@@ -89,18 +89,17 @@ impl Op {
         let parent_id = match parent_path {
             Some(parent) => {
                 match state.new_entries.get(parent) {
-                    Some(&(id, ref parent)) => {
-                        if !parent.allows_child(&self.objectclass) {
+                    Some(&(id, parent_class)) => {
+                        if !parent_class.allows_child(&self.object) {
                             return Err(Error::ObjectNestingError);
                         }
                         id
                     }
                     _ => {
                         let id = try!(adapter.find_direntry(txn, parent)).id;
-                        let entry = try!(adapter.find_entry(txn, &id));
-                        let parent = try!(ObjectClass::from_entry(entry));
+                        let parent_entry = try!(adapter.find_entry(txn, &id));
 
-                        if !parent.allows_child(&self.objectclass) {
+                        if !parent_entry.class.allows_child(&self.object) {
                             return Err(Error::ObjectNestingError);
                         }
 
@@ -113,16 +112,16 @@ impl Op {
 
         let name = try!(self.path.as_path().entry_name().ok_or(Error::PathInvalid));
         let metadata = Metadata::new(block.id, block.timestamp);
-        let proto = try!(self.objectclass.to_proto());
+        let proto = try!(self.object.to_proto());
         let entry = Entry {
             id: entry_id,
-            type_id: TypeId::from_objectclass(&self.objectclass),
+            class: self.object.class(),
             data: &proto,
         };
 
         // NOTE: The underlying adapter must handle Error::EntryAlreadyExists
         try!(adapter.add_entry(txn, &entry, &name, parent_id, &metadata));
-        state.new_entries.insert(self.path.as_path(), (entry_id, self.objectclass.clone()));
+        state.new_entries.insert(self.path.as_path(), (entry_id, self.object.class()));
 
         Ok(())
     }
@@ -132,7 +131,7 @@ impl Serialize for Op {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
         try!(out.write(1, &self.optype));
         try!(out.write(2, &self.path.as_path().to_string()));
-        try!(out.write(3, &self.objectclass));
+        try!(out.write(3, &self.object));
 
         Ok(())
     }
@@ -145,14 +144,14 @@ impl ObjectHash for Op {
             hasher,
             "optype" => self.optype,
             "path" => self.path,
-            "objectclass" => self.objectclass
+            "object" => self.object
         )
     }
 }
 
 pub struct State<'a> {
     next_entry_id: entry::Id,
-    new_entries: HashMap<&'a Path, (entry::Id, ObjectClass)>,
+    new_entries: HashMap<&'a Path, (entry::Id, Class)>,
 }
 
 impl<'a> State<'a> {
