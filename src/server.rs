@@ -60,7 +60,7 @@ impl Server {
                                                  encryption_alg,
                                                  signature_alg);
 
-        let adapter = LmdbAdapter::create_database(path).unwrap();
+        let adapter = try!(LmdbAdapter::create_database(path));
         let server = Server { adapter: adapter };
 
         try!(server.commit_unverified_block(&genesis_block));
