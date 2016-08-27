@@ -77,7 +77,7 @@ fn create(database_path: &str, admin_username: &str) {
                                   &admin_username,
                                   &admin_password) {
         Ok(_) => {
-            println!("\nDatabase created! Below is the password for the admin user: '{admin}'",
+            println!("\nDatabase created! Below is the password for the admin user ('{admin}')",
                      admin = admin_username);
             println!("Don't lose it! You will need it to perform administrative actions:\n");
 
