@@ -88,24 +88,21 @@ impl Op {
         let parent_path = self.path.as_path().parent();
         let parent_id = match parent_path {
             Some(parent) => {
-                match state.new_entries.get(parent) {
-                    Some(&(id, parent_class)) => {
-                        if !parent_class.allows_child(&self.object) {
-                            return Err(Error::ObjectNestingError);
-                        }
-                        id
-                    }
+                let (id, class) = match state.new_entries.get(parent) {
+                    Some(ref parent_entry) => (parent_entry.id, parent_entry.class),
                     _ => {
                         let id = try!(adapter.find_direntry(txn, parent)).id;
-                        let parent_entry = try!(adapter.find_entry(txn, &id));
-
-                        if !parent_entry.class.allows_child(&self.object) {
-                            return Err(Error::ObjectNestingError);
-                        }
-
-                        id
+                        let class = try!(adapter.find_entry(txn, &id)).class;
+                        (id, class)
                     }
+                };
+
+                if !class.allows_child(&self.object) {
+                    return Err(Error::ObjectNestingError);
                 }
+
+                id
+
             }
             None => entry::Id::root(),
         };
@@ -121,7 +118,12 @@ impl Op {
 
         // NOTE: The underlying adapter must handle Error::EntryAlreadyExists
         try!(adapter.add_entry(txn, &entry, &name, parent_id, &metadata));
-        state.new_entries.insert(self.path.as_path(), (entry_id, self.object.class()));
+
+        let new_entry = StateEntry {
+            id: entry_id,
+            class: self.object.class(),
+        };
+        state.new_entries.insert(self.path.as_path(), new_entry);
 
         Ok(())
     }
@@ -151,7 +153,7 @@ impl ObjectHash for Op {
 
 pub struct State<'a> {
     next_entry_id: entry::Id,
-    new_entries: HashMap<&'a Path, (entry::Id, Class)>,
+    new_entries: HashMap<&'a Path, StateEntry>,
 }
 
 impl<'a> State<'a> {
@@ -167,4 +169,9 @@ impl<'a> State<'a> {
         self.next_entry_id = id.next();
         id
     }
+}
+
+struct StateEntry {
+    id: entry::Id,
+    class: Class,
 }
