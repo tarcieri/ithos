@@ -4,7 +4,6 @@ use buffoon::{OutputStream, Serialize};
 use rustc_serialize::base64::{self, ToBase64};
 use serde_json;
 use serde_json::builder::ObjectBuilder;
-use time;
 
 use algorithm::{DigestAlgorithm, EncryptionAlgorithm, SignatureAlgorithm};
 use error::{Error, Result};
@@ -19,6 +18,7 @@ use op::{self, Op};
 use path::PathBuf;
 use proto::ToProto;
 use signature::KeyPair;
+use timestamp::Timestamp;
 
 const DIGEST_SIZE: usize = 32;
 const SIGNATURE_SIZE: usize = 64;
@@ -62,7 +62,7 @@ impl ObjectHash for Id {
 pub struct Block {
     pub id: Id,
     pub parent: Id,
-    pub timestamp: u64,
+    pub timestamp: Timestamp,
     pub ops: Vec<Op>,
     pub comment: String,
     pub signed_by: [u8; DIGEST_SIZE],
@@ -86,7 +86,7 @@ impl Block {
         // SHA256 is the only algorithm we presently support
         assert!(digest_alg == DigestAlgorithm::Sha256);
 
-        let timestamp = time::now_utc().to_timespec().sec as u64;
+        let timestamp = Timestamp::now();
         let mut ops = Vec::new();
         let mut path = PathBuf::new();
 
@@ -119,7 +119,7 @@ impl Block {
                                                admin_keypair_sealed,
                                                admin_keypair.public_key_bytes(),
                                                timestamp,
-                                               timestamp + ADMIN_KEYPAIR_LIFETIME,
+                                               timestamp.extend(ADMIN_KEYPAIR_LIFETIME),
                                                Some(String::from("Root signing key")));
 
         path.push("signing");
@@ -131,7 +131,7 @@ impl Block {
     }
 
     pub fn new(parent: Id,
-               timestamp: u64,
+               timestamp: Timestamp,
                ops: Vec<Op>,
                comment: &str,
                keypair: &KeyPair)
