@@ -271,7 +271,7 @@ pub mod tests {
                                     &example_block_id,
                                     example_timestamp);
 
-            assert_eq!(result1, Ok(()));
+            assert!(result1.is_ok());
 
             let result2 = op2.apply(&adapter,
                                     &mut txn,
