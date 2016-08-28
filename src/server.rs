@@ -74,7 +74,11 @@ impl Server {
 
         // Process the operations in the block and apply them to the database
         for op in &block.ops {
-            try!(op.apply(&self.adapter, &mut txn, &mut state, block));
+            try!(op.apply(&self.adapter,
+                          &mut txn,
+                          &mut state,
+                          &block.id,
+                          block.timestamp));
         }
 
         // NOTE: This only stores the block in the database. It does not process it
