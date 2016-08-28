@@ -13,6 +13,7 @@ extern crate objecthash;
 extern crate ring;
 extern crate ring_pwhash as pwhash;
 extern crate rustc_serialize;
+extern crate serde;
 extern crate serde_json;
 extern crate time;
 
@@ -34,6 +35,7 @@ mod path;
 mod proto;
 mod server;
 mod signature;
+mod timestamp;
 
 use ring::rand;
 

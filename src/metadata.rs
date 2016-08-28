@@ -4,17 +4,18 @@ use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
 
 use block;
 use proto::{FromProto, ToProto};
+use timestamp::Timestamp;
 
 pub struct Metadata {
     pub created_id: block::Id,
     pub updated_id: block::Id,
-    pub created_at: u64,
-    pub updated_at: u64,
+    pub created_at: Timestamp,
+    pub updated_at: Timestamp,
     pub version: u64,
 }
 
 impl Metadata {
-    pub fn new(id: block::Id, timestamp: u64) -> Metadata {
+    pub fn new(id: block::Id, timestamp: Timestamp) -> Metadata {
         Metadata {
             created_id: id,
             updated_id: id,

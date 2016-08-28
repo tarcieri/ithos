@@ -9,6 +9,7 @@ use error::{Error, Result};
 use proto::{ToProto, FromProto};
 use object::{AllowsChild, Object};
 use objecthash::{self, ObjectHash, ObjectHasher};
+use timestamp::Timestamp;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum Type {
@@ -58,8 +59,8 @@ pub struct CredentialEntry {
     sealing_alg: EncryptionAlgorithm,
     encrypted_value: Vec<u8>,
     public_key: Option<Vec<u8>>,
-    not_before: Option<u64>,
-    not_after: Option<u64>,
+    not_before: Option<Timestamp>,
+    not_after: Option<Timestamp>,
     description: Option<String>,
 }
 
@@ -68,8 +69,8 @@ impl CredentialEntry {
                              signature_alg: SignatureAlgorithm,
                              sealed_keypair: &[u8],
                              public_key: &[u8],
-                             not_before: u64,
-                             not_after: u64,
+                             not_before: Timestamp,
+                             not_after: Timestamp,
                              description: Option<String>)
                              -> CredentialEntry {
         // Ed25519 is the only signature algorithm we presently support
@@ -164,8 +165,8 @@ impl Deserialize for CredentialEntry {
         let mut sealing_alg: Option<u32> = None;
         let mut encrypted_value: Option<Vec<u8>> = None;
         let mut public_key: Option<Vec<u8>> = None;
-        let mut not_before: Option<u64> = None;
-        let mut not_after: Option<u64> = None;
+        let mut not_before: Option<Timestamp> = None;
+        let mut not_after: Option<Timestamp> = None;
         let mut description: Option<String> = None;
 
         while let Some(f) = try!(i.read_field()) {

@@ -253,6 +253,8 @@ impl<'a> RwTransaction<'a> {
 
 #[cfg(test)]
 mod tests {
+    use tempdir::TempDir;
+
     use adapter::{Adapter, Transaction};
     use adapter::lmdb::LmdbAdapter;
     use block;
@@ -261,25 +263,27 @@ mod tests {
     use metadata::Metadata;
     use object::Class;
     use path::Path;
-
-    use tempdir::TempDir;
+    use timestamp::Timestamp;
 
     fn create_database() -> LmdbAdapter {
         let dir = TempDir::new("ithos-test").unwrap();
         LmdbAdapter::create_database(dir.path()).unwrap()
     }
 
-    const EXAMPLE_TYPE_ID: &'static [u8; 4] = &[0u8; 4];
-    const EXAMPLE_TIMESTAMP: u64 = 1234567890;
+    const EXAMPLE_CLASS_ID: &'static [u8; 4] = &[0u8; 4];
+
+    fn example_timestamp() -> Timestamp {
+        Timestamp::at(1_231_006_505)
+    }
 
     fn example_metadata() -> Metadata {
-        Metadata::new(block::Id::root(), EXAMPLE_TIMESTAMP)
+        Metadata::new(block::Id::root(), example_timestamp())
     }
 
     fn example_entry(id: Id, data: &[u8]) -> Entry {
         Entry {
             id: id,
-            class: Class::from_bytes(EXAMPLE_TYPE_ID).unwrap(),
+            class: Class::from_bytes(EXAMPLE_CLASS_ID).unwrap(),
             data: data,
         }
     }
@@ -343,7 +347,7 @@ mod tests {
                 assert_eq!(direntry.name, "master.example.com");
 
                 let metadata = adapter.find_metadata(&txn, &direntry.id).unwrap();
-                assert_eq!(metadata.created_at, EXAMPLE_TIMESTAMP);
+                assert_eq!(metadata.created_at, example_timestamp());
 
                 let entry = adapter.find_entry(&txn, &direntry.id).unwrap();
                 assert_eq!(entry.data, &example_data[..]);

@@ -14,6 +14,7 @@ use object::{Class, Object};
 use objecthash::{self, ObjectHash, ObjectHasher};
 use path::{Path, PathBuf};
 use proto::ToProto;
+use timestamp::Timestamp;
 
 #[cfg(test)]
 extern crate tempdir;
@@ -68,7 +69,7 @@ impl Op {
                                          txn: &mut A::W,
                                          state: &mut State<'b>,
                                          block_id: &block::Id,
-                                         timestamp: u64)
+                                         timestamp: Timestamp)
                                          -> Result<()> {
         match self.optype {
             Type::Add => self.add(adapter, txn, state, block_id, timestamp),
@@ -86,7 +87,7 @@ impl Op {
                                    txn: &mut A::W,
                                    state: &mut State<'b>,
                                    block_id: &block::Id,
-                                   timestamp: u64)
+                                   timestamp: Timestamp)
                                    -> Result<()> {
         let entry_id = state.get_next_entry_id();
 
@@ -212,12 +213,17 @@ pub mod tests {
     use object::domain::DomainEntry;
     use object::root::RootEntry;
     use path::PathBuf;
+    use timestamp::Timestamp;
 
     use super::{Op, State, Type};
 
     fn test_adapter() -> LmdbAdapter {
         let dir = TempDir::new("ithos-test").unwrap();
         LmdbAdapter::create_database(&dir.path()).unwrap()
+    }
+
+    fn example_timestamp() -> Timestamp {
+        Timestamp::at(1_231_006_505)
     }
 
     #[test]
@@ -231,7 +237,6 @@ pub mod tests {
             let mut txn = adapter.rw_transaction().unwrap();
 
             let example_block_id = block::Id::root();
-            let example_timestamp = 123_456_789;
 
             let op = Op::new(Type::Add,
                              PathBuf::from("/".to_string()),
@@ -243,7 +248,7 @@ pub mod tests {
                                   &mut txn,
                                   &mut state,
                                   &example_block_id,
-                                  example_timestamp);
+                                  example_timestamp());
 
             assert_eq!(result, Err(Error::ObjectNestingError));
         }
@@ -253,7 +258,6 @@ pub mod tests {
             let mut txn = adapter.rw_transaction().unwrap();
 
             let example_block_id = block::Id::root();
-            let example_timestamp = 123_456_789;
 
             let op1 = Op::new(Type::Add,
                               PathBuf::from("/".to_string()),
@@ -269,7 +273,7 @@ pub mod tests {
                                     &mut txn,
                                     &mut state,
                                     &example_block_id,
-                                    example_timestamp);
+                                    example_timestamp());
 
             assert!(result1.is_ok());
 
@@ -277,7 +281,7 @@ pub mod tests {
                                     &mut txn,
                                     &mut state,
                                     &example_block_id,
-                                    example_timestamp);
+                                    example_timestamp());
 
             assert_eq!(result2, Err(Error::ObjectNestingError));
         }
