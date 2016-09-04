@@ -180,7 +180,7 @@ impl<'a> State<'a> {
                                      path: &Path)
                                      -> Result<StateEntry> {
         match self.new_entries.get(path) {
-            Some(ref parent_entry) => Ok(*parent_entry.clone()),
+            Some(parent_entry) => Ok(*parent_entry),
             _ => {
                 let id = try!(adapter.find_direntry(txn, path)).id;
                 let class = try!(adapter.find_entry(txn, &id)).class;
