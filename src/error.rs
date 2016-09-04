@@ -4,10 +4,8 @@ use std::error::Error as StdError;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum Error {
+    Adapter(i32),
     Rng,
-    DbCreate,
-    DbOpen,
-    DbWrite,
     Parse,
     Serialize,
     Transaction,
@@ -20,10 +18,8 @@ pub enum Error {
 impl StdError for Error {
     fn description(&self) -> &str {
         match *self {
+            Error::Adapter(_) => "a low-level error occurred inside a storage adapter",
             Error::Rng => "the system random number generator returned an error",
-            Error::DbCreate => "unable to create database",
-            Error::DbOpen => "unable to open database",
-            Error::DbWrite => "unable to write to database",
             Error::Parse => "unable to parse data",
             Error::Serialize => "unable to serialize data",
             Error::Transaction => "the current transaction cannot be completed because of an error",

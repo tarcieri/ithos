@@ -121,6 +121,7 @@ impl Object {
         }
     }
 
+    #[allow(dead_code)]
     pub fn from_entry(entry: Entry) -> Result<Object> {
         let result = match entry.class {
             Class::Root => Object::Root(try!(RootEntry::from_proto(entry.data))),

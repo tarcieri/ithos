@@ -6,6 +6,7 @@ use std::io::Write;
 
 use self::lmdb::{Environment, Database, DatabaseFlags, Cursor, WriteFlags, DUP_SORT, INTEGER_KEY};
 use self::lmdb::Transaction as LmdbTransaction;
+use self::lmdb::Error as LmdbError;
 
 use adapter::{Adapter, Transaction};
 use block::Block;
@@ -28,20 +29,12 @@ impl LmdbAdapter {
     pub fn create_database(path: &std::path::Path) -> Result<LmdbAdapter> {
         let env = try!(Environment::new()
             .set_max_dbs(8)
-            .open_with_permissions(&path, 0o600)
-            .map_err(|_| Error::DbCreate));
+            .open_with_permissions(&path, 0o600));
 
-        let blocks = try!(env.create_db(Some("blocks"), DatabaseFlags::empty())
-            .map_err(|_| Error::DbCreate));
-
-        let directories = try!(env.create_db(Some("directories"), INTEGER_KEY | DUP_SORT)
-            .map_err(|_| Error::DbCreate));
-
-        let metadata = try!(env.create_db(Some("metadata"), INTEGER_KEY)
-            .map_err(|_| Error::DbCreate));
-
-        let entries = try!(env.create_db(Some("entries"), INTEGER_KEY)
-            .map_err(|_| Error::DbCreate));
+        let blocks = try!(env.create_db(Some("blocks"), DatabaseFlags::empty()));
+        let directories = try!(env.create_db(Some("directories"), INTEGER_KEY | DUP_SORT));
+        let metadata = try!(env.create_db(Some("metadata"), INTEGER_KEY));
+        let entries = try!(env.create_db(Some("entries"), INTEGER_KEY));
 
         Ok(LmdbAdapter {
             env: env,
@@ -52,15 +45,13 @@ impl LmdbAdapter {
         })
     }
 
+    #[allow(dead_code)]
     pub fn open_database(path: &std::path::Path) -> Result<LmdbAdapter> {
-        let env = try!(Environment::new()
-            .open(&path)
-            .map_err(|_| Error::DbOpen));
-
-        let blocks = try!(env.open_db(Some("blocks")).map_err(|_| Error::DbOpen));
-        let directories = try!(env.open_db(Some("directories")).map_err(|_| Error::DbOpen));
-        let metadata = try!(env.open_db(Some("metadata")).map_err(|_| Error::DbOpen));
-        let entries = try!(env.open_db(Some("entries")).map_err(|_| Error::DbOpen));
+        let env = try!(Environment::new().open(&path));
+        let blocks = try!(env.open_db(Some("blocks")));
+        let directories = try!(env.open_db(Some("directories")));
+        let metadata = try!(env.open_db(Some("metadata")));
+        let entries = try!(env.open_db(Some("entries")));
 
         Ok(LmdbAdapter {
             env: env,
@@ -107,9 +98,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
     }
 
     fn next_free_entry_id(&self, txn: &RwTransaction) -> Result<entry::Id> {
-        let cursor = try!(txn.0
-            .open_ro_cursor(self.directories)
-            .map_err(|_| Error::Transaction));
+        let cursor = try!(txn.0.open_ro_cursor(self.directories));
 
         let last_id = match cursor.get(None, None, lmdb_sys::MDB_LAST) {
             Ok((id, _)) => entry::Id::from_bytes(id.unwrap()).unwrap(),
@@ -124,8 +113,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
             return Err(Error::EntryAlreadyExists);
         }
 
-        try!(txn.put(self.blocks, block.id.as_ref(), &try!(block.to_proto()))
-            .map_err(|_| Error::DbWrite));
+        try!(txn.put(self.blocks, block.id.as_ref(), &try!(block.to_proto())));
 
         Ok(())
     }
@@ -152,17 +140,14 @@ impl<'a> Adapter<'a> for LmdbAdapter {
             name: name,
         };
 
-        try!(txn.put(self.directories, parent_id.as_ref(), &direntry.to_bytes())
-            .map_err(|_| Error::DbWrite));
-
-        try!(txn.put(self.metadata, entry.id.as_ref(), &try!(metadata.to_proto()))
-            .map_err(|_| Error::DbWrite));
+        try!(txn.put(self.directories, parent_id.as_ref(), &direntry.to_bytes()));
+        try!(txn.put(self.metadata, entry.id.as_ref(), &try!(metadata.to_proto())));
 
         let mut buffer = try!(txn.reserve(self.entries, entry.id.as_ref(), 4 + entry.data.len()));
         try!(buffer.write_all(&entry.class.as_bytes())
-            .map_err(|_| Error::DbWrite));
+                .map_err(|_| Error::Serialize));
         try!(buffer.write_all(entry.data)
-            .map_err(|_| Error::DbWrite));
+                .map_err(|_| Error::Serialize));
 
         Ok(direntry)
     }
@@ -180,7 +165,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
                                                        txn: &'b T,
                                                        id: &entry::Id)
                                                        -> Result<Metadata> {
-        let proto = try!(txn.get(self.metadata, id.as_ref()).map_err(|_| Error::NotFound));
+        let proto = try!(txn.get(self.metadata, id.as_ref()));
         Metadata::from_proto(proto)
     }
 
@@ -188,7 +173,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
                                                     txn: &'b T,
                                                     id: &entry::Id)
                                                     -> Result<Entry> {
-        let bytes = try!(txn.get(self.entries, id.as_ref()).map_err(|_| Error::NotFound));
+        let bytes = try!(txn.get(self.entries, id.as_ref()));
         Entry::from_bytes(*id, bytes)
     }
 }
@@ -208,10 +193,7 @@ macro_rules! impl_transaction (($newtype:ident) => (
         fn find<P>(&self, db: Database, key: &[u8], predicate: P) -> Result<&[u8]>
             where P: Fn(&[u8]) -> bool
         {
-            let mut cursor = try!(self.0
-                                      .open_ro_cursor(db)
-                                      .map_err(|_| Error::Transaction));
-
+            let mut cursor = try!(self.0.open_ro_cursor(db));
             let mut result = None;
 
             for (cursor_key, value) in cursor.iter_from(key) {
@@ -248,6 +230,16 @@ impl<'a> RwTransaction<'a> {
         self.0
             .put(database, &key, &data, WriteFlags::empty())
             .map_err(|_| Error::Transaction)
+    }
+}
+
+impl From<LmdbError> for Error {
+    fn from(error: LmdbError) -> Error {
+        match error {
+            LmdbError::KeyExist => Error::EntryAlreadyExists,
+            LmdbError::NotFound => Error::NotFound,
+            _ => Error::Adapter(error.to_err_code() as i32),
+        }
     }
 }
 
