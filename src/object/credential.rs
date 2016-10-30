@@ -247,3 +247,51 @@ impl ObjectHash for CredentialEntry {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use serde_json;
+    use serde_json::builder::ObjectBuilder;
+
+    use algorithm::{EncryptionAlgorithm, SignatureAlgorithm};
+    use object::credential::{CredentialEntry, Type};
+    use proto::{FromProto, ToProto};
+    use timestamp::Timestamp;
+
+    const EXAMPLE_PUBLIC_KEY: &'static [u8] = b"public-key-placeholder";
+    const EXAMPLE_SEALED_KEY: &'static [u8] = b"ciphertext-placeholder";
+
+    fn example_timestamp() -> Timestamp {
+        Timestamp::at(1_231_006_505)
+    }
+
+    fn example_credential() -> CredentialEntry {
+        CredentialEntry {
+            keyid: Vec::from(EXAMPLE_PUBLIC_KEY),
+            credential_type: Type::SignatureKeyPair(SignatureAlgorithm::Ed25519),
+            sealing_alg: EncryptionAlgorithm::Aes256Gcm,
+            encrypted_value: Vec::from(EXAMPLE_SEALED_KEY),
+            public_key: Some(Vec::from(EXAMPLE_PUBLIC_KEY)),
+            not_before: Some(example_timestamp()),
+            not_after: Some(example_timestamp()),
+            description: Some(String::from("An example credential")),
+        }
+    }
+
+    #[test]
+    fn test_proto_serialization() {
+        let proto = example_credential().to_proto();
+        assert!(proto.is_ok());
+
+        let credential = CredentialEntry::from_proto(&proto.unwrap());
+        assert!(credential.is_ok());
+    }
+
+    #[test]
+    fn test_json_serialization() {
+        let value = example_credential().build_json(ObjectBuilder::new()).build();
+        let result = serde_json::to_string(&value);
+
+        assert!(result.is_ok());
+    }
+}

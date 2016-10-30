@@ -145,9 +145,9 @@ impl<'a> Adapter<'a> for LmdbAdapter {
 
         let mut buffer = try!(txn.reserve(self.entries, entry.id.as_ref(), 4 + entry.data.len()));
         try!(buffer.write_all(&entry.class.as_bytes())
-                .map_err(|_| Error::Serialize));
+            .map_err(|_| Error::Serialize));
         try!(buffer.write_all(entry.data)
-                .map_err(|_| Error::Serialize));
+            .map_err(|_| Error::Serialize));
 
         Ok(direntry)
     }
