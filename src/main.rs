@@ -25,6 +25,7 @@ mod adapter;
 mod algorithm;
 mod block;
 mod direntry;
+mod encryption;
 mod entry;
 mod error;
 mod log;
@@ -40,10 +41,10 @@ mod timestamp;
 
 use ring::rand;
 
+use encryption::AES256GCM_KEY_SIZE;
 use error::Error;
 use path::PathBuf;
 use server::Server;
-use signature::AES256GCM_KEY_SIZE;
 
 const DEFAULT_ADMIN_USERNAME: &'static str = "manager";
 

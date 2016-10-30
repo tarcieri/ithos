@@ -6,6 +6,7 @@ use adapter::{Adapter, Transaction};
 use adapter::lmdb::LmdbAdapter;
 use algorithm::{DigestAlgorithm, EncryptionAlgorithm, SignatureAlgorithm};
 use block::Block;
+use encryption::{AES256GCM_KEY_SIZE, AES256GCM_NONCE_SIZE};
 use error::{Error, Result};
 use log;
 use object::Object;
@@ -14,7 +15,7 @@ use object::domain::DomainEntry;
 use op::{self, Op};
 use password::{self, PasswordAlgorithm};
 use path::{Path, PathBuf};
-use signature::{KeyPair, AES256GCM_KEY_SIZE, AES256GCM_NONCE_SIZE};
+use signature::KeyPair;
 use timestamp::Timestamp;
 
 #[cfg(test)]
@@ -150,11 +151,12 @@ impl Server {
 mod tests {
     use ring::rand;
 
+    use encryption::AES256GCM_KEY_SIZE;
     use path::PathBuf;
     use password::{self, PasswordAlgorithm};
     use server::Server;
     use server::tempdir::TempDir;
-    use signature::{self, AES256GCM_KEY_SIZE};
+    use signature;
 
     const ADMIN_USERNAME: &'static str = "manager";
     const ADMIN_PASSWORD: &'static str = "The Magic Words are Squeamish Ossifrage";
