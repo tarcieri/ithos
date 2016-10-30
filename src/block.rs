@@ -110,8 +110,8 @@ impl Block {
         ops.push(Op::new(op::Type::Add, path.clone(), Object::OrgUnit(admin_keys_ou)));
 
         let admin_signing_credential =
-            CredentialEntry::from_signature_keypair(encryption_alg,
-                                                    signature_alg,
+            CredentialEntry::from_signature_keypair(signature_alg,
+                                                    encryption_alg,
                                                     admin_keypair_sealed,
                                                     admin_keypair.public_key_bytes(),
                                                     timestamp,

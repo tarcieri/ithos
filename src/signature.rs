@@ -52,11 +52,19 @@ impl<'a> KeyPair {
         Ok((KeyPair(keypair), buffer))
     }
 
-    pub fn unseal(symmetric_key_bytes: &[u8],
-                  sealed_keypair: &[u8],
+    pub fn unseal(signature_alg: SignatureAlgorithm,
+                  encryption_alg: EncryptionAlgorithm,
+                  symmetric_key_bytes: &[u8],
                   nonce: &[u8],
+                  sealed_keypair: &[u8],
                   public_key: &[u8])
                   -> Result<KeyPair> {
+        // Ed25519 is the only signature algorithm we presently support
+        assert!(signature_alg == SignatureAlgorithm::Ed25519);
+
+        // Aes256Gcm is the only encryption algorithm we presently support
+        assert!(encryption_alg == EncryptionAlgorithm::Aes256Gcm);
+
         let symmetric_key = try!(aead::OpeningKey::new(&aead::AES_256_GCM,
                                                        &symmetric_key_bytes[..])
             .map_err(|_| Error::CryptoFailure));
@@ -83,5 +91,35 @@ impl<'a> KeyPair {
 
 #[cfg(test)]
 pub mod tests {
-    // TODO: tests
+    use ring::rand;
+
+    use algorithm::{EncryptionAlgorithm, SignatureAlgorithm};
+    use signature::KeyPair;
+
+    // Please don't ever use this as an actual encryption key
+    const ENCRYPTION_KEY: [u8; 32] = [0u8; 32];
+    const ENCRYPTION_NONCE: [u8; 12] = [0u8; 12];
+
+    #[test]
+    fn test_sealing_and_unsealing() {
+        let rng = rand::SystemRandom::new();
+
+        let (keypair, sealed_keypair) = KeyPair::generate_and_seal(SignatureAlgorithm::Ed25519,
+                                                                   EncryptionAlgorithm::Aes256Gcm,
+                                                                   &rng,
+                                                                   &ENCRYPTION_KEY,
+                                                                   &ENCRYPTION_NONCE)
+            .unwrap();
+        let unsealed_keypair = KeyPair::unseal(SignatureAlgorithm::Ed25519,
+                                               EncryptionAlgorithm::Aes256Gcm,
+                                               &ENCRYPTION_KEY,
+                                               &ENCRYPTION_NONCE,
+                                               &sealed_keypair,
+                                               &keypair.public_key_bytes())
+            .unwrap();
+
+        // *ring* verifies private key correctness when we call Ed25519KeyPair::from_bytes
+        assert_eq!(keypair.public_key_bytes(),
+                   unsealed_keypair.public_key_bytes());
+    }
 }

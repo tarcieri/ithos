@@ -66,8 +66,8 @@ pub struct CredentialEntry {
 }
 
 impl CredentialEntry {
-    pub fn from_signature_keypair(sealing_alg: EncryptionAlgorithm,
-                                  signature_alg: SignatureAlgorithm,
+    pub fn from_signature_keypair(signature_alg: SignatureAlgorithm,
+                                  sealing_alg: EncryptionAlgorithm,
                                   sealed_keypair: &[u8],
                                   public_key: &[u8],
                                   not_before: Timestamp,
@@ -93,14 +93,21 @@ impl CredentialEntry {
                                     symmetric_key_bytes: &[u8],
                                     nonce: &[u8])
                                     -> Result<KeyPair> {
+        // Ed25519 is the only signature algorithm we presently support
+        if self.credential_type != Type::SignatureKeyPair(SignatureAlgorithm::Ed25519) {
+            return Err(Error::BadType);
+        }
+
         let public_key = match self.public_key {
             Some(ref key) => key,
             None => return Err(Error::CorruptData),
         };
 
-        KeyPair::unseal(symmetric_key_bytes,
-                        &self.encrypted_value,
+        KeyPair::unseal(SignatureAlgorithm::Ed25519,
+                        self.sealing_alg,
+                        symmetric_key_bytes,
                         nonce,
+                        &self.encrypted_value,
                         &public_key)
     }
 
