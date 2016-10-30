@@ -26,7 +26,7 @@ impl AllowsChild for SystemEntry {
     #[inline]
     fn allows_child(child: &Object) -> bool {
         match *child {
-            Object::OrganizationalUnit(_) => true,
+            Object::OrgUnit(_) => true,
             _ => false,
         }
     }

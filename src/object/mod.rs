@@ -18,7 +18,7 @@ use proto::{ToProto, FromProto};
 
 use self::credential::CredentialEntry;
 use self::domain::DomainEntry;
-use self::ou::OrganizationalUnitEntry;
+use self::ou::OrgUnitEntry;
 use self::root::RootEntry;
 use self::system::SystemEntry;
 
@@ -31,7 +31,7 @@ pub trait AllowsChild {
 pub enum Class {
     Root, // Root entry in the tree (ala LDAP root DSE)
     Domain, // Administrative Domain (ala DNS domain or Kerberos realm)
-    OrganizationalUnit, // Unit/department within an organization
+    OrgUnit, // Unit/department within an organization
     System, // System User (i.e. non-human account)
     Credential, // Encrypted access credential
 }
@@ -50,7 +50,7 @@ impl Class {
         let result = match id {
             0 => Class::Root,
             1 => Class::Domain,
-            2 => Class::OrganizationalUnit,
+            2 => Class::OrgUnit,
             3 => Class::System,
             4 => Class::Credential,
             _ => return Err(Error::Parse),
@@ -65,7 +65,7 @@ impl Class {
         match *self {
             Class::Root => RootEntry::allows_child(child),
             Class::Domain => DomainEntry::allows_child(child),
-            Class::OrganizationalUnit => OrganizationalUnitEntry::allows_child(child),
+            Class::OrgUnit => OrgUnitEntry::allows_child(child),
             Class::System => SystemEntry::allows_child(child),
             Class::Credential => CredentialEntry::allows_child(child),
         }
@@ -83,7 +83,7 @@ impl ToString for Class {
         match *self {
             Class::Root => "ROOT".to_string(),
             Class::Domain => "DOMAIN".to_string(),
-            Class::OrganizationalUnit => "ORGANIZATIONAL_UNIT".to_string(),
+            Class::OrgUnit => "ORGANIZATIONAL_UNIT".to_string(),
             Class::System => "SYSTEM".to_string(),
             Class::Credential => "CREDENTIAL".to_string(),
         }
@@ -104,7 +104,7 @@ impl Serialize for Class {
 pub enum Object {
     Root(RootEntry), // Root entry in the tree (ala LDAP root DSE)
     Domain(DomainEntry), // Administrative Domain (ala DNS domain or Kerberos realm)
-    OrganizationalUnit(OrganizationalUnitEntry), // Unit/department within an organization
+    OrgUnit(OrgUnitEntry), // Unit/department within an organization
     System(SystemEntry), // System User (i.e. non-human account)
     Credential(CredentialEntry), // Encrypted access credential
 }
@@ -115,7 +115,7 @@ impl Object {
         match *self {
             Object::Root(_) => Class::Root,
             Object::Domain(_) => Class::Domain,
-            Object::OrganizationalUnit(_) => Class::OrganizationalUnit,
+            Object::OrgUnit(_) => Class::OrgUnit,
             Object::System(_) => Class::System,
             Object::Credential(_) => Class::Credential,
         }
@@ -126,9 +126,7 @@ impl Object {
         let result = match entry.class {
             Class::Root => Object::Root(try!(RootEntry::from_proto(entry.data))),
             Class::Domain => Object::Domain(try!(DomainEntry::from_proto(entry.data))),
-            Class::OrganizationalUnit => {
-                Object::OrganizationalUnit(try!(OrganizationalUnitEntry::from_proto(entry.data)))
-            }
+            Class::OrgUnit => Object::OrgUnit(try!(OrgUnitEntry::from_proto(entry.data))),
             Class::System => Object::System(try!(SystemEntry::from_proto(entry.data))),
             Class::Credential => Object::Credential(try!(CredentialEntry::from_proto(entry.data))),
         };
@@ -141,7 +139,7 @@ impl Object {
             .insert_object("value", |b| match *self {
                 Object::Root(ref root) => root.build_json(b),
                 Object::Domain(ref domain) => domain.build_json(b),
-                Object::OrganizationalUnit(ref ou) => ou.build_json(b),
+                Object::OrgUnit(ref ou) => ou.build_json(b),
                 Object::System(ref system) => system.build_json(b),
                 Object::Credential(ref credential) => credential.build_json(b),
             })
@@ -155,7 +153,7 @@ impl Serialize for Object {
         let object_proto = match self {
             &Object::Root(ref root) => root.to_proto(),
             &Object::Domain(ref domain) => domain.to_proto(),
-            &Object::OrganizationalUnit(ref ou) => ou.to_proto(),
+            &Object::OrgUnit(ref ou) => ou.to_proto(),
             &Object::System(ref system) => system.to_proto(),
             &Object::Credential(ref credential) => credential.to_proto(),
         };
@@ -180,7 +178,7 @@ impl ObjectHash for Object {
         match self {
             &Object::Root(ref root) => root.objecthash(hasher),
             &Object::Domain(ref domain) => domain.objecthash(hasher),
-            &Object::OrganizationalUnit(ref ou) => ou.objecthash(hasher),
+            &Object::OrgUnit(ref ou) => ou.objecthash(hasher),
             &Object::System(ref system) => system.objecthash(hasher),
             &Object::Credential(ref credential) => credential.objecthash(hasher),
         }

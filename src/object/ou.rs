@@ -8,13 +8,13 @@ use object::{AllowsChild, Object};
 use objecthash::{self, ObjectHash, ObjectHasher};
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct OrganizationalUnitEntry {
+pub struct OrgUnitEntry {
     pub description: Option<String>,
 }
 
-impl OrganizationalUnitEntry {
-    pub fn new(description: Option<String>) -> OrganizationalUnitEntry {
-        OrganizationalUnitEntry { description: description }
+impl OrgUnitEntry {
+    pub fn new(description: Option<String>) -> OrgUnitEntry {
+        OrgUnitEntry { description: description }
     }
 
     pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
@@ -22,11 +22,11 @@ impl OrganizationalUnitEntry {
     }
 }
 
-impl AllowsChild for OrganizationalUnitEntry {
+impl AllowsChild for OrgUnitEntry {
     #[inline]
     fn allows_child(child: &Object) -> bool {
         match *child {
-            Object::OrganizationalUnit(_) => true,
+            Object::OrgUnit(_) => true,
             Object::System(_) => true,
             Object::Credential(_) => true,
             _ => false,
@@ -34,7 +34,7 @@ impl AllowsChild for OrganizationalUnitEntry {
     }
 }
 
-impl Serialize for OrganizationalUnitEntry {
+impl Serialize for OrgUnitEntry {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
         match self.description {
             Some(ref description) => try!(out.write(1, &description)),
@@ -45,8 +45,8 @@ impl Serialize for OrganizationalUnitEntry {
     }
 }
 
-impl Deserialize for OrganizationalUnitEntry {
-    fn deserialize<R: io::Read>(i: &mut InputStream<R>) -> io::Result<OrganizationalUnitEntry> {
+impl Deserialize for OrgUnitEntry {
+    fn deserialize<R: io::Read>(i: &mut InputStream<R>) -> io::Result<OrgUnitEntry> {
         let mut description: Option<String> = None;
 
         while let Some(f) = try!(i.read_field()) {
@@ -56,14 +56,14 @@ impl Deserialize for OrganizationalUnitEntry {
             }
         }
 
-        Ok(OrganizationalUnitEntry { description: description })
+        Ok(OrgUnitEntry { description: description })
     }
 }
 
-impl ToProto for OrganizationalUnitEntry {}
-impl FromProto for OrganizationalUnitEntry {}
+impl ToProto for OrgUnitEntry {}
+impl FromProto for OrgUnitEntry {}
 
-impl ObjectHash for OrganizationalUnitEntry {
+impl ObjectHash for OrgUnitEntry {
     #[inline]
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
         match self.description {

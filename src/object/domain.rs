@@ -27,7 +27,7 @@ impl AllowsChild for DomainEntry {
     fn allows_child(child: &Object) -> bool {
         match *child {
             Object::Domain(_) => true,
-            Object::OrganizationalUnit(_) => true,
+            Object::OrgUnit(_) => true,
             _ => false,
         }
     }
