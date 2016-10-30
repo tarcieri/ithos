@@ -1,6 +1,6 @@
 pub mod lmdb;
 
-use block::Block;
+use block::{self, Block};
 use direntry::DirEntry;
 use entry::{self, Entry};
 use error::Result;
@@ -25,6 +25,9 @@ pub trait Adapter<'a> {
     fn rw_transaction(&'a self) -> Result<Self::W>;
     fn next_free_entry_id(&self, txn: &Self::W) -> Result<entry::Id>;
     fn add_block<'b>(&'b self, txn: &'b mut Self::W, block: &Block) -> Result<()>;
+    fn current_block_id<'b, T: Transaction<D = Self::D>>(&'b self,
+                                                         txn: &'b T)
+                                                         -> Result<block::Id>;
     fn add_entry<'b>(&'b self,
                      txn: &'b mut Self::W,
                      entry: &Entry,

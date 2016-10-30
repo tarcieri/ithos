@@ -5,11 +5,11 @@ use std::{self, str};
 use std::io::Write;
 
 use self::lmdb::{Environment, Database, DatabaseFlags, Cursor, WriteFlags, DUP_SORT, INTEGER_KEY};
-use self::lmdb::Transaction as LmdbTransaction;
 use self::lmdb::Error as LmdbError;
+use self::lmdb::Transaction as LmdbTransaction;
 
 use adapter::{Adapter, Transaction};
-use block::Block;
+use block::{self, Block};
 use direntry::DirEntry;
 use entry::{self, Entry};
 use error::{Error, Result};
@@ -17,48 +17,68 @@ use metadata::Metadata;
 use path::Path;
 use proto::{FromProto, ToProto};
 
+const MAX_DBS: u32 = 8;
+const DB_PERMS: lmdb_sys::mode_t = 0o600;
+
+// Names of "databases" within LMDB: effectively namespaces for keys
+const BLOCKS_DB: &'static str = "blocks";
+const DIRECTORIES_DB: &'static str = "directories";
+const ENTRIES_DB: &'static str = "entries";
+const METADATA_DB: &'static str = "metadata";
+const STATE_DB: &'static str = "state";
+
+// Names of keys within the "state" database
+const LATEST_BLOCK_ID_KEY: &'static [u8] = b"latest_block_id";
+
 pub struct LmdbAdapter {
     env: Environment,
     blocks: Database,
     directories: Database,
-    metadata: Database,
     entries: Database,
+    metadata: Database,
+    state: Database,
 }
 
 impl LmdbAdapter {
     pub fn create_database(path: &std::path::Path) -> Result<LmdbAdapter> {
         let env = try!(Environment::new()
-            .set_max_dbs(8)
-            .open_with_permissions(&path, 0o600));
+            .set_max_dbs(MAX_DBS)
+            .open_with_permissions(&path, DB_PERMS));
 
-        let blocks = try!(env.create_db(Some("blocks"), DatabaseFlags::empty()));
-        let directories = try!(env.create_db(Some("directories"), INTEGER_KEY | DUP_SORT));
-        let metadata = try!(env.create_db(Some("metadata"), INTEGER_KEY));
-        let entries = try!(env.create_db(Some("entries"), INTEGER_KEY));
+        let blocks = try!(env.create_db(Some(BLOCKS_DB), DatabaseFlags::empty()));
+        let directories = try!(env.create_db(Some(DIRECTORIES_DB), INTEGER_KEY | DUP_SORT));
+        let entries = try!(env.create_db(Some(ENTRIES_DB), INTEGER_KEY));
+        let metadata = try!(env.create_db(Some(METADATA_DB), INTEGER_KEY));
+        let state = try!(env.create_db(Some(STATE_DB), DatabaseFlags::empty()));
 
         Ok(LmdbAdapter {
             env: env,
             blocks: blocks,
             directories: directories,
-            metadata: metadata,
             entries: entries,
+            metadata: metadata,
+            state: state,
         })
     }
 
-    #[allow(dead_code)]
     pub fn open_database(path: &std::path::Path) -> Result<LmdbAdapter> {
-        let env = try!(Environment::new().open(&path));
-        let blocks = try!(env.open_db(Some("blocks")));
-        let directories = try!(env.open_db(Some("directories")));
-        let metadata = try!(env.open_db(Some("metadata")));
-        let entries = try!(env.open_db(Some("entries")));
+        let env = try!(Environment::new()
+            .set_max_dbs(MAX_DBS)
+            .open_with_permissions(&path, DB_PERMS));
+
+        let blocks = try!(env.open_db(Some(BLOCKS_DB)));
+        let directories = try!(env.open_db(Some(DIRECTORIES_DB)));
+        let entries = try!(env.open_db(Some(ENTRIES_DB)));
+        let metadata = try!(env.open_db(Some(METADATA_DB)));
+        let state = try!(env.open_db(Some(STATE_DB)));
 
         Ok(LmdbAdapter {
             env: env,
             blocks: blocks,
             directories: directories,
-            metadata: metadata,
             entries: entries,
+            metadata: metadata,
+            state: state,
         })
     }
 
@@ -98,7 +118,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
     }
 
     fn next_free_entry_id(&self, txn: &RwTransaction) -> Result<entry::Id> {
-        let cursor = try!(txn.0.open_ro_cursor(self.directories));
+        let cursor = try!(txn.0.open_ro_cursor(self.entries));
 
         let last_id = match cursor.get(None, None, lmdb_sys::MDB_LAST) {
             Ok((id, _)) => entry::Id::from_bytes(id.unwrap()).unwrap(),
@@ -109,13 +129,30 @@ impl<'a> Adapter<'a> for LmdbAdapter {
     }
 
     fn add_block<'b>(&'b self, txn: &'b mut RwTransaction, block: &Block) -> Result<()> {
+        // Ensure the block we're adding is the next in the chain
+        if block.parent_id != block::Id::root() &&
+           block.parent_id != try!(self.current_block_id(txn)) {
+            return Err(Error::Ordering);
+        }
+
+        // This check should be redundant given the one above, but is here just in case
         if txn.get(self.blocks, block.id.as_ref()) != Err(Error::NotFound) {
             return Err(Error::EntryAlreadyExists);
         }
 
+        // Store the new block
         try!(txn.put(self.blocks, block.id.as_ref(), &try!(block.to_proto())));
 
+        // Update the current block ID in the state table
+        try!(txn.put(self.state, LATEST_BLOCK_ID_KEY, block.id.as_ref()));
+
         Ok(())
+    }
+
+    fn current_block_id<'b, T: Transaction<D = Database>>(&'b self,
+                                                          txn: &'b T)
+                                                          -> Result<block::Id> {
+        block::Id::from_bytes(try!(txn.get(self.state, LATEST_BLOCK_ID_KEY)))
     }
 
     fn add_entry<'b>(&'b self,
@@ -140,7 +177,10 @@ impl<'a> Adapter<'a> for LmdbAdapter {
             name: name,
         };
 
-        try!(txn.put(self.directories, parent_id.as_ref(), &direntry.to_bytes()));
+        if entry.id != entry::Id::root() {
+            try!(txn.put(self.directories, parent_id.as_ref(), &direntry.to_bytes()));
+        }
+
         try!(txn.put(self.metadata, entry.id.as_ref(), &try!(metadata.to_proto())));
 
         let mut buffer = try!(txn.reserve(self.entries, entry.id.as_ref(), 4 + entry.data.len()));
@@ -262,8 +302,6 @@ mod tests {
         LmdbAdapter::create_database(dir.path()).unwrap()
     }
 
-    const EXAMPLE_CLASS_ID: &'static [u8; 4] = &[0u8; 4];
-
     fn example_timestamp() -> Timestamp {
         Timestamp::at(1_231_006_505)
     }
@@ -275,7 +313,7 @@ mod tests {
     fn example_entry(id: Id, data: &[u8]) -> Entry {
         Entry {
             id: id,
-            class: Class::from_bytes(EXAMPLE_CLASS_ID).unwrap(),
+            class: Class::Root,
             data: data,
         }
     }

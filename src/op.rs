@@ -13,7 +13,6 @@ use metadata::Metadata;
 use object::{Class, Object};
 use objecthash::{self, ObjectHash, ObjectHasher};
 use path::{Path, PathBuf};
-use proto::ToProto;
 use timestamp::Timestamp;
 
 #[cfg(test)]
@@ -89,31 +88,31 @@ impl Op {
                                    block_id: &block::Id,
                                    timestamp: Timestamp)
                                    -> Result<()> {
-        let entry_id = state.get_next_entry_id();
-
         let parent_path = self.path.as_path().parent();
-        let parent_id = match parent_path {
+
+        let (parent_id, entry_id) = match parent_path {
             Some(path) => {
                 let parent_entry = try!(state.get_entry(adapter, txn, path));
 
                 if !parent_entry.class.allows_child(&self.object) {
-                    return Err(Error::ObjectNestingError);
+                    return Err(Error::NestingInvalid);
                 }
 
-                parent_entry.id
+                (parent_entry.id, state.get_next_entry_id())
             }
             None => {
                 if self.object.class() != Class::Root {
-                    return Err(Error::ObjectNestingError);
+                    return Err(Error::NestingInvalid);
                 }
 
-                entry::Id::root()
+                (entry::Id::root(), entry::Id::root())
             }
         };
 
         let name = try!(self.path.as_path().entry_name().ok_or(Error::PathInvalid));
         let metadata = Metadata::new(block_id.clone(), timestamp);
         let proto = try!(self.object.to_proto());
+
         let entry = Entry {
             id: entry_id,
             class: self.object.class(),
@@ -250,7 +249,7 @@ pub mod tests {
                                   &example_block_id,
                                   example_timestamp());
 
-            assert_eq!(result, Err(Error::ObjectNestingError));
+            assert_eq!(result, Err(Error::NestingInvalid));
         }
 
         // Test nesting constraints on a non-root entry
@@ -283,7 +282,7 @@ pub mod tests {
                                     &example_block_id,
                                     example_timestamp());
 
-            assert_eq!(result2, Err(Error::ObjectNestingError));
+            assert_eq!(result2, Err(Error::NestingInvalid));
         }
     }
 }

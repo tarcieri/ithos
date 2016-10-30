@@ -31,5 +31,8 @@ version = ">= 0.2.3"
 [dependencies.ring-pwhash]
 version = ">= 0.1.0"
 
+[dependencies.rpassword]
+version = ">= 0.3"
+
 [dev-dependencies]
 tempdir = "0.3"

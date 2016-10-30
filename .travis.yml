@@ -16,8 +16,6 @@ os:
 
 matrix:
   fast_finish: true
-  allow_failures:
-    - rust: beta
 
 notifications:
   irc: 'irc.freenode.org#cryptosphere'

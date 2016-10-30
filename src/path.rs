@@ -84,6 +84,10 @@ impl Path {
 
     // TODO: replace Vec with Components type ala std::path
     pub fn components(&self) -> Vec<&str> {
+        if self.0 == *SEPARATOR {
+            return Vec::new();
+        }
+
         let mut result: Vec<&str> = self.0.split(SEPARATOR).collect();
         result.remove(0);
         result
@@ -201,6 +205,11 @@ mod tests {
     #[test]
     fn path_entry_name() {
         assert_eq!(example_path().entry_name().unwrap(), "baz");
+    }
+
+    #[test]
+    fn root_components() {
+        assert!(Path::root().components().is_empty());
     }
 
     #[test]

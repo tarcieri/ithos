@@ -1,6 +1,7 @@
 use std::io;
 
 use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
+use objecthash::{self, ObjectHash, ObjectHasher};
 use rustc_serialize::base64::{self, ToBase64};
 use serde_json::builder::ObjectBuilder;
 
@@ -8,7 +9,7 @@ use algorithm::{EncryptionAlgorithm, SignatureAlgorithm};
 use error::{Error, Result};
 use proto::{ToProto, FromProto};
 use object::{AllowsChild, Object};
-use objecthash::{self, ObjectHash, ObjectHasher};
+use signature::KeyPair;
 use timestamp::Timestamp;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
@@ -65,14 +66,14 @@ pub struct CredentialEntry {
 }
 
 impl CredentialEntry {
-    pub fn signature_keypair(sealing_alg: EncryptionAlgorithm,
-                             signature_alg: SignatureAlgorithm,
-                             sealed_keypair: &[u8],
-                             public_key: &[u8],
-                             not_before: Timestamp,
-                             not_after: Timestamp,
-                             description: Option<String>)
-                             -> CredentialEntry {
+    pub fn from_signature_keypair(sealing_alg: EncryptionAlgorithm,
+                                  signature_alg: SignatureAlgorithm,
+                                  sealed_keypair: &[u8],
+                                  public_key: &[u8],
+                                  not_before: Timestamp,
+                                  not_after: Timestamp,
+                                  description: Option<String>)
+                                  -> CredentialEntry {
         // Ed25519 is the only signature algorithm we presently support
         assert!(signature_alg == SignatureAlgorithm::Ed25519);
 
@@ -86,6 +87,21 @@ impl CredentialEntry {
             not_after: Some(not_after),
             description: description,
         }
+    }
+
+    pub fn unseal_signature_keypair(&self,
+                                    symmetric_key_bytes: &[u8],
+                                    nonce: &[u8])
+                                    -> Result<KeyPair> {
+        let public_key = match self.public_key {
+            Some(ref key) => key,
+            None => return Err(Error::CorruptData),
+        };
+
+        KeyPair::unseal(symmetric_key_bytes,
+                        &self.encrypted_value,
+                        nonce,
+                        &public_key)
     }
 
     pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
