@@ -89,10 +89,7 @@ impl CredentialEntry {
         }
     }
 
-    pub fn unseal_signature_keypair(&self,
-                                    symmetric_key_bytes: &[u8],
-                                    nonce: &[u8])
-                                    -> Result<KeyPair> {
+    pub fn unseal_signature_keypair(&self, symmetric_key_bytes: &[u8]) -> Result<KeyPair> {
         // Ed25519 is the only signature algorithm we presently support
         if self.credential_type != Type::SignatureKeyPair(SignatureAlgorithm::Ed25519) {
             return Err(Error::BadType);
@@ -106,7 +103,6 @@ impl CredentialEntry {
         KeyPair::unseal(SignatureAlgorithm::Ed25519,
                         self.sealing_alg,
                         symmetric_key_bytes,
-                        nonce,
                         &self.encrypted_value,
                         &public_key)
     }

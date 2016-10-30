@@ -6,6 +6,10 @@ use error::{Error, Result};
 
 pub struct KeyPair(signature::Ed25519KeyPair);
 
+// TODO: factor this elsewhere (i.e. into an encryption-specific module)
+pub const AES256GCM_KEY_SIZE: usize = 32;
+pub const AES256GCM_NONCE_SIZE: usize = 12;
+
 impl<'a> KeyPair {
     #[cfg(test)]
     pub fn generate(rng: &SecureRandom) -> KeyPair {
@@ -35,16 +39,21 @@ impl<'a> KeyPair {
             .map_err(|_| Error::CryptoFailure));
 
         let max_overhead_len = symmetric_key.algorithm().max_overhead_len();
-        let mut buffer = Vec::with_capacity(serializable_keypair.private_key.len() +
+        let mut buffer = Vec::with_capacity(AES256GCM_NONCE_SIZE +
+                                            serializable_keypair.private_key.len() +
                                             max_overhead_len);
+
+        buffer.extend(nonce);
         buffer.extend(&serializable_keypair.private_key);
+
+        // Add space in the buffer to store the GCM tag
         for _ in 0..max_overhead_len {
             buffer.push(0u8);
         }
 
         try!(aead::seal_in_place(&symmetric_key,
                                  &nonce,
-                                 &mut buffer[..],
+                                 &mut buffer[AES256GCM_NONCE_SIZE..],
                                  max_overhead_len,
                                  &b""[..])
             .map_err(|_| Error::CryptoFailure));
@@ -55,7 +64,6 @@ impl<'a> KeyPair {
     pub fn unseal(signature_alg: SignatureAlgorithm,
                   encryption_alg: EncryptionAlgorithm,
                   symmetric_key_bytes: &[u8],
-                  nonce: &[u8],
                   sealed_keypair: &[u8],
                   public_key: &[u8])
                   -> Result<KeyPair> {
@@ -65,11 +73,17 @@ impl<'a> KeyPair {
         // Aes256Gcm is the only encryption algorithm we presently support
         assert!(encryption_alg == EncryptionAlgorithm::Aes256Gcm);
 
+        // The sealed keypair MUST be larger than a nonce
+        if sealed_keypair.len() <= AES256GCM_NONCE_SIZE {
+            return Err(Error::CryptoFailure);
+        }
+
         let symmetric_key = try!(aead::OpeningKey::new(&aead::AES_256_GCM,
                                                        &symmetric_key_bytes[..])
             .map_err(|_| Error::CryptoFailure));
 
-        let mut buffer = Vec::from(sealed_keypair);
+        let nonce = &sealed_keypair[0..AES256GCM_NONCE_SIZE];
+        let mut buffer = Vec::from(&sealed_keypair[AES256GCM_NONCE_SIZE..]);
 
         let pt_len = try!(aead::open_in_place(&symmetric_key, nonce, 0, &mut buffer, &b""[..])
             .map_err(|_| Error::CryptoFailure));
@@ -94,11 +108,10 @@ pub mod tests {
     use ring::rand;
 
     use algorithm::{EncryptionAlgorithm, SignatureAlgorithm};
-    use signature::KeyPair;
+    use signature::{KeyPair, AES256GCM_KEY_SIZE, AES256GCM_NONCE_SIZE};
 
-    // Please don't ever use this as an actual encryption key
-    const ENCRYPTION_KEY: [u8; 32] = [0u8; 32];
-    const ENCRYPTION_NONCE: [u8; 12] = [0u8; 12];
+    // WARNING: Please don't ever use zeroes as an actual encryption key
+    const ENCRYPTION_KEY: [u8; AES256GCM_KEY_SIZE] = [0u8; AES256GCM_KEY_SIZE];
 
     #[test]
     fn test_sealing_and_unsealing() {
@@ -108,12 +121,12 @@ pub mod tests {
                                                                    EncryptionAlgorithm::Aes256Gcm,
                                                                    &rng,
                                                                    &ENCRYPTION_KEY,
-                                                                   &ENCRYPTION_NONCE)
+                                                                   &[0u8; AES256GCM_NONCE_SIZE])
             .unwrap();
+
         let unsealed_keypair = KeyPair::unseal(SignatureAlgorithm::Ed25519,
                                                EncryptionAlgorithm::Aes256Gcm,
                                                &ENCRYPTION_KEY,
-                                               &ENCRYPTION_NONCE,
                                                &sealed_keypair,
                                                &keypair.public_key_bytes())
             .unwrap();

@@ -43,6 +43,7 @@ use ring::rand;
 use error::Error;
 use path::PathBuf;
 use server::Server;
+use signature::AES256GCM_KEY_SIZE;
 
 const DEFAULT_ADMIN_USERNAME: &'static str = "manager";
 
@@ -150,15 +151,13 @@ fn domain_add(database_path: &str, admin_username: &str, domain_name: &str) {
     let admin_password =
         rpassword::prompt_password_stdout(&format!("{}'s password: ", admin_username)).unwrap();
 
-    let mut admin_symmetric_key = [0u8; 32];
+    let mut admin_symmetric_key = [0u8; AES256GCM_KEY_SIZE];
     password::derive(password::PasswordAlgorithm::SCRYPT,
                      &salt,
                      &admin_password,
                      &mut admin_symmetric_key);
 
-    // TODO: store nonce with ciphertext
-    let nonce = [0u8; 12];
-    let admin_keypair = admin_credential.unseal_signature_keypair(&admin_symmetric_key, &nonce)
+    let admin_keypair = admin_credential.unseal_signature_keypair(&admin_symmetric_key)
         .unwrap_or_else(|err| {
             panic!("*** Error: couldn't decrypt admin keypair: {} (wrong password?)",
                    err)

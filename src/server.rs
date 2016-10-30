@@ -14,7 +14,7 @@ use object::domain::DomainEntry;
 use op::{self, Op};
 use password::{self, PasswordAlgorithm};
 use path::{Path, PathBuf};
-use signature::KeyPair;
+use signature::{KeyPair, AES256GCM_KEY_SIZE, AES256GCM_NONCE_SIZE};
 use timestamp::Timestamp;
 
 #[cfg(test)]
@@ -38,7 +38,7 @@ impl Server {
         salt.extend(logid.as_ref());
         salt.extend(admin_username.as_bytes());
 
-        let mut admin_symmetric_key = [0u8; 32];
+        let mut admin_symmetric_key = [0u8; AES256GCM_KEY_SIZE];
         password::derive(PasswordAlgorithm::SCRYPT,
                          &salt,
                          &admin_password,
@@ -48,7 +48,7 @@ impl Server {
         let signature_alg = SignatureAlgorithm::Ed25519;
 
         // NOTE: Fixed nonce. The admin password should be randomly generated and never reused
-        let nonce = [0u8; 12];
+        let nonce = [0u8; AES256GCM_NONCE_SIZE];
         let (admin_keypair, admin_keypair_sealed) = try!(KeyPair::generate_and_seal(
                                        signature_alg,
                                        encryption_alg,
@@ -117,7 +117,6 @@ impl Server {
     pub fn find_logid(&self) -> Result<log::Id> {
         let txn = try!(self.adapter.ro_transaction());
         let direntry = try!(self.adapter.find_direntry(&txn, Path::new("/").unwrap()));
-
         let entry = try!(self.adapter.find_entry(&txn, &direntry.id));
 
         match try!(entry.to_object()) {
@@ -155,7 +154,7 @@ mod tests {
     use password::{self, PasswordAlgorithm};
     use server::Server;
     use server::tempdir::TempDir;
-    use signature;
+    use signature::{self, AES256GCM_KEY_SIZE};
 
     const ADMIN_USERNAME: &'static str = "manager";
     const ADMIN_PASSWORD: &'static str = "The Magic Words are Squeamish Ossifrage";
@@ -181,14 +180,13 @@ mod tests {
         salt.extend(logid.as_ref());
         salt.extend(ADMIN_USERNAME.as_bytes());
 
-        let mut admin_symmetric_key = [0u8; 32];
+        let mut admin_symmetric_key = [0u8; AES256GCM_KEY_SIZE];
         password::derive(PasswordAlgorithm::SCRYPT,
                          &salt,
                          ADMIN_PASSWORD,
                          &mut admin_symmetric_key);
 
-        let nonce = [0u8; 12];
-        credential.unseal_signature_keypair(&admin_symmetric_key, &nonce).unwrap()
+        credential.unseal_signature_keypair(&admin_symmetric_key).unwrap()
     }
 
     #[test]
