@@ -1,6 +1,9 @@
 use pwhash::scrypt::{self, ScryptParams};
 use ring::constant_time;
 use ring::rand::SecureRandom;
+use rpassword;
+
+use error::{Error, Result};
 
 // Prefix added to all randomly generated passwords
 const GENPASS_PREFIX: &'static str = "ithos-genpass";
@@ -29,6 +32,11 @@ pub fn generate(rng: &SecureRandom) -> String {
             password = String::from_utf8(encode(&bytes[0..6])).unwrap(),
             digits1 = bytes[6] % 100,
             digits2 = bytes[7])
+}
+
+// Prompt for a password from standard input
+pub fn prompt(message: &str) -> Result<String> {
+    rpassword::prompt_password_stdout(message).map_err(|_| Error::System)
 }
 
 // Use a weak set of parameters when running tests to reduce test times

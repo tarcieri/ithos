@@ -5,6 +5,7 @@ use std::error::Error as StdError;
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum Error {
     Adapter(i32),
+    System,
     Rng,
     Parse,
     Serialize,
@@ -23,6 +24,7 @@ impl StdError for Error {
     fn description(&self) -> &str {
         match *self {
             Error::Adapter(_) => "storage adapter returned low-level error",
+            Error::System => "a low-level system error occurred",
             Error::Rng => "the system random number generator returned an error",
             Error::Parse => "unable to parse data",
             Error::Serialize => "unable to serialize data",

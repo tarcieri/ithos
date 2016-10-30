@@ -148,8 +148,7 @@ fn domain_add(database_path: &str, admin_username: &str, domain_name: &str) {
     salt.extend(logid.as_ref());
     salt.extend(admin_username.as_bytes());
 
-    let admin_password =
-        rpassword::prompt_password_stdout(&format!("{}'s password: ", admin_username)).unwrap();
+    let admin_password = password::prompt(&format!("{}'s password: ", admin_username)).unwrap();
 
     let mut admin_symmetric_key = [0u8; AES256GCM_KEY_SIZE];
     password::derive(password::PasswordAlgorithm::SCRYPT,
