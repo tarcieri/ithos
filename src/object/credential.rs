@@ -55,20 +55,22 @@ impl ToString for Type {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct CredentialEntry {
-    keyid: Vec<u8>,
-    credential_type: Type,
-    sealing_alg: EncryptionAlgorithm,
-    encrypted_value: Vec<u8>,
-    public_key: Option<Vec<u8>>,
-    not_before: Option<Timestamp>,
-    not_after: Option<Timestamp>,
-    description: Option<String>,
+    pub keyid: Vec<u8>,
+    pub credential_type: Type,
+    pub sealing_alg: Option<EncryptionAlgorithm>,
+    pub encrypted_value: Option<Vec<u8>>,
+    pub salt: Option<Vec<u8>>,
+    pub public_key: Option<Vec<u8>>,
+    pub not_before: Option<Timestamp>,
+    pub not_after: Option<Timestamp>,
+    pub description: Option<String>,
 }
 
 impl CredentialEntry {
     pub fn from_signature_keypair(signature_alg: SignatureAlgorithm,
                                   sealing_alg: EncryptionAlgorithm,
                                   sealed_keypair: &[u8],
+                                  salt: &[u8],
                                   public_key: &[u8],
                                   not_before: Timestamp,
                                   not_after: Timestamp,
@@ -80,8 +82,9 @@ impl CredentialEntry {
         CredentialEntry {
             keyid: Vec::from(public_key),
             credential_type: Type::SignatureKeyPair(SignatureAlgorithm::Ed25519),
-            sealing_alg: sealing_alg,
-            encrypted_value: Vec::from(sealed_keypair),
+            sealing_alg: Some(sealing_alg),
+            encrypted_value: Some(Vec::from(sealed_keypair)),
+            salt: Some(Vec::from(salt)),
             public_key: Some(Vec::from(public_key)),
             not_before: Some(not_before),
             not_after: Some(not_after),
@@ -95,25 +98,47 @@ impl CredentialEntry {
             return Err(Error::BadType);
         }
 
+        let encrypted_value = match self.encrypted_value {
+            Some(ref value) => value,
+            None => return Err(Error::CorruptData),
+        };
+
+        let sealing_alg = try!(self.sealing_alg.ok_or(Error::CorruptData));
+
         let public_key = match self.public_key {
             Some(ref key) => key,
             None => return Err(Error::CorruptData),
         };
 
         KeyPair::unseal(SignatureAlgorithm::Ed25519,
-                        self.sealing_alg,
+                        sealing_alg,
                         symmetric_key_bytes,
-                        &self.encrypted_value,
-                        &public_key)
+                        encrypted_value,
+                        public_key)
     }
 
     pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
         let builder = builder.insert("keyid", self.keyid.to_base64(base64::URL_SAFE))
             .insert("credential_type", self.credential_type.to_string())
-            .insert("credential_alg", self.credential_type.alg())
-            .insert("sealing_alg", self.sealing_alg.to_string())
-            .insert("encrypted_value",
-                    self.encrypted_value.to_base64(base64::URL_SAFE));
+            .insert("credential_alg", self.credential_type.alg());
+
+        let builder = match self.sealing_alg {
+            Some(ref sealing_alg) => builder.insert("sealing_alg", sealing_alg.to_string()),
+            None => builder,
+        };
+
+        let builder = match self.encrypted_value {
+            Some(ref encrypted_value) => {
+                builder.insert("encrypted_value",
+                               encrypted_value.to_base64(base64::URL_SAFE))
+            }
+            None => builder,
+        };
+
+        let builder = match self.salt {
+            Some(ref salt) => builder.insert("salt", salt.to_base64(base64::URL_SAFE)),
+            None => builder,
+        };
 
         let builder = match self.public_key {
             Some(ref public_key) => {
@@ -153,23 +178,33 @@ impl Serialize for CredentialEntry {
         try!(out.write(1, &self.keyid));
         try!(out.write(2, &self.credential_type.id()));
         try!(out.write(3, &self.credential_type.alg()));
-        try!(out.write(4, &self.sealing_alg.id()));
-        try!(out.write(5, &self.encrypted_value));
+
+        if let Some(ref sealing_alg) = self.sealing_alg {
+            try!(out.write(4, sealing_alg));
+        }
+
+        if let Some(ref encrypted_value) = self.encrypted_value {
+            try!(out.write(5, encrypted_value));
+        }
+
+        if let Some(ref salt) = self.salt {
+            try!(out.write(6, salt));
+        }
 
         if let Some(ref public_key) = self.public_key {
-            try!(out.write(6, public_key));
+            try!(out.write(7, public_key));
         }
 
         if let Some(not_before) = self.not_before {
-            try!(out.write(7, &not_before));
+            try!(out.write(8, &not_before));
         }
 
         if let Some(not_after) = self.not_after {
-            try!(out.write(8, &not_after));
+            try!(out.write(9, &not_after));
         }
 
         if let Some(ref description) = self.description {
-            try!(out.write(9, description));
+            try!(out.write(10, description));
         }
 
         Ok(())
@@ -181,8 +216,9 @@ impl Deserialize for CredentialEntry {
         let mut keyid: Option<Vec<u8>> = None;
         let mut credential_id: Option<u32> = None;
         let mut credential_alg: Option<String> = None;
-        let mut sealing_alg: Option<u32> = None;
+        let mut sealing_alg: Option<EncryptionAlgorithm> = None;
         let mut encrypted_value: Option<Vec<u8>> = None;
+        let mut salt: Option<Vec<u8>> = None;
         let mut public_key: Option<Vec<u8>> = None;
         let mut not_before: Option<Timestamp> = None;
         let mut not_after: Option<Timestamp> = None;
@@ -195,10 +231,11 @@ impl Deserialize for CredentialEntry {
                 3 => credential_alg = Some(try!(f.read())),
                 4 => sealing_alg = Some(try!(f.read())),
                 5 => encrypted_value = Some(try!(f.read())),
-                6 => public_key = Some(try!(f.read())),
-                7 => not_before = Some(try!(f.read())),
-                8 => not_after = Some(try!(f.read())),
-                9 => description = Some(try!(f.read())),
+                6 => salt = Some(try!(f.read())),
+                7 => public_key = Some(try!(f.read())),
+                8 => not_before = Some(try!(f.read())),
+                9 => not_after = Some(try!(f.read())),
+                10 => description = Some(try!(f.read())),
                 _ => try!(f.skip()),
             }
         }
@@ -206,16 +243,12 @@ impl Deserialize for CredentialEntry {
         let credential_type = try!(Type::from_id_and_alg(credential_id, credential_alg)
             .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid credential type")));
 
-        // Ensure sealing algorithm is Aes256Gcm
-        if sealing_alg != Some(EncryptionAlgorithm::Aes256Gcm.id()) {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid sealing algorithm"));
-        }
-
         Ok(CredentialEntry {
             keyid: required!(keyid, "CredentialObject::keyid"),
             credential_type: credential_type,
-            sealing_alg: EncryptionAlgorithm::Aes256Gcm,
-            encrypted_value: required!(encrypted_value, "CredentialObject::encrypted_value"),
+            sealing_alg: sealing_alg,
+            encrypted_value: encrypted_value,
+            salt: salt,
             public_key: public_key,
             not_before: not_before,
             not_after: not_after,
@@ -238,8 +271,18 @@ impl ObjectHash for CredentialEntry {
         digests.push(objecthash_struct_member!("keyid", self.keyid));
         digests.push(objecthash_struct_member!("credential_type", credential_id_string));
         digests.push(objecthash_struct_member!("credential_alg", credential_alg_string));
-        digests.push(objecthash_struct_member!("sealing_alg", self.sealing_alg.to_string()));
-        digests.push(objecthash_struct_member!("encrypted_value", self.encrypted_value));
+
+        if let Some(ref sealing_alg) = self.sealing_alg {
+            digests.push(objecthash_struct_member!("sealing_alg", sealing_alg.to_string()));
+        }
+
+        if let Some(ref encrypted_value) = self.encrypted_value {
+            digests.push(objecthash_struct_member!("encrypted_value", *encrypted_value));
+        }
+
+        if let Some(ref salt) = self.salt {
+            digests.push(objecthash_struct_member!("salt", *salt));
+        }
 
         if let Some(ref public_key) = self.public_key {
             digests.push(objecthash_struct_member!("public_key", *public_key));
@@ -279,6 +322,7 @@ mod tests {
 
     const EXAMPLE_PUBLIC_KEY: &'static [u8] = b"public-key-placeholder";
     const EXAMPLE_SEALED_KEY: &'static [u8] = b"ciphertext-placeholder";
+    const EXAMPLE_SALT: &'static [u8] = b"NaCl";
 
     fn example_timestamp() -> Timestamp {
         Timestamp::at(1_231_006_505)
@@ -288,8 +332,9 @@ mod tests {
         CredentialEntry {
             keyid: Vec::from(EXAMPLE_PUBLIC_KEY),
             credential_type: Type::SignatureKeyPair(SignatureAlgorithm::Ed25519),
-            sealing_alg: EncryptionAlgorithm::Aes256Gcm,
-            encrypted_value: Vec::from(EXAMPLE_SEALED_KEY),
+            sealing_alg: Some(EncryptionAlgorithm::Aes256Gcm),
+            encrypted_value: Some(Vec::from(EXAMPLE_SEALED_KEY)),
+            salt: Some(Vec::from(EXAMPLE_SALT)),
             public_key: Some(Vec::from(EXAMPLE_PUBLIC_KEY)),
             not_before: Some(example_timestamp()),
             not_after: Some(example_timestamp()),

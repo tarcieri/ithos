@@ -3,9 +3,6 @@ package ithos.object;
 import "algorithm.proto";
 
 // Root entry of the directory tree (Root DSE in LDAP parlance)
-//
-// This entry is the home for central identifiers and policy configuration
 message Root {
-    required bytes           logid = 1;
-    required DigestAlgorithm digest_alg = 2;
+    required DigestAlgorithm digest_alg = 1;
 }

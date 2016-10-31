@@ -63,13 +63,15 @@ impl Op {
         }
     }
 
-    pub fn apply<'a, 'b, A: Adapter<'a>>(&'b self,
-                                         adapter: &A,
-                                         txn: &mut A::W,
-                                         state: &mut State<'b>,
-                                         block_id: &block::Id,
-                                         timestamp: Timestamp)
-                                         -> Result<()> {
+    pub fn apply<'a, 'b, A>(&'b self,
+                            adapter: &A,
+                            txn: &mut A::W,
+                            state: &mut State<'b>,
+                            block_id: &block::Id,
+                            timestamp: Timestamp)
+                            -> Result<()>
+        where A: Adapter<'a>
+    {
         match self.optype {
             Type::Add => self.add(adapter, txn, state, block_id, timestamp),
         }
@@ -81,13 +83,15 @@ impl Op {
             .insert_object("objectclass", |b| self.object.build_json(b))
     }
 
-    fn add<'a, 'b, A: Adapter<'a>>(&'b self,
-                                   adapter: &A,
-                                   txn: &mut A::W,
-                                   state: &mut State<'b>,
-                                   block_id: &block::Id,
-                                   timestamp: Timestamp)
-                                   -> Result<()> {
+    fn add<'a, 'b, A>(&'b self,
+                      adapter: &A,
+                      txn: &mut A::W,
+                      state: &mut State<'b>,
+                      block_id: &block::Id,
+                      timestamp: Timestamp)
+                      -> Result<()>
+        where A: Adapter<'a>
+    {
         let parent_path = self.path.as_path().parent();
 
         let (parent_id, entry_id) = match parent_path {
@@ -173,11 +177,9 @@ impl<'a> State<'a> {
         id
     }
 
-    fn get_entry<'b, A: Adapter<'b>>(&self,
-                                     adapter: &A,
-                                     txn: &mut A::W,
-                                     path: &Path)
-                                     -> Result<StateEntry> {
+    fn get_entry<'b, A>(&self, adapter: &A, txn: &mut A::W, path: &Path) -> Result<StateEntry>
+        where A: Adapter<'b>
+    {
         match self.new_entries.get(path) {
             Some(parent_entry) => Ok(*parent_entry),
             _ => {
@@ -200,14 +202,13 @@ struct StateEntry {
 
 #[cfg(test)]
 pub mod tests {
-    use ring::rand;
     use super::tempdir::TempDir;
 
     use adapter::Adapter;
     use adapter::lmdb::LmdbAdapter;
+    use algorithm::DigestAlgorithm;
     use block;
     use error::Error;
-    use log;
     use object::Object;
     use object::domain::DomainEntry;
     use object::root::RootEntry;
@@ -228,8 +229,6 @@ pub mod tests {
     #[test]
     fn nesting_constraint_violation() {
         let adapter = test_adapter();
-        let rng = rand::SystemRandom::new();
-        let logid = log::Id::generate(&rng).unwrap();
 
         // Test nesting constraints on root entry
         {
@@ -260,11 +259,11 @@ pub mod tests {
 
             let op1 = Op::new(Type::Add,
                               PathBuf::from("/".to_string()),
-                              Object::Root(RootEntry::new(logid)));
+                              Object::Root(RootEntry::new(DigestAlgorithm::Sha256)));
 
             let op2 = Op::new(Type::Add,
                               PathBuf::from("/derp".to_string()),
-                              Object::Root(RootEntry::new(logid)));
+                              Object::Root(RootEntry::new(DigestAlgorithm::Sha256)));
 
             let mut state = State::new(adapter.next_free_entry_id(&txn).unwrap());
 
