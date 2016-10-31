@@ -30,7 +30,7 @@ pub struct Id([u8; DIGEST_SIZE]);
 impl Id {
     // Parent ID of the initial block (256-bits of zero)
     pub fn zero() -> Id {
-        Id([0u8; 32])
+        Id([0u8; DIGEST_SIZE])
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Id> {
@@ -132,7 +132,7 @@ impl Block {
                comment: &str,
                keypair: &KeyPair)
                -> Block {
-        let mut signed_by = [0u8; 32];
+        let mut signed_by = [0u8; DIGEST_SIZE];
         signed_by.copy_from_slice(&keypair.public_key_bytes());
 
         let mut block = Block {
