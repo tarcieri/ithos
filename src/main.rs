@@ -101,9 +101,9 @@ fn db_create(database_path: &str, admin_username: &str) {
     let admin_password = password::generate(&rng);
 
     match Server::<LmdbAdapter>::create_database(&std::path::Path::new(database_path),
-                                  &rng,
-                                  &admin_username,
-                                  &admin_password) {
+                                                 &rng,
+                                                 &admin_username,
+                                                 &admin_password) {
         Ok(_) => {
             println!("\nDatabase created! Below is the password for the admin user ('{admin}')",
                      admin = admin_username);

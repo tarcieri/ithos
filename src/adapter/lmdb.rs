@@ -39,23 +39,6 @@ pub struct LmdbAdapter {
     state: Database,
 }
 
-impl LmdbAdapter {
-    fn find_child<'a, T: Transaction<D = Database>>(&'a self,
-                                                    txn: &'a T,
-                                                    parent_id: entry::Id,
-                                                    name: &str)
-                                                    -> Result<DirEntry> {
-        let direntry_bytes = try!(txn.find(self.directories, parent_id.as_ref(), |direntry_bytes| {
-                match DirEntry::new(parent_id, direntry_bytes) {
-                    Ok(direntry) => direntry.name == name,
-                    _ => false,
-                }
-            }));
-
-        DirEntry::new(parent_id, direntry_bytes)
-    }
-}
-
 impl<'a> Adapter<'a> for LmdbAdapter {
     type D = Database;
     type R = RoTransaction<'a>;
@@ -103,16 +86,16 @@ impl<'a> Adapter<'a> for LmdbAdapter {
         })
     }
 
-    fn rw_transaction(&'a self) -> Result<RwTransaction<'a>> {
-        match self.env.begin_rw_txn() {
-            Ok(txn) => Ok(RwTransaction(txn)),
+    fn ro_transaction(&'a self) -> Result<RoTransaction<'a>> {
+        match self.env.begin_ro_txn() {
+            Ok(txn) => Ok(RoTransaction(txn)),
             Err(_) => Err(Error::Transaction),
         }
     }
 
-    fn ro_transaction(&'a self) -> Result<RoTransaction<'a>> {
-        match self.env.begin_ro_txn() {
-            Ok(txn) => Ok(RoTransaction(txn)),
+    fn rw_transaction(&'a self) -> Result<RwTransaction<'a>> {
+        match self.env.begin_rw_txn() {
+            Ok(txn) => Ok(RwTransaction(txn)),
             Err(_) => Err(Error::Transaction),
         }
     }
@@ -149,9 +132,9 @@ impl<'a> Adapter<'a> for LmdbAdapter {
         Ok(())
     }
 
-    fn current_block_id<'b, T: Transaction<D = Database>>(&'b self,
-                                                          txn: &'b T)
-                                                          -> Result<block::Id> {
+    fn current_block_id<'b, T>(&'b self, txn: &'b T) -> Result<block::Id>
+        where T: Transaction<D = Database>
+    {
         block::Id::from_bytes(try!(txn.get(self.state, LATEST_BLOCK_ID_KEY)))
     }
 
@@ -192,29 +175,39 @@ impl<'a> Adapter<'a> for LmdbAdapter {
         Ok(direntry)
     }
 
-    fn find_direntry<'b, T: Transaction<D = Database>>(&'b self,
-                                                       txn: &'b T,
-                                                       path: &Path)
-                                                       -> Result<DirEntry> {
+    fn find_direntry<'b, T>(&'b self, txn: &'b T, path: &Path) -> Result<DirEntry>
+        where T: Transaction<D = Database>
+    {
         path.components().iter().fold(Ok(DirEntry::root()), |parent_direntry, component| {
             self.find_child(txn, try!(parent_direntry).id, component)
         })
     }
 
-    fn find_metadata<'b, T: Transaction<D = Database>>(&'b self,
-                                                       txn: &'b T,
-                                                       id: &entry::Id)
-                                                       -> Result<Metadata> {
+    fn find_metadata<'b, T>(&'b self, txn: &'b T, id: &entry::Id) -> Result<Metadata>
+        where T: Transaction<D = Database>
+    {
         let proto = try!(txn.get(self.metadata, id.as_ref()));
         Metadata::from_proto(proto)
     }
 
-    fn find_entry<'b, T: Transaction<D = Database>>(&'b self,
-                                                    txn: &'b T,
-                                                    id: &entry::Id)
-                                                    -> Result<Entry> {
+    fn find_entry<'b, T>(&'b self, txn: &'b T, id: &entry::Id) -> Result<Entry>
+        where T: Transaction<D = Database>
+    {
         let bytes = try!(txn.get(self.entries, id.as_ref()));
         Entry::from_bytes(*id, bytes)
+    }
+}
+
+impl LmdbAdapter {
+    fn find_child<'a, T>(&'a self, txn: &'a T, parent_id: entry::Id, name: &str) -> Result<DirEntry>
+        where T: Transaction<D = Database>
+    {
+        let direntry_bytes = try!(txn.find(self.directories, parent_id.as_ref(), |direntry_bytes| {
+                let direntry = DirEntry::new(parent_id, direntry_bytes).unwrap();
+                direntry.name == name
+            }));
+
+        DirEntry::new(parent_id, direntry_bytes)
     }
 }
 

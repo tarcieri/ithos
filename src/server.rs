@@ -22,11 +22,15 @@ extern crate tempdir;
 
 const DEFAULT_GENESIS_MESSAGE: &'static str = "Initial block";
 
-pub struct Server<A> where A: for<'a> Adapter<'a> {
-    adapter: A
+pub struct Server<A>
+    where A: for<'a> Adapter<'a>
+{
+    adapter: A,
 }
 
-impl<A> Server<A> where A: for<'a> Adapter<'a> {
+impl<A> Server<A>
+    where A: for<'a> Adapter<'a>
+{
     pub fn create_database(path: &std::path::Path,
                            rng: &SecureRandom,
                            admin_username: &str,
