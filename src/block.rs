@@ -61,7 +61,7 @@ impl ObjectHash for Id {
 
 pub struct Block {
     pub id: Id,
-    pub parent: Id,
+    pub parent_id: Id,
     pub timestamp: Timestamp,
     pub ops: Vec<Op>,
     pub comment: String,
@@ -110,13 +110,13 @@ impl Block {
         ops.push(Op::new(op::Type::Add, path.clone(), Object::OrgUnit(admin_keys_ou)));
 
         let admin_signing_credential =
-            CredentialEntry::signature_keypair(encryption_alg,
-                                               signature_alg,
-                                               admin_keypair_sealed,
-                                               admin_keypair.public_key_bytes(),
-                                               timestamp,
-                                               timestamp.extend(ADMIN_KEYPAIR_LIFETIME),
-                                               Some(String::from("Root signing key")));
+            CredentialEntry::from_signature_keypair(signature_alg,
+                                                    encryption_alg,
+                                                    admin_keypair_sealed,
+                                                    admin_keypair.public_key_bytes(),
+                                                    timestamp,
+                                                    timestamp.extend(ADMIN_KEYPAIR_LIFETIME),
+                                                    Some(String::from("Root signing key")));
 
         path.push("signing");
         ops.push(Op::new(op::Type::Add,
@@ -137,7 +137,7 @@ impl Block {
 
         let mut block = Block {
             id: Id::root(),
-            parent: parent,
+            parent_id: parent,
             timestamp: timestamp,
             ops: ops,
             comment: String::from(comment),
@@ -155,7 +155,8 @@ impl Block {
 
     pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
         builder.insert("id", self.id.as_ref().to_base64(base64::URL_SAFE))
-            .insert("parent", self.parent.as_ref().to_base64(base64::URL_SAFE))
+            .insert("parent",
+                    self.parent_id.as_ref().to_base64(base64::URL_SAFE))
             .insert("timestamp", self.timestamp)
             .insert_array("ops", |builder| {
                 self.ops.iter().fold(builder, |b, op| b.push_object(|b| op.build_json(b)))
@@ -177,7 +178,7 @@ impl ToProto for Block {}
 impl Serialize for Block {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
         try!(out.write(1, self.id.as_ref()));
-        try!(out.write(2, self.parent.as_ref()));
+        try!(out.write(2, self.parent_id.as_ref()));
         try!(out.write(3, &self.timestamp));
         try!(out.write_repeated(4, &self.ops));
         try!(out.write(5, &self.comment));
@@ -192,7 +193,7 @@ impl ObjectHash for Block {
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
         objecthash_struct!(
             hasher,
-            "parent" => self.parent,
+            "parent" => self.parent_id,
             "timestamp" => self.timestamp,
             "ops" => self.ops,
             "comment" => self.comment

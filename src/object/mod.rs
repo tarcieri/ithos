@@ -14,7 +14,7 @@ use objecthash::{ObjectHash, ObjectHasher};
 
 use entry::Entry;
 use error::{Error, Result};
-use proto::{ToProto, FromProto};
+use proto::{FromProto, ToProto};
 
 use self::credential::CredentialEntry;
 use self::domain::DomainEntry;
@@ -48,11 +48,11 @@ impl Class {
         let id: u32 = unsafe { mem::transmute(id_bytes) };
 
         let result = match id {
-            0 => Class::Root,
-            1 => Class::Domain,
-            2 => Class::OrgUnit,
-            3 => Class::System,
-            4 => Class::Credential,
+            1 => Class::Root,
+            2 => Class::Domain,
+            3 => Class::OrgUnit,
+            4 => Class::System,
+            5 => Class::Credential,
             _ => return Err(Error::Parse),
         };
 
@@ -121,8 +121,8 @@ impl Object {
         }
     }
 
-    #[allow(dead_code)]
-    pub fn from_entry(entry: Entry) -> Result<Object> {
+    // TODO: use TryFrom
+    pub fn from_entry(entry: &Entry) -> Result<Object> {
         let result = match entry.class {
             Class::Root => Object::Root(try!(RootEntry::from_proto(entry.data))),
             Class::Domain => Object::Domain(try!(DomainEntry::from_proto(entry.data))),
@@ -144,19 +144,24 @@ impl Object {
                 Object::Credential(ref credential) => credential.build_json(b),
             })
     }
+
+    pub fn to_proto(&self) -> Result<Vec<u8>> {
+        match *self {
+            Object::Root(ref root) => root.to_proto(),
+            Object::Domain(ref domain) => domain.to_proto(),
+            Object::OrgUnit(ref ou) => ou.to_proto(),
+            Object::System(ref system) => system.to_proto(),
+            Object::Credential(ref credential) => credential.to_proto(),
+        }
+    }
 }
 
+// TODO: replace this serializer with oneof
 impl Serialize for Object {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
         try!(out.write(1, &self.class()));
 
-        let object_proto = match self {
-            &Object::Root(ref root) => root.to_proto(),
-            &Object::Domain(ref domain) => domain.to_proto(),
-            &Object::OrgUnit(ref ou) => ou.to_proto(),
-            &Object::System(ref system) => system.to_proto(),
-            &Object::Credential(ref credential) => credential.to_proto(),
-        };
+        let object_proto = self.to_proto();
 
         if !object_proto.is_ok() {
             return Err(io::Error::new(
@@ -171,8 +176,6 @@ impl Serialize for Object {
     }
 }
 
-impl ToProto for Object {}
-
 impl ObjectHash for Object {
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
         match self {
@@ -182,5 +185,17 @@ impl ObjectHash for Object {
             &Object::System(ref system) => system.objecthash(hasher),
             &Object::Credential(ref credential) => credential.objecthash(hasher),
         }
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use object::Class;
+
+    #[test]
+    fn test_class_serialization() {
+        let example_class = Class::OrgUnit;
+        let class_bytes = example_class.as_bytes();
+        assert_eq!(Class::OrgUnit, Class::from_bytes(&class_bytes).unwrap());
     }
 }
