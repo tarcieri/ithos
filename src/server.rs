@@ -3,7 +3,6 @@ use std::{self, str};
 use ring::rand::SecureRandom;
 
 use adapter::{Adapter, Transaction};
-use adapter::lmdb::LmdbAdapter;
 use algorithm::{DigestAlgorithm, EncryptionAlgorithm, SignatureAlgorithm};
 use block::Block;
 use encryption::{AES256GCM_KEY_SIZE, AES256GCM_NONCE_SIZE};
@@ -23,16 +22,16 @@ extern crate tempdir;
 
 const DEFAULT_GENESIS_MESSAGE: &'static str = "Initial block";
 
-pub struct Server {
-    adapter: LmdbAdapter,
+pub struct Server<A> where A: for<'a> Adapter<'a> {
+    adapter: A
 }
 
-impl Server {
+impl<A> Server<A> where A: for<'a> Adapter<'a> {
     pub fn create_database(path: &std::path::Path,
                            rng: &SecureRandom,
                            admin_username: &str,
                            admin_password: &str)
-                           -> Result<Server> {
+                           -> Result<Server<A>> {
         let logid = try!(log::Id::generate(rng));
 
         let mut salt = Vec::with_capacity(16 + admin_username.as_bytes().len());
@@ -66,15 +65,16 @@ impl Server {
                                                  encryption_alg,
                                                  signature_alg);
 
-        let adapter = try!(LmdbAdapter::create_database(path));
-        let server = Server { adapter: adapter };
+        let adapter = try!(A::create_database(path));
 
+        let server = Server { adapter: adapter };
         try!(server.commit_unverified_block(&genesis_block));
+
         Ok(server)
     }
 
-    pub fn open_database(path: &std::path::Path) -> Result<Server> {
-        let adapter = try!(LmdbAdapter::open_database(path));
+    pub fn open_database(path: &std::path::Path) -> Result<Server<A>> {
+        let adapter = try!(A::open_database(path));
         Ok(Server { adapter: adapter })
     }
 
@@ -151,6 +151,7 @@ impl Server {
 mod tests {
     use ring::rand;
 
+    use adapter::lmdb::LmdbAdapter;
     use encryption::AES256GCM_KEY_SIZE;
     use path::PathBuf;
     use password::{self, PasswordAlgorithm};
@@ -162,13 +163,13 @@ mod tests {
     const ADMIN_PASSWORD: &'static str = "The Magic Words are Squeamish Ossifrage";
     const EXAMPLE_DOMAIN: &'static str = "example.com";
 
-    fn create_database() -> Server {
+    fn create_database() -> Server<LmdbAdapter> {
         let rng = rand::SystemRandom::new();
         let dir = TempDir::new("ithos-test").unwrap();
         Server::create_database(dir.path(), &rng, ADMIN_USERNAME, ADMIN_PASSWORD).unwrap()
     }
 
-    fn admin_keypair(server: &Server) -> signature::KeyPair {
+    fn admin_keypair(server: &Server<LmdbAdapter>) -> signature::KeyPair {
         let mut keypair_path = PathBuf::new();
         keypair_path.push("system");
         keypair_path.push(ADMIN_USERNAME);

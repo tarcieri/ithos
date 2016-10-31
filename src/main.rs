@@ -41,6 +41,7 @@ mod timestamp;
 
 use ring::rand;
 
+use adapter::lmdb::LmdbAdapter;
 use encryption::AES256GCM_KEY_SIZE;
 use error::Error;
 use path::PathBuf;
@@ -99,7 +100,7 @@ fn db_create(database_path: &str, admin_username: &str) {
     let rng = rand::SystemRandom::new();
     let admin_password = password::generate(&rng);
 
-    match Server::create_database(&std::path::Path::new(database_path),
+    match Server::<LmdbAdapter>::create_database(&std::path::Path::new(database_path),
                                   &rng,
                                   &admin_username,
                                   &admin_password) {
@@ -123,7 +124,7 @@ fn domain_add(database_path: &str, admin_username: &str, domain_name: &str) {
              path = database_path,
              domain = domain_name);
 
-    let server = Server::open_database(&std::path::Path::new(database_path))
+    let server = Server::<LmdbAdapter>::open_database(&std::path::Path::new(database_path))
         .unwrap_or_else(|err| {
             panic!("*** Error: couldn't open database at {path}: {err}",
                    path = database_path,
