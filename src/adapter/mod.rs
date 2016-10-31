@@ -1,11 +1,14 @@
 pub mod lmdb;
 
+use std::marker::Sized;
+use std::path::Path as StdPath;
+
 use block::{self, Block};
 use direntry::DirEntry;
 use entry::{self, Entry};
 use error::Result;
 use metadata::Metadata;
-use path::Path;
+use path;
 
 pub trait Transaction {
     type D;
@@ -21,9 +24,14 @@ pub trait Adapter<'a> {
     type R: Transaction<D = Self::D>;
     type W: Transaction<D = Self::D>;
 
+    fn create_database(path: &StdPath) -> Result<Self> where Self: Sized;
+    fn open_database(path: &StdPath) -> Result<Self> where Self: Sized;
+
     fn ro_transaction(&'a self) -> Result<Self::R>;
     fn rw_transaction(&'a self) -> Result<Self::W>;
+
     fn next_free_entry_id(&self, txn: &Self::W) -> Result<entry::Id>;
+
     fn add_block<'b>(&'b self, txn: &'b mut Self::W, block: &Block) -> Result<()>;
     fn current_block_id<'b, T: Transaction<D = Self::D>>(&'b self,
                                                          txn: &'b T)
@@ -37,7 +45,7 @@ pub trait Adapter<'a> {
                      -> Result<DirEntry>;
     fn find_direntry<'b, T: Transaction<D = Self::D>>(&'b self,
                                                       txn: &'b T,
-                                                      path: &Path)
+                                                      path: &path::Path)
                                                       -> Result<DirEntry>;
     fn find_metadata<'b, T: Transaction<D = Self::D>>(&'b self,
                                                       txn: &'b T,

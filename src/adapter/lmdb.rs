@@ -40,48 +40,6 @@ pub struct LmdbAdapter {
 }
 
 impl LmdbAdapter {
-    pub fn create_database(path: &std::path::Path) -> Result<LmdbAdapter> {
-        let env = try!(Environment::new()
-            .set_max_dbs(MAX_DBS)
-            .open_with_permissions(&path, DB_PERMS));
-
-        let blocks = try!(env.create_db(Some(BLOCKS_DB), DatabaseFlags::empty()));
-        let directories = try!(env.create_db(Some(DIRECTORIES_DB), INTEGER_KEY | DUP_SORT));
-        let entries = try!(env.create_db(Some(ENTRIES_DB), INTEGER_KEY));
-        let metadata = try!(env.create_db(Some(METADATA_DB), INTEGER_KEY));
-        let state = try!(env.create_db(Some(STATE_DB), DatabaseFlags::empty()));
-
-        Ok(LmdbAdapter {
-            env: env,
-            blocks: blocks,
-            directories: directories,
-            entries: entries,
-            metadata: metadata,
-            state: state,
-        })
-    }
-
-    pub fn open_database(path: &std::path::Path) -> Result<LmdbAdapter> {
-        let env = try!(Environment::new()
-            .set_max_dbs(MAX_DBS)
-            .open_with_permissions(&path, DB_PERMS));
-
-        let blocks = try!(env.open_db(Some(BLOCKS_DB)));
-        let directories = try!(env.open_db(Some(DIRECTORIES_DB)));
-        let entries = try!(env.open_db(Some(ENTRIES_DB)));
-        let metadata = try!(env.open_db(Some(METADATA_DB)));
-        let state = try!(env.open_db(Some(STATE_DB)));
-
-        Ok(LmdbAdapter {
-            env: env,
-            blocks: blocks,
-            directories: directories,
-            entries: entries,
-            metadata: metadata,
-            state: state,
-        })
-    }
-
     fn find_child<'a, T: Transaction<D = Database>>(&'a self,
                                                     txn: &'a T,
                                                     parent_id: entry::Id,
@@ -102,6 +60,48 @@ impl<'a> Adapter<'a> for LmdbAdapter {
     type D = Database;
     type R = RoTransaction<'a>;
     type W = RwTransaction<'a>;
+
+    fn create_database(path: &std::path::Path) -> Result<LmdbAdapter> {
+        let env = try!(Environment::new()
+            .set_max_dbs(MAX_DBS)
+            .open_with_permissions(&path, DB_PERMS));
+
+        let blocks = try!(env.create_db(Some(BLOCKS_DB), DatabaseFlags::empty()));
+        let directories = try!(env.create_db(Some(DIRECTORIES_DB), INTEGER_KEY | DUP_SORT));
+        let entries = try!(env.create_db(Some(ENTRIES_DB), INTEGER_KEY));
+        let metadata = try!(env.create_db(Some(METADATA_DB), INTEGER_KEY));
+        let state = try!(env.create_db(Some(STATE_DB), DatabaseFlags::empty()));
+
+        Ok(LmdbAdapter {
+            env: env,
+            blocks: blocks,
+            directories: directories,
+            entries: entries,
+            metadata: metadata,
+            state: state,
+        })
+    }
+
+    fn open_database(path: &std::path::Path) -> Result<LmdbAdapter> {
+        let env = try!(Environment::new()
+            .set_max_dbs(MAX_DBS)
+            .open_with_permissions(&path, DB_PERMS));
+
+        let blocks = try!(env.open_db(Some(BLOCKS_DB)));
+        let directories = try!(env.open_db(Some(DIRECTORIES_DB)));
+        let entries = try!(env.open_db(Some(ENTRIES_DB)));
+        let metadata = try!(env.open_db(Some(METADATA_DB)));
+        let state = try!(env.open_db(Some(STATE_DB)));
+
+        Ok(LmdbAdapter {
+            env: env,
+            blocks: blocks,
+            directories: directories,
+            entries: entries,
+            metadata: metadata,
+            state: state,
+        })
+    }
 
     fn rw_transaction(&'a self) -> Result<RwTransaction<'a>> {
         match self.env.begin_rw_txn() {
