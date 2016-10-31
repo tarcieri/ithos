@@ -29,8 +29,8 @@ const ADMIN_KEYPAIR_LIFETIME: u64 = 315_532_800; // 10 years
 pub struct Id([u8; DIGEST_SIZE]);
 
 impl Id {
-    // ID of the genesis block (256-bits of zero)
-    pub fn root() -> Id {
+    // Parent ID of the initial block (256-bits of zero)
+    pub fn zero() -> Id {
         Id([0u8; 32])
     }
 
@@ -70,11 +70,11 @@ pub struct Block {
 }
 
 impl Block {
-    // Create the "genesis block": the first block in the log
+    // Create the first block in a new log, with a parent ID of zero.
     // This block contains the initial administrative signature key which will
-    // be used as the initial root authority for new blocks in the log
-    // We also sign the genesis block using this key
-    pub fn genesis_block(logid: &log::Id,
+    // be used as the initial root authority for new blocks in the log.
+    // The block is self-signed with the initial administrator key.
+    pub fn initial_block(logid: &log::Id,
                          admin_username: &str,
                          admin_keypair: &KeyPair,
                          admin_keypair_sealed: &[u8],
@@ -123,7 +123,7 @@ impl Block {
                          path,
                          Object::Credential(admin_signing_credential)));
 
-        Block::new(Id::root(), timestamp, ops, comment, admin_keypair)
+        Block::new(Id::zero(), timestamp, ops, comment, admin_keypair)
     }
 
     pub fn new(parent: Id,
@@ -136,7 +136,7 @@ impl Block {
         signed_by.copy_from_slice(&keypair.public_key_bytes());
 
         let mut block = Block {
-            id: Id::root(),
+            id: Id::zero(),
             parent_id: parent,
             timestamp: timestamp,
             ops: ops,
@@ -222,7 +222,7 @@ pub mod tests {
         let rng = rand::SystemRandom::new();
         let admin_keypair = KeyPair::generate(&rng);
 
-        Block::genesis_block(&example_log_id(),
+        Block::initial_block(&example_log_id(),
                              ADMIN_USERNAME,
                              &admin_keypair,
                              ADMIN_KEYPAIR_SEALED,

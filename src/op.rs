@@ -235,7 +235,7 @@ pub mod tests {
         {
             let mut txn = adapter.rw_transaction().unwrap();
 
-            let example_block_id = block::Id::root();
+            let example_block_id = block::Id::zero();
 
             let op = Op::new(Type::Add,
                              PathBuf::from("/".to_string()),
@@ -256,7 +256,7 @@ pub mod tests {
         {
             let mut txn = adapter.rw_transaction().unwrap();
 
-            let example_block_id = block::Id::root();
+            let example_block_id = block::Id::zero();
 
             let op1 = Op::new(Type::Add,
                               PathBuf::from("/".to_string()),

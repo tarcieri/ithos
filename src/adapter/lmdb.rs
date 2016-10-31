@@ -113,7 +113,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
 
     fn add_block<'b>(&'b self, txn: &'b mut RwTransaction, block: &Block) -> Result<()> {
         // Ensure the block we're adding is the next in the chain
-        if block.parent_id != block::Id::root() &&
+        if block.parent_id != block::Id::zero() &&
            block.parent_id != try!(self.current_block_id(txn)) {
             return Err(Error::Ordering);
         }
@@ -300,7 +300,7 @@ mod tests {
     }
 
     fn example_metadata() -> Metadata {
-        Metadata::new(block::Id::root(), example_timestamp())
+        Metadata::new(block::Id::zero(), example_timestamp())
     }
 
     fn example_entry(id: Id, data: &[u8]) -> Entry {

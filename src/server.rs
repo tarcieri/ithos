@@ -20,7 +20,8 @@ use timestamp::Timestamp;
 #[cfg(test)]
 extern crate tempdir;
 
-const DEFAULT_GENESIS_MESSAGE: &'static str = "Initial block";
+// Comment
+const DEFAULT_INITIAL_BLOCK_MESSAGE: &'static str = "Initial log creation";
 
 pub struct Server<A>
     where A: for<'a> Adapter<'a>
@@ -60,11 +61,11 @@ impl<A> Server<A>
                                        &admin_symmetric_key,
                                        &nonce));
 
-        let genesis_block = Block::genesis_block(&logid,
+        let initial_block = Block::initial_block(&logid,
                                                  &admin_username,
                                                  &admin_keypair,
                                                  &admin_keypair_sealed,
-                                                 DEFAULT_GENESIS_MESSAGE,
+                                                 DEFAULT_INITIAL_BLOCK_MESSAGE,
                                                  DigestAlgorithm::Sha256,
                                                  encryption_alg,
                                                  signature_alg);
@@ -72,7 +73,7 @@ impl<A> Server<A>
         let adapter = try!(A::create_database(path));
 
         let server = Server { adapter: adapter };
-        try!(server.commit_unverified_block(&genesis_block));
+        try!(server.commit_unverified_block(&initial_block));
 
         Ok(server)
     }
