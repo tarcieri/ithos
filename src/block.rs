@@ -7,7 +7,6 @@ use serde_json::builder::ObjectBuilder;
 
 use algorithm::{DigestAlgorithm, EncryptionAlgorithm, SignatureAlgorithm};
 use error::{Error, Result};
-use log;
 use object::Object;
 use object::credential::CredentialEntry;
 use object::ou::OrgUnitEntry;
@@ -74,10 +73,10 @@ impl Block {
     // This block contains the initial administrative signature key which will
     // be used as the initial root authority for new blocks in the log.
     // The block is self-signed with the initial administrator key.
-    pub fn initial_block(logid: &log::Id,
-                         admin_username: &str,
+    pub fn initial_block(admin_username: &str,
                          admin_keypair: &KeyPair,
                          admin_keypair_sealed: &[u8],
+                         admin_keypair_salt: &[u8],
                          comment: &str,
                          digest_alg: DigestAlgorithm,
                          encryption_alg: EncryptionAlgorithm,
@@ -92,7 +91,7 @@ impl Block {
 
         ops.push(Op::new(op::Type::Add,
                          path.clone(),
-                         Object::Root(RootEntry::new(*logid))));
+                         Object::Root(RootEntry::new(digest_alg))));
 
         let system_ou = OrgUnitEntry::new(Some(String::from("Core system users")));
 
@@ -113,6 +112,7 @@ impl Block {
             CredentialEntry::from_signature_keypair(signature_alg,
                                                     encryption_alg,
                                                     admin_keypair_sealed,
+                                                    admin_keypair_salt,
                                                     admin_keypair.public_key_bytes(),
                                                     timestamp,
                                                     timestamp.extend(ADMIN_KEYPAIR_LIFETIME),
@@ -208,25 +208,22 @@ pub mod tests {
 
     use algorithm::{DigestAlgorithm, EncryptionAlgorithm, SignatureAlgorithm};
     use block::Block;
-    use log;
     use signature::KeyPair;
 
     const ADMIN_USERNAME: &'static str = "manager";
-    const ADMIN_KEYPAIR_SEALED: &'static [u8; 11] = b"placeholder";
-
-    pub fn example_log_id() -> log::Id {
-        log::Id::from_bytes(&[0u8; 16]).unwrap()
-    }
+    const ADMIN_KEYPAIR_SEALED: &'static [u8] = b"placeholder";
+    const ADMIN_KEYPAIR_SALT: &'static [u8] = b"NaCl";
+    const COMMENT: &'static str = "The tree of a thousand users begins with one block";
 
     pub fn example_block() -> Block {
         let rng = rand::SystemRandom::new();
         let admin_keypair = KeyPair::generate(&rng);
 
-        Block::initial_block(&example_log_id(),
-                             ADMIN_USERNAME,
+        Block::initial_block(ADMIN_USERNAME,
                              &admin_keypair,
                              ADMIN_KEYPAIR_SEALED,
-                             "Initial block",
+                             ADMIN_KEYPAIR_SALT,
+                             COMMENT,
                              DigestAlgorithm::Sha256,
                              EncryptionAlgorithm::Aes256Gcm,
                              SignatureAlgorithm::Ed25519)

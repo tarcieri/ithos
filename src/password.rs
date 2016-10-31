@@ -5,6 +5,9 @@ use rpassword;
 
 use error::{Error, Result};
 
+// Size of a random salt value to use with a password
+const RANDOM_SALT_SIZE: usize = 16;
+
 // Prefix added to all randomly generated passwords
 const GENPASS_PREFIX: &'static str = "ithos-genpass";
 
@@ -32,6 +35,12 @@ pub fn generate(rng: &SecureRandom) -> String {
             password = String::from_utf8(encode(&bytes[0..6])).unwrap(),
             digits1 = bytes[6] % 100,
             digits2 = bytes[7])
+}
+
+pub fn random_salt(rng: &SecureRandom) -> Result<[u8; RANDOM_SALT_SIZE]> {
+    let mut salt = [0u8; RANDOM_SALT_SIZE];
+    try!(rng.fill(&mut salt).map_err(|_| Error::Rng));
+    Ok(salt)
 }
 
 // Prompt for a password from standard input

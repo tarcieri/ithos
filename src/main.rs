@@ -28,7 +28,6 @@ mod direntry;
 mod encryption;
 mod entry;
 mod error;
-mod log;
 mod metadata;
 mod object;
 mod op;
@@ -143,14 +142,12 @@ fn domain_add(database_path: &str, admin_username: &str, domain_name: &str) {
                err = err);
     });
 
-    let logid = server.find_logid()
-        .unwrap_or_else(|err| panic!("*** Error: couldn't find log ID: {}", err));
-
-    let mut salt = Vec::with_capacity(16 + admin_username.as_bytes().len());
-    salt.extend(logid.as_ref());
-    salt.extend(admin_username.as_bytes());
-
     let admin_password = password::prompt(&format!("{}'s password: ", admin_username)).unwrap();
+
+    let salt = match admin_credential.salt {
+        Some(ref s) => s,
+        None => panic!("salt missing!"),
+    };
 
     let mut admin_symmetric_key = [0u8; AES256GCM_KEY_SIZE];
     password::derive(password::PasswordAlgorithm::SCRYPT,

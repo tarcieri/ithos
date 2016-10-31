@@ -7,7 +7,6 @@ use algorithm::{DigestAlgorithm, EncryptionAlgorithm, SignatureAlgorithm};
 use block::Block;
 use encryption::{AES256GCM_KEY_SIZE, AES256GCM_NONCE_SIZE};
 use error::{Error, Result};
-use log;
 use object::Object;
 use object::credential::CredentialEntry;
 use object::domain::DomainEntry;
@@ -21,7 +20,7 @@ use timestamp::Timestamp;
 extern crate tempdir;
 
 // Comment
-const DEFAULT_INITIAL_BLOCK_MESSAGE: &'static str = "Initial log creation";
+const DEFAULT_INITIAL_BLOCK_COMMENT: &'static str = "Initial log creation";
 
 pub struct Server<A>
     where A: for<'a> Adapter<'a>
@@ -37,15 +36,11 @@ impl<A> Server<A>
                            admin_username: &str,
                            admin_password: &str)
                            -> Result<Server<A>> {
-        let logid = try!(log::Id::generate(rng));
-
-        let mut salt = Vec::with_capacity(16 + admin_username.as_bytes().len());
-        salt.extend(logid.as_ref());
-        salt.extend(admin_username.as_bytes());
+        let admin_keypair_salt = try!(password::random_salt(rng));
 
         let mut admin_symmetric_key = [0u8; AES256GCM_KEY_SIZE];
         password::derive(PasswordAlgorithm::SCRYPT,
-                         &salt,
+                         &admin_keypair_salt,
                          &admin_password,
                          &mut admin_symmetric_key);
 
@@ -61,11 +56,11 @@ impl<A> Server<A>
                                        &admin_symmetric_key,
                                        &nonce));
 
-        let initial_block = Block::initial_block(&logid,
-                                                 &admin_username,
+        let initial_block = Block::initial_block(&admin_username,
                                                  &admin_keypair,
                                                  &admin_keypair_sealed,
-                                                 DEFAULT_INITIAL_BLOCK_MESSAGE,
+                                                 &admin_keypair_salt,
+                                                 DEFAULT_INITIAL_BLOCK_COMMENT,
                                                  DigestAlgorithm::Sha256,
                                                  encryption_alg,
                                                  signature_alg);
@@ -116,17 +111,6 @@ impl<A> Server<A>
 
         match try!(entry.to_object()) {
             Object::Credential(credential_entry) => Ok(credential_entry),
-            _ => Err(Error::BadType),
-        }
-    }
-
-    pub fn find_logid(&self) -> Result<log::Id> {
-        let txn = try!(self.adapter.ro_transaction());
-        let direntry = try!(self.adapter.find_direntry(&txn, Path::new("/").unwrap()));
-        let entry = try!(self.adapter.find_entry(&txn, &direntry.id));
-
-        match try!(entry.to_object()) {
-            Object::Root(root_entry) => Ok(root_entry.logid),
             _ => Err(Error::BadType),
         }
     }
@@ -182,11 +166,11 @@ mod tests {
         keypair_path.push("signing");
 
         let credential = server.find_credential(keypair_path.as_ref()).unwrap();
-        let logid = server.find_logid().unwrap();
 
-        let mut salt = Vec::with_capacity(16 + ADMIN_USERNAME.as_bytes().len());
-        salt.extend(logid.as_ref());
-        salt.extend(ADMIN_USERNAME.as_bytes());
+        let salt = match credential.salt {
+            Some(ref s) => s,
+            None => panic!("salt missing!"),
+        };
 
         let mut admin_symmetric_key = [0u8; AES256GCM_KEY_SIZE];
         password::derive(PasswordAlgorithm::SCRYPT,
