@@ -35,7 +35,7 @@ impl<A> Server<A>
                            rng: &SecureRandom,
                            admin_username: &str,
                            admin_password: &str)
-                           -> Result<Server<A>> {
+                           -> Result<()> {
         let admin_keypair_salt = try!(password::random_salt(rng));
 
         let mut admin_symmetric_key = [0u8; AES256GCM_KEY_SIZE];
@@ -66,11 +66,12 @@ impl<A> Server<A>
                                                  signature_alg);
 
         let adapter = try!(A::create_database(path));
+        let mut txn = try!(adapter.rw_transaction());
 
-        let server = Server { adapter: adapter };
-        try!(server.commit_unverified_block(&initial_block));
+        try!(initial_block.apply(&adapter, &mut txn));
+        try!(txn.commit());
 
-        Ok(server)
+        Ok(())
     }
 
     pub fn open_database(path: &std::path::Path) -> Result<Server<A>> {
@@ -93,13 +94,13 @@ impl<A> Server<A>
 
         ops.push(Op::new(op::Type::Add, path, Object::Domain(domain_entry)));
 
-        // TODO: make committing the block transactional
-        let txn = try!(self.adapter.ro_transaction());
+        let mut txn = try!(self.adapter.rw_transaction());
         let parent_id = try!(self.adapter.current_block_id(&txn));
         let block = Block::new(parent_id, timestamp, ops, comment, admin_keypair);
 
         // TODO: authenticate signature before committing
-        try!(self.commit_unverified_block(&block));
+        try!(block.apply(&self.adapter, &mut txn));
+        try!(txn.commit());
 
         Ok(())
     }
@@ -113,26 +114,6 @@ impl<A> Server<A>
             Object::Credential(credential_entry) => Ok(credential_entry),
             _ => Err(Error::BadType),
         }
-    }
-
-    // Commit a block without first checking its signature
-    fn commit_unverified_block(&self, block: &Block) -> Result<()> {
-        let mut txn = try!(self.adapter.rw_transaction());
-        let mut state = op::State::new(try!(self.adapter.next_free_entry_id(&txn)));
-
-        // NOTE: This only stores the block in the database. It does not process it
-        try!(self.adapter.add_block(&mut txn, block));
-
-        // Process the operations in the block and apply them to the database
-        for op in &block.ops {
-            try!(op.apply(&self.adapter,
-                          &mut txn,
-                          &mut state,
-                          &block.id,
-                          block.timestamp));
-        }
-
-        txn.commit()
     }
 }
 
@@ -155,7 +136,9 @@ mod tests {
     fn create_database() -> Server<LmdbAdapter> {
         let rng = rand::SystemRandom::new();
         let dir = TempDir::new("ithos-test").unwrap();
-        Server::create_database(dir.path(), &rng, ADMIN_USERNAME, ADMIN_PASSWORD).unwrap()
+        Server::<LmdbAdapter>::create_database(dir.path(), &rng, ADMIN_USERNAME, ADMIN_PASSWORD)
+            .unwrap();
+        Server::<LmdbAdapter>::open_database(dir.path()).unwrap()
     }
 
     fn admin_keypair(server: &Server<LmdbAdapter>) -> signature::KeyPair {

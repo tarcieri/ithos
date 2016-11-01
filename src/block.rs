@@ -5,6 +5,7 @@ use rustc_serialize::base64::{self, ToBase64};
 use serde_json;
 use serde_json::builder::ObjectBuilder;
 
+use adapter::Adapter;
 use algorithm::{DigestAlgorithm, EncryptionAlgorithm, SignatureAlgorithm};
 use error::{Error, Result};
 use object::Object;
@@ -159,6 +160,25 @@ impl Block {
         block.signature.copy_from_slice(&keypair.sign(id.as_ref()).as_slice());
 
         block
+    }
+
+    // Apply the operations contained within the block to the database
+    pub fn apply<'a, A>(&self, adapter: &A, txn: &mut A::W) -> Result<()>
+        where A: Adapter<'a>
+    {
+        let mut state = op::State::new(try!(adapter.next_free_entry_id(txn)));
+
+        // NOTE: This only stores the block in the database. It does not process it
+        try!(adapter.add_block(txn, self));
+
+        let ref ops = self.ops;
+
+        // Process the operations in the block and apply them to the database
+        for op in ops {
+            try!(op.apply(adapter, txn, &mut state, &self.id, self.timestamp));
+        }
+
+        Ok(())
     }
 
     pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
