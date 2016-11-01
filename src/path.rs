@@ -7,7 +7,7 @@ use objecthash::{ObjectHash, ObjectHasher};
 pub const SEPARATOR: &'static str = "/";
 
 // Builder for absolute paths
-#[derive(Clone)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct PathBuf(String);
 
 impl PathBuf {

@@ -63,13 +63,13 @@ impl Op {
         }
     }
 
-    pub fn apply<'a, 'b, A>(&'b self,
-                            adapter: &A,
-                            txn: &mut A::W,
-                            state: &mut State<'b>,
-                            block_id: &block::Id,
-                            timestamp: Timestamp)
-                            -> Result<()>
+    pub fn apply<'a, A>(&self,
+                        adapter: &A,
+                        txn: &mut A::W,
+                        state: &mut State,
+                        block_id: &block::Id,
+                        timestamp: Timestamp)
+                        -> Result<()>
         where A: Adapter<'a>
     {
         match self.optype {
@@ -83,13 +83,13 @@ impl Op {
             .insert_object("objectclass", |b| self.object.build_json(b))
     }
 
-    fn add<'a, 'b, A>(&'b self,
-                      adapter: &A,
-                      txn: &mut A::W,
-                      state: &mut State<'b>,
-                      block_id: &block::Id,
-                      timestamp: Timestamp)
-                      -> Result<()>
+    fn add<'a, A>(&self,
+                  adapter: &A,
+                  txn: &mut A::W,
+                  state: &mut State,
+                  block_id: &block::Id,
+                  timestamp: Timestamp)
+                  -> Result<()>
         where A: Adapter<'a>
     {
         let parent_path = self.path.as_path().parent();
@@ -130,7 +130,7 @@ impl Op {
             id: entry_id,
             class: self.object.class(),
         };
-        state.new_entries.insert(self.path.as_path(), new_entry);
+        state.new_entries.insert(self.path.clone(), new_entry);
 
         Ok(())
     }
@@ -158,13 +158,13 @@ impl ObjectHash for Op {
     }
 }
 
-pub struct State<'a> {
+pub struct State {
     next_entry_id: entry::Id,
-    new_entries: HashMap<&'a Path, StateEntry>,
+    new_entries: HashMap<PathBuf, StateEntry>,
 }
 
-impl<'a> State<'a> {
-    pub fn new(next_entry_id: entry::Id) -> State<'a> {
+impl State {
+    pub fn new(next_entry_id: entry::Id) -> State {
         State {
             next_entry_id: next_entry_id,
             new_entries: HashMap::new(),
@@ -177,8 +177,8 @@ impl<'a> State<'a> {
         id
     }
 
-    fn get_entry<'b, A>(&self, adapter: &A, txn: &mut A::W, path: &Path) -> Result<StateEntry>
-        where A: Adapter<'b>
+    fn get_entry<'a, A>(&self, adapter: &A, txn: &mut A::W, path: &Path) -> Result<StateEntry>
+        where A: Adapter<'a>
     {
         match self.new_entries.get(path) {
             Some(parent_entry) => Ok(*parent_entry),
