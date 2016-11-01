@@ -84,7 +84,7 @@ impl<A> Server<A>
                       description: Option<String>,
                       comment: &str)
                       -> Result<()> {
-        let domain_entry = DomainEntry { description: description };
+        let domain_entry = DomainEntry::new(description);
 
         let timestamp = Timestamp::now();
         let mut ops = Vec::new();
@@ -160,7 +160,8 @@ mod tests {
 
     fn admin_keypair(server: &Server<LmdbAdapter>) -> signature::KeyPair {
         let mut keypair_path = PathBuf::new();
-        keypair_path.push("system");
+        keypair_path.push("global");
+        keypair_path.push("users");
         keypair_path.push(ADMIN_USERNAME);
         keypair_path.push("keys");
         keypair_path.push("signing");

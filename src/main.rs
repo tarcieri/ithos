@@ -131,7 +131,8 @@ fn domain_add(database_path: &str, admin_username: &str, domain_name: &str) {
         });
 
     let mut keypair_path = PathBuf::new();
-    keypair_path.push("system");
+    keypair_path.push("global");
+    keypair_path.push("users");
     keypair_path.push(&admin_username);
     keypair_path.push("keys");
     keypair_path.push("signing");

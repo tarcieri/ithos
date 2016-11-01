@@ -9,6 +9,7 @@ use algorithm::{DigestAlgorithm, EncryptionAlgorithm, SignatureAlgorithm};
 use error::{Error, Result};
 use object::Object;
 use object::credential::CredentialEntry;
+use object::domain::DomainEntry;
 use object::ou::OrgUnitEntry;
 use object::root::RootEntry;
 use object::system::SystemEntry;
@@ -93,10 +94,17 @@ impl Block {
                          path.clone(),
                          Object::Root(RootEntry::new(digest_alg))));
 
-        let system_ou = OrgUnitEntry::new(Some(String::from("Core system users")));
+        let global_domain = DomainEntry::new(Some(String::from("Global system users and config")));
 
-        path.push("system");
-        ops.push(Op::new(op::Type::Add, path.clone(), Object::OrgUnit(system_ou)));
+        path.push("global");
+        ops.push(Op::new(op::Type::Add, path.clone(), Object::Domain(global_domain)));
+
+        let global_users_ou = OrgUnitEntry::new(Some(String::from("Core system users")));
+
+        path.push("users");
+        ops.push(Op::new(op::Type::Add,
+                         path.clone(),
+                         Object::OrgUnit(global_users_ou)));
 
         let admin_user = SystemEntry::new(String::from(admin_username));
 
