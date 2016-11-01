@@ -32,20 +32,20 @@ pub trait Adapter<'a> {
 
     fn next_free_entry_id(&self, txn: &Self::W) -> Result<entry::Id>;
 
-    fn add_block<'b>(&'b self, txn: &'b mut Self::W, block: &Block) -> Result<()>;
-    fn current_block_id<'b, T>(&'b self, txn: &'b T) -> Result<block::Id>
+    fn add_block<'t>(&'t self, txn: &'t mut Self::W, block: &Block) -> Result<()>;
+    fn current_block_id<'t, T>(&'t self, txn: &'t T) -> Result<block::Id>
         where T: Transaction<D = Self::D>;
-    fn add_entry<'b>(&'b self,
-                     txn: &'b mut Self::W,
+    fn add_entry<'t>(&'t self,
+                     txn: &'t mut Self::W,
                      entry: &Entry,
-                     name: &'b str,
+                     name: &'t str,
                      parent_id: entry::Id,
                      metadata: &Metadata)
                      -> Result<DirEntry>;
-    fn find_direntry<'b, T>(&'b self, txn: &'b T, path: &path::Path) -> Result<DirEntry>
+    fn find_direntry<'t, T>(&'t self, txn: &'t T, path: &path::Path) -> Result<DirEntry>
         where T: Transaction<D = Self::D>;
-    fn find_metadata<'b, T>(&'b self, txn: &'b T, id: &entry::Id) -> Result<Metadata>
+    fn find_metadata<'t, T>(&'t self, txn: &'t T, id: &entry::Id) -> Result<Metadata>
         where T: Transaction<D = Self::D>;
-    fn find_entry<'b, T>(&'b self, txn: &'b T, id: &entry::Id) -> Result<Entry>
+    fn find_entry<'t, T>(&'t self, txn: &'t T, id: &entry::Id) -> Result<Entry>
         where T: Transaction<D = Self::D>;
 }

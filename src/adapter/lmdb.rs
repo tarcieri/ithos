@@ -112,7 +112,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
         Ok(last_id.next())
     }
 
-    fn add_block<'b>(&'b self, txn: &'b mut RwTransaction, block: &Block) -> Result<()> {
+    fn add_block<'t>(&'t self, txn: &'t mut RwTransaction, block: &Block) -> Result<()> {
         // Ensure the block we're adding is the next in the chain
         if block.parent_id == block::Id::zero() {
             if txn.get(self.state, LOG_ID_KEY) != Err(Error::NotFound) {
@@ -138,16 +138,16 @@ impl<'a> Adapter<'a> for LmdbAdapter {
         Ok(())
     }
 
-    fn current_block_id<'b, T>(&'b self, txn: &'b T) -> Result<block::Id>
+    fn current_block_id<'t, T>(&'t self, txn: &'t T) -> Result<block::Id>
         where T: Transaction<D = Database>
     {
         block::Id::from_bytes(try!(txn.get(self.state, LATEST_BLOCK_ID_KEY)))
     }
 
-    fn add_entry<'b>(&'b self,
-                     txn: &'b mut RwTransaction,
+    fn add_entry<'t>(&'t self,
+                     txn: &'t mut RwTransaction,
                      entry: &Entry,
-                     name: &'b str,
+                     name: &'t str,
                      parent_id: entry::Id,
                      metadata: &Metadata)
                      -> Result<DirEntry> {
@@ -181,7 +181,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
         Ok(direntry)
     }
 
-    fn find_direntry<'b, T>(&'b self, txn: &'b T, path: &Path) -> Result<DirEntry>
+    fn find_direntry<'t, T>(&'t self, txn: &'t T, path: &Path) -> Result<DirEntry>
         where T: Transaction<D = Database>
     {
         path.components().iter().fold(Ok(DirEntry::root()), |parent_direntry, component| {
@@ -189,14 +189,14 @@ impl<'a> Adapter<'a> for LmdbAdapter {
         })
     }
 
-    fn find_metadata<'b, T>(&'b self, txn: &'b T, id: &entry::Id) -> Result<Metadata>
+    fn find_metadata<'t, T>(&'t self, txn: &'t T, id: &entry::Id) -> Result<Metadata>
         where T: Transaction<D = Database>
     {
         let proto = try!(txn.get(self.metadata, id.as_ref()));
         Metadata::from_proto(proto)
     }
 
-    fn find_entry<'b, T>(&'b self, txn: &'b T, id: &entry::Id) -> Result<Entry>
+    fn find_entry<'t, T>(&'t self, txn: &'t T, id: &entry::Id) -> Result<Entry>
         where T: Transaction<D = Database>
     {
         let bytes = try!(txn.get(self.entries, id.as_ref()));
