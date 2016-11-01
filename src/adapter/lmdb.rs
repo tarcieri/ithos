@@ -116,7 +116,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
         // Ensure the block we're adding is the next in the chain
         if block.parent_id == block::Id::zero() {
             if txn.get(self.state, LOG_ID_KEY) != Err(Error::NotFound) {
-                return Err(Error::EntryAlreadyExists)
+                return Err(Error::EntryAlreadyExists);
             }
 
             try!(txn.put(self.state, LOG_ID_KEY, block.id.as_ref()));

@@ -27,7 +27,6 @@ impl AllowsChild for RootEntry {
     #[inline]
     fn allows_child(child: &Object) -> bool {
         match *child {
-            Object::OrgUnit(_) => true,
             Object::Domain(_) => true,
             _ => false,
         }
