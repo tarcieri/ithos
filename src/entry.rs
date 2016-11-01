@@ -1,7 +1,7 @@
 use std::mem;
 
 use error::{Error, Result};
-use object::{Class, Object};
+use object::Class;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct Id(u64);
@@ -53,9 +53,5 @@ impl<'a> Entry<'a> {
             class: try!(Class::from_bytes(&bytes[0..4])),
             data: &bytes[4..],
         })
-    }
-
-    pub fn to_object(&self) -> Result<Object> {
-        Object::from_entry(self)
     }
 }

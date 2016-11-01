@@ -12,8 +12,10 @@ use buffoon::{Serialize, OutputStream};
 use serde_json::builder::ObjectBuilder;
 use objecthash::{ObjectHash, ObjectHasher};
 
+use adapter::Adapter;
 use entry::Entry;
 use error::{Error, Result};
+use path::Path;
 use proto::{FromProto, ToProto};
 
 use self::credential::CredentialEntry;
@@ -132,6 +134,14 @@ impl Object {
         };
 
         Ok(result)
+    }
+
+    pub fn find<'a, A>(adapter: &'a A, path: &Path) -> Result<Object> where A: Adapter<'a> {
+        let txn = try!(adapter.ro_transaction());
+        let direntry = try!(adapter.find_direntry(&txn, path));
+        let entry = try!(adapter.find_entry(&txn, &direntry.id));
+
+        Self::from_entry(&entry)
     }
 
     pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {

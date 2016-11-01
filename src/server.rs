@@ -106,11 +106,7 @@ impl<A> Server<A>
     }
 
     pub fn find_credential(&self, path: &Path) -> Result<CredentialEntry> {
-        let txn = try!(self.adapter.ro_transaction());
-        let direntry = try!(self.adapter.find_direntry(&txn, path));
-        let entry = try!(self.adapter.find_entry(&txn, &direntry.id));
-
-        match try!(entry.to_object()) {
+        match try!(Object::find(&self.adapter, path)) {
             Object::Credential(credential_entry) => Ok(credential_entry),
             _ => Err(Error::BadType),
         }
