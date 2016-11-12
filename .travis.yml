@@ -6,8 +6,6 @@ branches:
     - master
 
 rust:
-  - stable
-  - beta
   - nightly
 
 os:
