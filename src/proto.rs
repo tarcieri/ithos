@@ -1,7 +1,4 @@
-
-
 use buffoon::{self, Serialize, Deserialize};
-
 use error::{Error, Result};
 use std::marker::Sized;
 

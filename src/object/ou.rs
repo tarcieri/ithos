@@ -1,9 +1,6 @@
-
-
 use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
 use object::{AllowsChild, Object};
 use objecthash::{self, ObjectHash, ObjectHasher};
-
 use proto::{ToProto, FromProto};
 use serde_json::builder::ObjectBuilder;
 use std::io;

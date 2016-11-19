@@ -1,5 +1,3 @@
-
-
 use algorithm::{EncryptionAlgorithm, SignatureAlgorithm};
 use encryption;
 use error::{Error, Result};

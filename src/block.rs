@@ -1,8 +1,5 @@
-
-
 use adapter::Adapter;
 use algorithm::{DigestAlgorithm, EncryptionAlgorithm, SignatureAlgorithm};
-
 use buffoon::{OutputStream, Serialize};
 use error::{Error, Result};
 use object::Object;

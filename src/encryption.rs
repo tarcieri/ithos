@@ -1,5 +1,3 @@
-
-
 use algorithm::EncryptionAlgorithm;
 use error::{Error, Result};
 use ring::aead;

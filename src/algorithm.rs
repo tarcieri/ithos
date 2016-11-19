@@ -1,7 +1,4 @@
-
-
 use buffoon::{Serialize, Deserialize, OutputStream, InputStream, Field};
-
 use objecthash::{ObjectHash, ObjectHasher};
 use std::io;
 

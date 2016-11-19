@@ -1,5 +1,3 @@
-
-
 use adapter::{Adapter, Transaction};
 use algorithm::{DigestAlgorithm, EncryptionAlgorithm, SignatureAlgorithm};
 use block::Block;

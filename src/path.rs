@@ -1,5 +1,3 @@
-
-
 use objecthash::{ObjectHash, ObjectHasher};
 use std::borrow::Borrow;
 use std::hash::{Hash, Hasher};

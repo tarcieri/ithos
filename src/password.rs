@@ -1,5 +1,3 @@
-
-
 use error::{Error, Result};
 use pwhash::scrypt::{self, ScryptParams};
 use ring::constant_time;

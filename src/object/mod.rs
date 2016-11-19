@@ -4,16 +4,13 @@ pub mod ou;
 pub mod root;
 pub mod system;
 
-
 use adapter::Adapter;
-
 use buffoon::{Serialize, OutputStream};
 use entry::Entry;
 use error::{Error, Result};
 use objecthash::{ObjectHash, ObjectHasher};
 use path::Path;
 use proto::{FromProto, ToProto};
-
 use self::credential::CredentialEntry;
 use self::domain::DomainEntry;
 use self::ou::OrgUnitEntry;

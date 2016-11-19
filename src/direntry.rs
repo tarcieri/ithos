@@ -1,5 +1,3 @@
-
-
 use entry::Id;
 use error::{Error, Result};
 use std::str;

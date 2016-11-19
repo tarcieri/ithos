@@ -1,7 +1,4 @@
-
-
 use block;
-
 use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
 use proto::{FromProto, ToProto};
 use std::io;

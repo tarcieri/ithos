@@ -1,5 +1,3 @@
-
-
 use error::{Error, Result};
 use object::Class;
 use std::mem;

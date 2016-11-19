@@ -1,7 +1,4 @@
-
-
 use algorithm::{EncryptionAlgorithm, SignatureAlgorithm};
-
 use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
 use error::{Error, Result};
 use object::{AllowsChild, Object};

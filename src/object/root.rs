@@ -1,7 +1,4 @@
-
-
 use algorithm::DigestAlgorithm;
-
 use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
 use object::{AllowsChild, Object};
 use objecthash::{self, ObjectHash, ObjectHasher};

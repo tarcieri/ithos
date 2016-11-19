@@ -1,8 +1,5 @@
-
-
 use adapter::Adapter;
 use block;
-
 use buffoon::{OutputStream, Serialize};
 use entry::{self, Entry};
 use error::{Error, Result};

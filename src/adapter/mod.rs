@@ -1,6 +1,5 @@
 pub mod lmdb;
 
-
 use block::{self, Block};
 use direntry::DirEntry;
 use entry::{self, Entry};

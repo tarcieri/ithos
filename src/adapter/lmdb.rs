@@ -1,7 +1,6 @@
 extern crate lmdb;
 extern crate lmdb_sys;
 
-
 use adapter::{Adapter, Transaction};
 use block::{self, Block};
 use direntry::DirEntry;
@@ -10,7 +9,6 @@ use error::{Error, Result};
 use metadata::Metadata;
 use path::Path;
 use proto::{FromProto, ToProto};
-
 use self::lmdb::{Environment, Database, DatabaseFlags, Cursor, WriteFlags, DUP_SORT, INTEGER_KEY};
 use self::lmdb::Error as LmdbError;
 use self::lmdb::Transaction as LmdbTransaction;
