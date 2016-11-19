@@ -36,4 +36,4 @@ version = ">= 0.3"
 
 [dev-dependencies]
 tempdir = "0.3"
-clippy = "*"
+clippy = "0.0.98"
