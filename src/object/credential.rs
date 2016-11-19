@@ -67,6 +67,7 @@ pub struct CredentialEntry {
 }
 
 impl CredentialEntry {
+    #[allow(too_many_arguments)]
     pub fn from_signature_keypair(signature_alg: SignatureAlgorithm,
                                   sealing_alg: EncryptionAlgorithm,
                                   sealed_keypair: &[u8],
@@ -157,12 +158,10 @@ impl CredentialEntry {
             None => builder,
         };
 
-        let builder = match self.description {
+        match self.description {
             Some(ref description) => builder.insert("description", description),
             None => builder,
-        };
-
-        builder
+        }
     }
 }
 
@@ -305,7 +304,7 @@ impl ObjectHash for CredentialEntry {
         hasher.update(objecthash::types::DICT_TAG);
 
         for value in &digests {
-            hasher.update(&value);
+            hasher.update(value);
         }
     }
 }

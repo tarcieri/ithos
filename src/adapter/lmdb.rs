@@ -372,7 +372,7 @@ mod tests {
             {
                 let path = Path::new("/example.com/hosts/master.example.com").unwrap();
 
-                let direntry = adapter.find_direntry(&txn, &path).unwrap();
+                let direntry = adapter.find_direntry(&txn, path).unwrap();
                 assert_eq!(direntry.name, "master.example.com");
 
                 let metadata = adapter.find_metadata(&txn, &direntry.id).unwrap();

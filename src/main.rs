@@ -82,12 +82,12 @@ fn main() {
         .subcommand(domain_add_command)
         .get_matches();
 
-    if let Some(ref matches) = matches.subcommand_matches("db") {
+    if let Some(matches) = matches.subcommand_matches("db") {
         let db_path = matches.value_of("path").unwrap();
         let admin_username = matches.value_of("username").unwrap_or(DEFAULT_ADMIN_USERNAME);
 
-        db_create(&db_path, &admin_username);
-    } else if let Some(ref matches) = matches.subcommand_matches("domain") {
+        db_create(db_path, admin_username);
+    } else if let Some(matches) = matches.subcommand_matches("domain") {
         let domain = matches.value_of("domain").unwrap();
         let db_path = matches.value_of("path").unwrap();
         let username = matches.value_of("username").unwrap_or(DEFAULT_ADMIN_USERNAME);
@@ -102,9 +102,9 @@ fn db_create(database_path: &str, admin_username: &str) {
     let rng = rand::SystemRandom::new();
     let admin_password = password::generate(&rng);
 
-    match Server::<LmdbAdapter>::create_database(&std::path::Path::new(database_path),
+    match Server::<LmdbAdapter>::create_database(std::path::Path::new(database_path),
                                                  &rng,
-                                                 &admin_username,
+                                                 admin_username,
                                                  &admin_password) {
         Ok(_) => {
             println!("\nDatabase created! Below is the password for the admin user ('{admin}')",
@@ -126,7 +126,7 @@ fn domain_add(database_path: &str, admin_username: &str, domain_name: &str) {
              path = database_path,
              domain = domain_name);
 
-    let server = Server::<LmdbAdapter>::open_database(&std::path::Path::new(database_path))
+    let server = Server::<LmdbAdapter>::open_database(std::path::Path::new(database_path))
         .unwrap_or_else(|err| {
             panic!("*** Error: couldn't open database at {path}: {err}",
                    path = database_path,
@@ -155,7 +155,7 @@ fn domain_add(database_path: &str, admin_username: &str, domain_name: &str) {
 
     let mut admin_symmetric_key = [0u8; AES256GCM_KEY_SIZE];
     password::derive(password::PasswordAlgorithm::SCRYPT,
-                     &salt,
+                     salt,
                      &admin_password,
                      &mut admin_symmetric_key);
 

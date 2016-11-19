@@ -74,7 +74,7 @@ pub fn verify(alg: PasswordAlgorithm,
     let mut out = vec![0u8; previously_derived.len()];
     scrypt::scrypt(password.as_bytes(), &*salt, &params(), &mut out);
 
-    constant_time::verify_slices_are_equal(&previously_derived, &out).is_ok()
+    constant_time::verify_slices_are_equal(previously_derived, &out).is_ok()
 }
 
 // Encode random data with the Bubble Babble encoding
@@ -87,6 +87,7 @@ fn encode(bytes: &[u8]) -> Vec<u8> {
 
     result.push(b'x');
 
+    #[allow(needless_range_loop)]
     for i in 0..(bytes.len() + 1) {
         if i % 2 != 0 {
             continue;

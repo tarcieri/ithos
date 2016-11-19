@@ -48,7 +48,7 @@ impl Id {
 }
 
 impl AsRef<[u8]> for Id {
-    #[inline(always)]
+    #[inline]
     fn as_ref(&self) -> &[u8] {
         &self.0
     }
@@ -75,6 +75,7 @@ impl Block {
     // This block contains the initial administrative signature key which will
     // be used as the initial root authority for new blocks in the log.
     // The block is self-signed with the initial administrator key.
+    #[allow(too_many_arguments)]
     pub fn initial_block(admin_username: &str,
                          admin_keypair: &KeyPair,
                          admin_keypair_sealed: &[u8],
@@ -142,7 +143,7 @@ impl Block {
                keypair: &KeyPair)
                -> Block {
         let mut signed_by = [0u8; DIGEST_SIZE];
-        signed_by.copy_from_slice(&keypair.public_key_bytes());
+        signed_by.copy_from_slice(keypair.public_key_bytes());
 
         let mut block = Block {
             id: Id::zero(),
@@ -157,7 +158,7 @@ impl Block {
         let id = Id::from_bytes(objecthash::digest(&block).as_ref()).unwrap();
 
         block.id = id;
-        block.signature.copy_from_slice(&keypair.sign(id.as_ref()).as_slice());
+        block.signature.copy_from_slice(keypair.sign(id.as_ref()).as_slice());
 
         block
     }
@@ -171,7 +172,7 @@ impl Block {
         // NOTE: This only stores the block in the database. It does not process it
         try!(adapter.add_block(txn, self));
 
-        let ref ops = self.ops;
+        let ops = &self.ops;
 
         // Process the operations in the block and apply them to the database
         for op in ops {

@@ -26,8 +26,8 @@ impl AllowsChild for OrgUnitEntry {
     #[inline]
     fn allows_child(child: &Object) -> bool {
         match *child {
-            Object::OrgUnit(_) => true,
-            Object::System(_) => true,
+            Object::OrgUnit(_) |
+            Object::System(_) |
             Object::Credential(_) => true,
             _ => false,
         }
@@ -36,9 +36,8 @@ impl AllowsChild for OrgUnitEntry {
 
 impl Serialize for OrgUnitEntry {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
-        match self.description {
-            Some(ref description) => try!(out.write(1, &description)),
-            None => (),
+        if let Some(ref description) = self.description {
+            try!(out.write(1, &description))
         }
 
         Ok(())
@@ -66,14 +65,11 @@ impl FromProto for OrgUnitEntry {}
 impl ObjectHash for OrgUnitEntry {
     #[inline]
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
-        match self.description {
-            Some(ref desc) => {
-                objecthash_struct!(
-                    hasher,
-                    "description" => *desc
-                )
-            }
-            None => (),
+        if let Some(ref desc) = self.description {
+            objecthash_struct!(
+                hasher,
+                "description" => *desc
+            )
         }
     }
 }

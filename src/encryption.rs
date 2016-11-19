@@ -20,8 +20,8 @@ pub fn seal(algorithm: EncryptionAlgorithm,
     let max_overhead_len = sealing_key.algorithm().max_overhead_len();
     let mut buffer = Vec::with_capacity(AES256GCM_NONCE_SIZE + plaintext.len() + max_overhead_len);
 
-    buffer.extend(nonce);
-    buffer.extend(plaintext);
+    buffer.extend_from_slice(nonce);
+    buffer.extend_from_slice(plaintext);
 
     // Add space in the buffer to store the GCM tag
     for _ in 0..max_overhead_len {
@@ -79,7 +79,7 @@ pub mod tests {
         let ciphertext = encryption::seal(EncryptionAlgorithm::Aes256Gcm,
                                           &ENCRYPTION_KEY,
                                           &NONCE,
-                                          &PLAINTEXT)
+                                          PLAINTEXT)
             .unwrap();
 
         let plaintext =

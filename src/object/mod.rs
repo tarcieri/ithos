@@ -136,7 +136,9 @@ impl Object {
         Ok(result)
     }
 
-    pub fn find<'a, A>(adapter: &'a A, path: &Path) -> Result<Object> where A: Adapter<'a> {
+    pub fn find<'a, A>(adapter: &'a A, path: &Path) -> Result<Object>
+        where A: Adapter<'a>
+    {
         let txn = try!(adapter.ro_transaction());
         let direntry = try!(adapter.find_direntry(&txn, path));
         let entry = try!(adapter.find_entry(&txn, &direntry.id));
@@ -188,12 +190,12 @@ impl Serialize for Object {
 
 impl ObjectHash for Object {
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
-        match self {
-            &Object::Root(ref root) => root.objecthash(hasher),
-            &Object::Domain(ref domain) => domain.objecthash(hasher),
-            &Object::OrgUnit(ref ou) => ou.objecthash(hasher),
-            &Object::System(ref system) => system.objecthash(hasher),
-            &Object::Credential(ref credential) => credential.objecthash(hasher),
+        match *self {
+            Object::Root(ref root) => root.objecthash(hasher),
+            Object::Domain(ref domain) => domain.objecthash(hasher),
+            Object::OrgUnit(ref ou) => ou.objecthash(hasher),
+            Object::System(ref system) => system.objecthash(hasher),
+            Object::Credential(ref credential) => credential.objecthash(hasher),
         }
     }
 }

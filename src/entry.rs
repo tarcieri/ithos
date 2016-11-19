@@ -30,7 +30,7 @@ impl Id {
 }
 
 impl AsRef<[u8; 8]> for Id {
-    #[inline(always)]
+    #[inline]
     fn as_ref(&self) -> &[u8; 8] {
         unsafe { mem::transmute(&self.0) }
     }

@@ -41,7 +41,7 @@ impl<A> Server<A>
         let mut admin_symmetric_key = [0u8; AES256GCM_KEY_SIZE];
         password::derive(PasswordAlgorithm::SCRYPT,
                          &admin_keypair_salt,
-                         &admin_password,
+                         admin_password,
                          &mut admin_symmetric_key);
 
         let encryption_alg = EncryptionAlgorithm::Aes256Gcm;
@@ -56,7 +56,7 @@ impl<A> Server<A>
                                        &admin_symmetric_key,
                                        &nonce));
 
-        let initial_block = Block::initial_block(&admin_username,
+        let initial_block = Block::initial_block(admin_username,
                                                  &admin_keypair,
                                                  &admin_keypair_sealed,
                                                  &admin_keypair_salt,
@@ -154,7 +154,7 @@ mod tests {
 
         let mut admin_symmetric_key = [0u8; AES256GCM_KEY_SIZE];
         password::derive(PasswordAlgorithm::SCRYPT,
-                         &salt,
+                         salt,
                          ADMIN_PASSWORD,
                          &mut admin_symmetric_key);
 

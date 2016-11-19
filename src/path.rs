@@ -10,6 +10,7 @@ pub const SEPARATOR: &'static str = "/";
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct PathBuf(String);
 
+#[allow(single_char_pattern)]
 impl PathBuf {
     pub fn new() -> PathBuf {
         PathBuf(String::from(SEPARATOR))
@@ -52,6 +53,7 @@ impl Borrow<Path> for PathBuf {
     }
 }
 
+#[allow(derive_hash_xor_eq)]
 impl Hash for PathBuf {
     fn hash<H: Hasher>(&self, h: &mut H) {
         self.0.hash(h)
@@ -69,6 +71,7 @@ impl ObjectHash for PathBuf {
 #[derive(Debug, Eq, PartialEq)]
 pub struct Path(str);
 
+#[allow(single_char_pattern)]
 impl Path {
     pub fn root() -> &'static Path {
         Path::new(SEPARATOR).unwrap()
@@ -126,7 +129,7 @@ impl AsRef<Path> for Path {
 
 impl AsRef<Path> for PathBuf {
     fn as_ref(&self) -> &Path {
-        &Path::new(&self.0).unwrap()
+        Path::new(&self.0).unwrap()
     }
 }
 
@@ -144,6 +147,7 @@ impl ToOwned for Path {
     }
 }
 
+#[allow(derive_hash_xor_eq)]
 impl Hash for Path {
     fn hash<H: Hasher>(&self, h: &mut H) {
         self.0.hash(h)

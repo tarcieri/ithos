@@ -26,7 +26,7 @@ impl AllowsChild for DomainEntry {
     #[inline]
     fn allows_child(child: &Object) -> bool {
         match *child {
-            Object::Domain(_) => true,
+            Object::Domain(_) |
             Object::OrgUnit(_) => true,
             _ => false,
         }
@@ -35,9 +35,8 @@ impl AllowsChild for DomainEntry {
 
 impl Serialize for DomainEntry {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
-        match self.description {
-            Some(ref description) => try!(out.write(1, &description)),
-            None => (),
+        if let Some(ref description) = self.description {
+            try!(out.write(1, &description))
         }
 
         Ok(())
@@ -65,14 +64,11 @@ impl FromProto for DomainEntry {}
 impl ObjectHash for DomainEntry {
     #[inline]
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
-        match self.description {
-            Some(ref desc) => {
-                objecthash_struct!(
-                    hasher,
-                    "description" => *desc
-                )
-            }
-            None => (),
+        if let Some(ref desc) = self.description {
+            objecthash_struct!(
+                hasher,
+                "description" => *desc
+            )
         }
     }
 }

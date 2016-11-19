@@ -87,7 +87,7 @@ pub mod tests {
                                                EncryptionAlgorithm::Aes256Gcm,
                                                &ENCRYPTION_KEY,
                                                &sealed_keypair,
-                                               &keypair.public_key_bytes())
+                                               keypair.public_key_bytes())
             .unwrap();
 
         // *ring* verifies private key correctness when we call Ed25519KeyPair::from_bytes

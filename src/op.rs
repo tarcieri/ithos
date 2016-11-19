@@ -114,7 +114,7 @@ impl Op {
         };
 
         let name = try!(self.path.as_path().entry_name().ok_or(Error::PathInvalid));
-        let metadata = Metadata::new(block_id.clone(), timestamp);
+        let metadata = Metadata::new(*block_id, timestamp);
         let proto = try!(self.object.to_proto());
 
         let entry = Entry {
@@ -219,7 +219,7 @@ pub mod tests {
 
     fn test_adapter() -> LmdbAdapter {
         let dir = TempDir::new("ithos-test").unwrap();
-        LmdbAdapter::create_database(&dir.path()).unwrap()
+        LmdbAdapter::create_database(dir.path()).unwrap()
     }
 
     fn example_timestamp() -> Timestamp {
