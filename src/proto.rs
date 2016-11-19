@@ -1,8 +1,9 @@
-use std::marker::Sized;
+
 
 use buffoon::{self, Serialize, Deserialize};
 
 use error::{Error, Result};
+use std::marker::Sized;
 
 pub trait ToProto
     where Self: Sized + Serialize

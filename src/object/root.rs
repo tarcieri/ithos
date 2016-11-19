@@ -1,12 +1,13 @@
-use std::io;
 
-use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
-use serde_json::builder::ObjectBuilder;
 
 use algorithm::DigestAlgorithm;
-use proto::{ToProto, FromProto};
+
+use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
 use object::{AllowsChild, Object};
 use objecthash::{self, ObjectHash, ObjectHasher};
+use proto::{ToProto, FromProto};
+use serde_json::builder::ObjectBuilder;
+use std::io;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct RootEntry {

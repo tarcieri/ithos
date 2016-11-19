@@ -1,12 +1,6 @@
 extern crate lmdb;
 extern crate lmdb_sys;
 
-use std::{self, str};
-use std::io::Write;
-
-use self::lmdb::{Environment, Database, DatabaseFlags, Cursor, WriteFlags, DUP_SORT, INTEGER_KEY};
-use self::lmdb::Error as LmdbError;
-use self::lmdb::Transaction as LmdbTransaction;
 
 use adapter::{Adapter, Transaction};
 use block::{self, Block};
@@ -16,6 +10,12 @@ use error::{Error, Result};
 use metadata::Metadata;
 use path::Path;
 use proto::{FromProto, ToProto};
+
+use self::lmdb::{Environment, Database, DatabaseFlags, Cursor, WriteFlags, DUP_SORT, INTEGER_KEY};
+use self::lmdb::Error as LmdbError;
+use self::lmdb::Transaction as LmdbTransaction;
+use std::{self, str};
+use std::io::Write;
 
 const MAX_DBS: u32 = 8;
 const DB_PERMS: lmdb_sys::mode_t = 0o600;
@@ -284,7 +284,6 @@ impl From<LmdbError> for Error {
 
 #[cfg(test)]
 mod tests {
-    use tempdir::TempDir;
 
     use adapter::{Adapter, Transaction};
     use adapter::lmdb::LmdbAdapter;
@@ -294,6 +293,7 @@ mod tests {
     use metadata::Metadata;
     use object::Class;
     use path::Path;
+    use tempdir::TempDir;
     use timestamp::Timestamp;
 
     fn create_database() -> LmdbAdapter {

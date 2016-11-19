@@ -1,12 +1,9 @@
-use std::io;
 
-use buffoon::{OutputStream, Serialize};
-use rustc_serialize::base64::{self, ToBase64};
-use serde_json;
-use serde_json::builder::ObjectBuilder;
 
 use adapter::Adapter;
 use algorithm::{DigestAlgorithm, EncryptionAlgorithm, SignatureAlgorithm};
+
+use buffoon::{OutputStream, Serialize};
 use error::{Error, Result};
 use object::Object;
 use object::credential::CredentialEntry;
@@ -18,7 +15,11 @@ use objecthash::{self, ObjectHash, ObjectHasher};
 use op::{self, Op};
 use path::PathBuf;
 use proto::ToProto;
+use rustc_serialize::base64::{self, ToBase64};
+use serde_json;
+use serde_json::builder::ObjectBuilder;
 use signature::KeyPair;
+use std::io;
 use timestamp::Timestamp;
 
 const DIGEST_SIZE: usize = 32;
@@ -232,11 +233,11 @@ impl ObjectHash for Block {
 
 #[cfg(test)]
 pub mod tests {
-    use buffoon;
-    use ring::rand;
 
     use algorithm::{DigestAlgorithm, EncryptionAlgorithm, SignatureAlgorithm};
     use block::Block;
+    use buffoon;
+    use ring::rand;
     use signature::KeyPair;
 
     const ADMIN_USERNAME: &'static str = "manager";

@@ -1,6 +1,4 @@
-use std::{self, str};
 
-use ring::rand::SecureRandom;
 
 use adapter::{Adapter, Transaction};
 use algorithm::{DigestAlgorithm, EncryptionAlgorithm, SignatureAlgorithm};
@@ -13,7 +11,10 @@ use object::domain::DomainEntry;
 use op::{self, Op};
 use password::{self, PasswordAlgorithm};
 use path::{Path, PathBuf};
+
+use ring::rand::SecureRandom;
 use signature::KeyPair;
+use std::{self, str};
 use timestamp::Timestamp;
 
 #[cfg(test)]
@@ -115,12 +116,12 @@ impl<A> Server<A>
 
 #[cfg(test)]
 mod tests {
-    use ring::rand;
 
     use adapter::lmdb::LmdbAdapter;
     use encryption::AES256GCM_KEY_SIZE;
-    use path::PathBuf;
     use password::{self, PasswordAlgorithm};
+    use path::PathBuf;
+    use ring::rand;
     use server::Server;
     use server::tempdir::TempDir;
     use signature;

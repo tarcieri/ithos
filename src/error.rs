@@ -1,6 +1,6 @@
+use std::error::Error as StdError;
 use std::fmt;
 use std::result::Result as StdResult;
-use std::error::Error as StdError;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum Error {

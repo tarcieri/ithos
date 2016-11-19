@@ -1,8 +1,9 @@
-use std::io;
+
 
 use buffoon::{Serialize, Deserialize, OutputStream, InputStream, Field};
 
 use objecthash::{ObjectHash, ObjectHasher};
+use std::io;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum DigestAlgorithm {

@@ -1,7 +1,8 @@
-use std::str;
+
 
 use entry::Id;
 use error::{Error, Result};
+use std::str;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct DirEntry<'a> {

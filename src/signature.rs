@@ -1,9 +1,10 @@
-use ring::signature;
-use ring::rand::SecureRandom;
+
 
 use algorithm::{EncryptionAlgorithm, SignatureAlgorithm};
 use encryption;
 use error::{Error, Result};
+use ring::rand::SecureRandom;
+use ring::signature;
 
 pub struct KeyPair(signature::Ed25519KeyPair);
 
@@ -63,10 +64,10 @@ impl<'a> KeyPair {
 
 #[cfg(test)]
 pub mod tests {
-    use ring::rand;
 
     use algorithm::{EncryptionAlgorithm, SignatureAlgorithm};
     use encryption::{AES256GCM_KEY_SIZE, AES256GCM_NONCE_SIZE};
+    use ring::rand;
     use signature::KeyPair;
 
     // WARNING: Please don't ever use zeroes as an actual encryption key

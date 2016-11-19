@@ -1,18 +1,19 @@
-use std::collections::HashMap;
-use std::io;
-use std::string::ToString;
 
-use buffoon::{OutputStream, Serialize};
-use serde_json::builder::ObjectBuilder;
 
 use adapter::Adapter;
 use block;
+
+use buffoon::{OutputStream, Serialize};
 use entry::{self, Entry};
 use error::{Error, Result};
 use metadata::Metadata;
 use object::{Class, Object};
 use objecthash::{self, ObjectHash, ObjectHasher};
 use path::{Path, PathBuf};
+use serde_json::builder::ObjectBuilder;
+use std::collections::HashMap;
+use std::io;
+use std::string::ToString;
 use timestamp::Timestamp;
 
 #[cfg(test)]
@@ -202,7 +203,6 @@ struct StateEntry {
 
 #[cfg(test)]
 pub mod tests {
-    use super::tempdir::TempDir;
 
     use adapter::Adapter;
     use adapter::lmdb::LmdbAdapter;
@@ -213,9 +213,10 @@ pub mod tests {
     use object::domain::DomainEntry;
     use object::root::RootEntry;
     use path::PathBuf;
-    use timestamp::Timestamp;
 
     use super::{Op, State, Type};
+    use super::tempdir::TempDir;
+    use timestamp::Timestamp;
 
     fn test_adapter() -> LmdbAdapter {
         let dir = TempDir::new("ithos-test").unwrap();

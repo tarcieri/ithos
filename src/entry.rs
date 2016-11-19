@@ -1,7 +1,8 @@
-use std::mem;
+
 
 use error::{Error, Result};
 use object::Class;
+use std::mem;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct Id(u64);

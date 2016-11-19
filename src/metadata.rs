@@ -1,9 +1,10 @@
-use std::io;
 
-use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
 
 use block;
+
+use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
 use proto::{FromProto, ToProto};
+use std::io;
 use timestamp::Timestamp;
 
 pub struct Metadata {

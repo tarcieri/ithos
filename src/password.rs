@@ -1,9 +1,10 @@
+
+
+use error::{Error, Result};
 use pwhash::scrypt::{self, ScryptParams};
 use ring::constant_time;
 use ring::rand::SecureRandom;
 use rpassword;
-
-use error::{Error, Result};
 
 // Size of a random salt value to use with a password
 const RANDOM_SALT_SIZE: usize = 16;

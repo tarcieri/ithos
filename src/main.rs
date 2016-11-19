@@ -41,12 +41,12 @@ mod server;
 mod signature;
 mod timestamp;
 
-use ring::rand;
 
 use adapter::lmdb::LmdbAdapter;
 use encryption::AES256GCM_KEY_SIZE;
 use error::Error;
 use path::PathBuf;
+use ring::rand;
 use server::Server;
 
 const DEFAULT_ADMIN_USERNAME: &'static str = "manager";

@@ -1,8 +1,9 @@
-use std::io;
+
 
 use buffoon::{self, Field, InputStream, OutputStream};
 use objecthash::{ObjectHash, ObjectHasher};
 use serde;
+use std::io;
 use time;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]

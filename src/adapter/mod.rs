@@ -1,7 +1,5 @@
 pub mod lmdb;
 
-use std::marker::Sized;
-use std::path::Path as StdPath;
 
 use block::{self, Block};
 use direntry::DirEntry;
@@ -9,6 +7,8 @@ use entry::{self, Entry};
 use error::Result;
 use metadata::Metadata;
 use path;
+use std::marker::Sized;
+use std::path::Path as StdPath;
 
 pub trait Transaction {
     type D;

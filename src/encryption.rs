@@ -1,7 +1,8 @@
-use ring::aead;
+
 
 use algorithm::EncryptionAlgorithm;
 use error::{Error, Result};
+use ring::aead;
 
 pub const AES256GCM_KEY_SIZE: usize = 32;
 pub const AES256GCM_NONCE_SIZE: usize = 12;

@@ -4,17 +4,13 @@ pub mod ou;
 pub mod root;
 pub mod system;
 
-use std::io;
-use std::mem;
-use std::string::ToString;
-
-use buffoon::{Serialize, OutputStream};
-use serde_json::builder::ObjectBuilder;
-use objecthash::{ObjectHash, ObjectHasher};
 
 use adapter::Adapter;
+
+use buffoon::{Serialize, OutputStream};
 use entry::Entry;
 use error::{Error, Result};
+use objecthash::{ObjectHash, ObjectHasher};
 use path::Path;
 use proto::{FromProto, ToProto};
 
@@ -23,6 +19,10 @@ use self::domain::DomainEntry;
 use self::ou::OrgUnitEntry;
 use self::root::RootEntry;
 use self::system::SystemEntry;
+use serde_json::builder::ObjectBuilder;
+use std::io;
+use std::mem;
+use std::string::ToString;
 
 // Object nesting constraints
 pub trait AllowsChild {

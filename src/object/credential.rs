@@ -1,15 +1,16 @@
-use std::io;
 
-use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
-use objecthash::{self, ObjectHash, ObjectHasher};
-use rustc_serialize::base64::{self, ToBase64};
-use serde_json::builder::ObjectBuilder;
 
 use algorithm::{EncryptionAlgorithm, SignatureAlgorithm};
+
+use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
 use error::{Error, Result};
-use proto::{ToProto, FromProto};
 use object::{AllowsChild, Object};
+use objecthash::{self, ObjectHash, ObjectHasher};
+use proto::{ToProto, FromProto};
+use rustc_serialize::base64::{self, ToBase64};
+use serde_json::builder::ObjectBuilder;
 use signature::KeyPair;
+use std::io;
 use timestamp::Timestamp;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
@@ -311,12 +312,12 @@ impl ObjectHash for CredentialEntry {
 
 #[cfg(test)]
 mod tests {
-    use serde_json;
-    use serde_json::builder::ObjectBuilder;
 
     use algorithm::{EncryptionAlgorithm, SignatureAlgorithm};
     use object::credential::{CredentialEntry, Type};
     use proto::{FromProto, ToProto};
+    use serde_json;
+    use serde_json::builder::ObjectBuilder;
     use timestamp::Timestamp;
 
     const EXAMPLE_PUBLIC_KEY: &'static [u8] = b"public-key-placeholder";

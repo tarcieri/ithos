@@ -1,8 +1,9 @@
+
+
+use objecthash::{ObjectHash, ObjectHasher};
 use std::borrow::Borrow;
 use std::hash::{Hash, Hasher};
 use std::mem;
-
-use objecthash::{ObjectHash, ObjectHasher};
 
 pub const SEPARATOR: &'static str = "/";
 
