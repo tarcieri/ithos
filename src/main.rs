@@ -1,9 +1,6 @@
 #![crate_name = "ithos"]
 #![crate_type = "bin"]
 
-#![feature(plugin)]
-#![plugin(clippy)]
-
 extern crate clap;
 use clap::{App, Arg, SubCommand};
 
