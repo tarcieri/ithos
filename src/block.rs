@@ -73,7 +73,6 @@ impl Block {
     // This block contains the initial administrative signature key which will
     // be used as the initial root authority for new blocks in the log.
     // The block is self-signed with the initial administrator key.
-    #[allow(too_many_arguments)]
     pub fn initial_block(admin_username: &str,
                          admin_keypair: &KeyPair,
                          admin_keypair_sealed: &[u8],
