@@ -35,4 +35,6 @@ Coming "soon"!
 ## License
 
 Copyright (c) 2016-2017 Tony Arcieri. Distributed under the Apache 2.0 License.
-See LICENSE file for further details.
+See [LICENSE] file for further details.
+
+[LICENSE]: https://github.com/cryptosphere/ithos/blob/master/LICENSE
