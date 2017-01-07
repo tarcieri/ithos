@@ -9,11 +9,10 @@ import "op.proto";
 // a signature) to carry them out. Some might call it a "blockchain",
 // but in Ithos it is referred to as the log
 message Block {
-  bytes id         = 1;
-  bytes parent     = 2;
-  uint64 timestamp = 3;
-  repeated Op ops  = 4;
-  string comment   = 5;
-  bytes signed_by  = 6;
-  bytes signature  = 7;
+  bytes parent     = 1;
+  uint64 timestamp = 2;
+  repeated Op ops  = 3;
+  string comment   = 4;
+  bytes signed_by  = 5;
+  bytes signature  = 6;
 }

@@ -117,21 +117,21 @@ impl<'a> Adapter<'a> for LmdbAdapter {
                 return Err(Error::EntryAlreadyExists);
             }
 
-            try!(txn.put(self.state, LOG_ID_KEY, block.id.as_ref()));
+            try!(txn.put(self.state, LOG_ID_KEY, block.id().as_ref()));
         } else if block.parent_id != try!(self.current_block_id(txn)) {
             return Err(Error::Ordering);
         }
 
         // This check should be redundant given the one above, but is here just in case
-        if txn.get(self.blocks, block.id.as_ref()) != Err(Error::NotFound) {
+        if txn.get(self.blocks, block.id().as_ref()) != Err(Error::NotFound) {
             return Err(Error::EntryAlreadyExists);
         }
 
         // Store the new block
-        try!(txn.put(self.blocks, block.id.as_ref(), &try!(block.to_proto())));
+        try!(txn.put(self.blocks, block.id().as_ref(), &try!(block.to_proto())));
 
         // Update the current block ID in the state table
-        try!(txn.put(self.state, LATEST_BLOCK_ID_KEY, block.id.as_ref()));
+        try!(txn.put(self.state, LATEST_BLOCK_ID_KEY, block.id().as_ref()));
 
         Ok(())
     }

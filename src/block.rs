@@ -59,7 +59,6 @@ impl ObjectHash for Id {
 }
 
 pub struct Block {
-    pub id: Id,
     pub parent_id: Id,
     pub timestamp: Timestamp,
     pub ops: Vec<Op>,
@@ -143,7 +142,6 @@ impl Block {
         signed_by.copy_from_slice(keypair.public_key_bytes());
 
         let mut block = Block {
-            id: Id::zero(),
             parent_id: parent,
             timestamp: timestamp,
             ops: ops,
@@ -152,12 +150,15 @@ impl Block {
             signature: [0u8; SIGNATURE_SIZE],
         };
 
-        let id = Id::from_bytes(objecthash::digest(&block).as_ref()).unwrap();
-
-        block.id = id;
+        let id = block.id();
         block.signature.copy_from_slice(keypair.sign(id.as_ref()).as_slice());
 
         block
+    }
+
+    // Compute the Id of this block
+    pub fn id(&self) -> Id {
+        Id::from_bytes(objecthash::digest(self).as_ref()).unwrap()
     }
 
     // Apply the operations contained within the block to the database
@@ -173,14 +174,14 @@ impl Block {
 
         // Process the operations in the block and apply them to the database
         for op in ops {
-            try!(op.apply(adapter, txn, &mut state, &self.id, self.timestamp));
+            try!(op.apply(adapter, txn, &mut state, &self.id(), self.timestamp));
         }
 
         Ok(())
     }
 
     pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
-        builder.insert("id", self.id.as_ref().to_base64(base64::URL_SAFE))
+        builder.insert("id", self.id().as_ref().to_base64(base64::URL_SAFE))
             .insert("parent",
                     self.parent_id.as_ref().to_base64(base64::URL_SAFE))
             .insert("timestamp", self.timestamp)
@@ -203,13 +204,12 @@ impl ToProto for Block {}
 
 impl Serialize for Block {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
-        try!(out.write(1, self.id.as_ref()));
-        try!(out.write(2, self.parent_id.as_ref()));
-        try!(out.write(3, &self.timestamp));
-        try!(out.write_repeated(4, &self.ops));
-        try!(out.write(5, &self.comment));
-        try!(out.write(6, &self.signed_by[..]));
-        try!(out.write(7, &self.signature[..]));
+        try!(out.write(1, self.parent_id.as_ref()));
+        try!(out.write(2, &self.timestamp));
+        try!(out.write_repeated(3, &self.ops));
+        try!(out.write(4, &self.comment));
+        try!(out.write(5, &self.signed_by[..]));
+        try!(out.write(6, &self.signature[..]));
         Ok(())
     }
 }
