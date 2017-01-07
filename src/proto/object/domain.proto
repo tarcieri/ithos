@@ -1,6 +1,8 @@
+syntax = "proto3";
+
 package ithos.object;
 
 // Toplevel domain for an organization (i.e. DNS domain)
 message Domain {
-    optional string description = 1;
+    string description = 1;
 }

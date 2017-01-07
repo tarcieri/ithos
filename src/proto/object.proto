@@ -1,15 +1,19 @@
+syntax = "proto3";
+
 package ithos;
 
-message Object {
-  enum Class {
-    ROOT = 1;                // Root entry in the tree (ala LDAP root DSE)
-    DOMAIN = 2;              // Administrative Domain (ala DNS domain or Kerberos realm)
-    ORGANIZATIONAL_UNIT = 3; // Unit/department within an organization or other logical grouping
-    SYSTEM = 5;              // System User (i.e. non-human account)
-    CREDENTIAL = 4;          // Encrypted access credentials
-    HOST = 6;                // Individual server within a domain
-  }
+import "object/credential.proto";
+import "object/domain.proto";
+import "object/org_unit.proto";
+import "object/root.proto";
+import "object/system.proto";
 
-  required Class class = 1;
-  required bytes value = 2;
+message Object {
+  oneof value {
+    ithos.object.Root       root       = 0;
+    ithos.object.Domain     domain     = 1;
+    ithos.object.OrgUnit    org_unit   = 2;
+    ithos.object.System     system     = 3;
+    ithos.object.Credential credential = 4;
+  }
 }

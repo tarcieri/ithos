@@ -22,7 +22,7 @@ macro_rules! impl_algorithm (($algorithm:ident, $only:expr, $string:expr) => (
     impl $algorithm {
         #[allow(dead_code)]
         pub fn id(&self) -> u32 {
-            *self as u32 + 1
+            *self as u32
         }
     }
 
@@ -44,7 +44,7 @@ macro_rules! impl_algorithm (($algorithm:ident, $only:expr, $string:expr) => (
         }
 
         fn serialize_nested<O: OutputStream>(&self, field: u32, out: &mut O) -> io::Result<()> {
-            out.write_varint(field, *self as u32 + 1)
+            out.write_varint(field, *self as u32)
         }
     }
 
@@ -55,7 +55,7 @@ macro_rules! impl_algorithm (($algorithm:ident, $only:expr, $string:expr) => (
 
         fn deserialize_nested<R: io::Read>(field: Field<R>) -> io::Result<$algorithm> {
             match try!(u32::deserialize_nested(field)) {
-                1 => Ok($only),
+                0 => Ok($only),
                 _ => Err(io::Error::new(
                          io::ErrorKind::InvalidInput,
                          concat!("unknown algorithm"))),

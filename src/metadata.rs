@@ -4,6 +4,7 @@ use proto::{FromProto, ToProto};
 use std::io;
 use timestamp::Timestamp;
 
+#[derive(Debug, Eq, PartialEq)]
 pub struct Metadata {
     pub created_id: block::Id,
     pub updated_id: block::Id,
