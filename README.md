@@ -9,11 +9,30 @@
 
 Modern directory services and credential management
 
+## What is ithos?
+
+ithos (pronounced like "ethos") is a modern directory server designed to be
+the master access control system for a fleet of Linux or other Unix-like
+servers. The design is inspired by [LDAP], but using [gRPC] and [JSON] APIs in
+lieu of the LDAP wire protocol. As ithos is intended for highly secure
+applications, it's written in the [Rust language] to ensure safety.
+
+The key differentiating feature of ithos over other directory servers is the
+use of a cryptographically authenticated append-only log, similar to a
+"blockchain", to mediate all changes to the directory. This means every change
+is fully auditable and can be attributed to one or more credentials for users
+or automated processes who authorized the change.
+
+[LDAP]: https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol
+[gRPC]: http://www.grpc.io/
+[JSON]: http://www.json.org
+[Rust]: https://www.rust-lang.org/
+
 ## Usage
 
 Coming "soon"!
 
 ## License
 
-Copyright (c) 2016 Tony Arcieri. Distributed under the Apache 2.0 License.
+Copyright (c) 2016-2017 Tony Arcieri. Distributed under the Apache 2.0 License.
 See LICENSE file for further details.
