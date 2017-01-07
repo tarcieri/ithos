@@ -282,7 +282,6 @@ impl From<LmdbError> for Error {
 
 #[cfg(test)]
 mod tests {
-
     use adapter::{Adapter, Transaction};
     use adapter::lmdb::LmdbAdapter;
     use block;

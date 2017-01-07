@@ -1,8 +1,10 @@
+syntax = "proto3";
+
 package ithos.object;
 
 import "algorithm.proto";
 
 // Root entry of the directory tree (Root DSE in LDAP parlance)
 message Root {
-    required DigestAlgorithm digest_alg = 1;
+    DigestAlgorithm digest_alg = 1;
 }

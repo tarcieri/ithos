@@ -1,3 +1,5 @@
+syntax = "proto3";
+
 package ithos;
 
 import "object.proto";
@@ -5,10 +7,10 @@ import "object.proto";
 // Ops make modifications to the state of the database
 message Op {
   enum Type {
-    ADD = 1;
+    ADD = 0;
   }
 
-  required Type   optype = 1;
-  required string path = 2;
-  optional Object objectclass = 3;
+  Type optype   = 1;
+  string path   = 2;
+  Object object = 3;
 }

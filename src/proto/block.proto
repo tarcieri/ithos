@@ -1,3 +1,5 @@
+syntax = "proto3";
+
 package ithos;
 
 import "op.proto";
@@ -7,11 +9,11 @@ import "op.proto";
 // a signature) to carry them out. Some might call it a "blockchain",
 // but in Ithos it is referred to as the log
 message Block {
-  required bytes  id = 1;
-  required bytes  parent = 2;
-  required uint64 timestamp = 3;
-  repeated Op     ops = 4;
-  required string comment = 5;
-  required bytes  signed_by = 6;
-  required bytes  signature = 7;
+  bytes id         = 1;
+  bytes parent     = 2;
+  uint64 timestamp = 3;
+  repeated Op ops  = 4;
+  string comment   = 5;
+  bytes signed_by  = 6;
+  bytes signature  = 7;
 }

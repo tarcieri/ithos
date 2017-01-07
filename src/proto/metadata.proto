@@ -1,10 +1,12 @@
+syntax = "proto3";
+
 package ithos;
 
 // Metadata associated with an ithos entry
 message Metadata {
-  required bytes  created_id = 1;
-  required bytes  updated_id = 2;
-  required uint64 created_at = 3;
-  required uint64 updated_at = 4;
-  required uint64 version    = 5;
+  bytes  created_id = 1;
+  bytes  updated_id = 2;
+  uint64 created_at = 3;
+  uint64 updated_at = 4;
+  uint64 version    = 5;
 }

@@ -34,7 +34,7 @@ impl Serialize for Type {
     }
 
     fn serialize_nested<O: OutputStream>(&self, field: u32, out: &mut O) -> io::Result<()> {
-        out.write_varint(field, *self as u32 + 1)
+        out.write_varint(field, *self as u32)
     }
 }
 
@@ -78,7 +78,7 @@ impl Op {
     pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
         builder.insert("optype", self.optype.to_string())
             .insert("path", self.path.as_path().to_string())
-            .insert_object("objectclass", |b| self.object.build_json(b))
+            .insert_object("object", |b| self.object.build_json(b))
     }
 
     fn add<'a, A>(&self,

@@ -239,7 +239,7 @@ pub mod tests {
     const ADMIN_USERNAME: &'static str = "manager";
     const ADMIN_KEYPAIR_SEALED: &'static [u8] = b"placeholder";
     const ADMIN_KEYPAIR_SALT: &'static [u8] = b"NaCl";
-    const COMMENT: &'static str = "The tree of a thousand users begins with one block";
+    const COMMENT: &'static str = "The tree of a thousand users begins with a single block";
 
     pub fn example_block() -> Block {
         let rng = rand::SystemRandom::new();

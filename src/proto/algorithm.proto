@@ -1,13 +1,15 @@
+syntax = "proto3";
+
 package ithos;
 
 enum DigestAlgorithm {
-    SHA256 = 1;
+    SHA256 = 0;
 }
 
 enum EncryptionAlgorithm {
-    AES256GCM = 1;
+    AES256GCM = 0;
 }
 
 enum SignatureAlgorithm {
-    Ed25519 = 1;
+    Ed25519 = 0;
 }

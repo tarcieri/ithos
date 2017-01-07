@@ -19,7 +19,6 @@ use self::system::SystemEntry;
 use serde_json::builder::ObjectBuilder;
 use std::io;
 use std::mem;
-use std::string::ToString;
 
 // Object nesting constraints
 pub trait AllowsChild {
@@ -47,17 +46,16 @@ impl Class {
         let id: u32 = unsafe { mem::transmute(id_bytes) };
 
         let result = match id {
-            1 => Class::Root,
-            2 => Class::Domain,
-            3 => Class::OrgUnit,
-            4 => Class::System,
-            5 => Class::Credential,
+            0 => Class::Root,
+            1 => Class::Domain,
+            2 => Class::OrgUnit,
+            3 => Class::System,
+            4 => Class::Credential,
             _ => return Err(Error::Parse),
         };
 
         Ok(result)
     }
-
 
     #[inline]
     pub fn allows_child(&self, child: &Object) -> bool {
@@ -72,7 +70,7 @@ impl Class {
 
     #[inline]
     pub fn as_bytes(&self) -> [u8; 4] {
-        let id = *self as u32 + 1;
+        let id = *self as u32;
         unsafe { mem::transmute(id) }
     }
 }
@@ -80,22 +78,12 @@ impl Class {
 impl ToString for Class {
     fn to_string(&self) -> String {
         match *self {
-            Class::Root => "ROOT".to_string(),
-            Class::Domain => "DOMAIN".to_string(),
-            Class::OrgUnit => "ORGANIZATIONAL_UNIT".to_string(),
-            Class::System => "SYSTEM".to_string(),
-            Class::Credential => "CREDENTIAL".to_string(),
+            Class::Root => "root".to_string(),
+            Class::Domain => "domain".to_string(),
+            Class::OrgUnit => "org_unit".to_string(),
+            Class::System => "system".to_string(),
+            Class::Credential => "credential".to_string(),
         }
-    }
-}
-
-impl Serialize for Class {
-    fn serialize<O: OutputStream>(&self, _: &mut O) -> io::Result<()> {
-        unimplemented!();
-    }
-
-    fn serialize_nested<O: OutputStream>(&self, field: u32, out: &mut O) -> io::Result<()> {
-        out.write_varint(field, *self as u32 + 1)
     }
 }
 
@@ -144,14 +132,13 @@ impl Object {
     }
 
     pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
-        builder.insert("class", self.class().to_string())
-            .insert_object("value", |b| match *self {
-                Object::Root(ref root) => root.build_json(b),
-                Object::Domain(ref domain) => domain.build_json(b),
-                Object::OrgUnit(ref ou) => ou.build_json(b),
-                Object::System(ref system) => system.build_json(b),
-                Object::Credential(ref credential) => credential.build_json(b),
-            })
+        builder.insert_object(self.class().to_string(), |b| match *self {
+            Object::Root(ref root) => root.build_json(b),
+            Object::Domain(ref domain) => domain.build_json(b),
+            Object::OrgUnit(ref ou) => ou.build_json(b),
+            Object::System(ref system) => system.build_json(b),
+            Object::Credential(ref credential) => credential.build_json(b),
+        })
     }
 
     pub fn to_proto(&self) -> Result<Vec<u8>> {
@@ -165,21 +152,16 @@ impl Object {
     }
 }
 
-// TODO: replace this serializer with oneof
 impl Serialize for Object {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
-        try!(out.write(1, &self.class()));
-
         let object_proto = self.to_proto();
 
         if !object_proto.is_ok() {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("couldn't serialize {type}", type = self.class().to_string())
-            ));
+            return Err(io::Error::new(io::ErrorKind::InvalidData,
+                                      format!("couldn't serialize {:?}", self.class())));
         }
 
-        try!(out.write(2, &object_proto.unwrap()));
+        try!(out.write(self.class() as u32, &object_proto.unwrap()));
 
         Ok(())
     }
@@ -194,17 +176,5 @@ impl ObjectHash for Object {
             Object::System(ref system) => system.objecthash(hasher),
             Object::Credential(ref credential) => credential.objecthash(hasher),
         }
-    }
-}
-
-#[cfg(test)]
-pub mod tests {
-    use object::Class;
-
-    #[test]
-    fn test_class_serialization() {
-        let example_class = Class::OrgUnit;
-        let class_bytes = example_class.as_bytes();
-        assert_eq!(Class::OrgUnit, Class::from_bytes(&class_bytes).unwrap());
     }
 }
