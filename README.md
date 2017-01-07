@@ -15,7 +15,7 @@ ithos (pronounced ˈēTHōs like "ethos") is a modern directory server designed
 to be a master access control system for a fleet of Linux or other Unix-like
 servers. The design is inspired by [LDAP], but using [gRPC] and [JSON] APIs in
 lieu of the LDAP wire protocol. As ithos is intended for highly secure
-applications, it's written in the [Rust language] to ensure safety.
+applications, it's written in the [Rust] language to ensure safety.
 
 The key differentiating feature of ithos over other directory servers is the
 use of a cryptographically authenticated append-only log, similar to a
