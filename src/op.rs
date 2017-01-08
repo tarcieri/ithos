@@ -46,6 +46,7 @@ impl ToString for Type {
     }
 }
 
+#[derive(Debug, Eq, PartialEq)]
 pub struct Op {
     pub optype: Type,
     pub path: PathBuf,

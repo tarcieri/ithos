@@ -18,9 +18,9 @@ use serde_json::builder::ObjectBuilder;
 use signature::KeyPair;
 use std::io;
 use timestamp::Timestamp;
+use witness::Witness;
 
 const DIGEST_SIZE: usize = 32;
-const SIGNATURE_SIZE: usize = 64;
 const ADMIN_KEYPAIR_LIFETIME: u64 = 315_532_800; // 10 years
 
 // Block IDs are presently SHA-256 only
@@ -58,13 +58,64 @@ impl ObjectHash for Id {
     }
 }
 
-pub struct Block {
+#[derive(Debug, Eq, PartialEq)]
+pub struct Body {
     pub parent_id: Id,
     pub timestamp: Timestamp,
     pub ops: Vec<Op>,
     pub comment: String,
-    pub signed_by: [u8; DIGEST_SIZE],
-    pub signature: [u8; SIGNATURE_SIZE],
+}
+
+impl Body {
+    pub fn new(parent_id: Id, timestamp: Timestamp, ops: Vec<Op>, comment: String) -> Body {
+        Body {
+            parent_id: parent_id,
+            timestamp: timestamp,
+            ops: ops,
+            comment: comment,
+        }
+    }
+
+    pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
+        builder.insert("parent",
+                    self.parent_id.as_ref().to_base64(base64::URL_SAFE))
+            .insert("timestamp", self.timestamp)
+            .insert_array("ops", |builder| {
+                self.ops.iter().fold(builder, |b, op| b.push_object(|b| op.build_json(b)))
+            })
+            .insert("comment", self.comment.clone())
+    }
+}
+
+impl ToProto for Body {}
+
+impl Serialize for Body {
+    fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
+        try!(out.write(1, self.parent_id.as_ref()));
+        try!(out.write(2, &self.timestamp));
+        try!(out.write_repeated(3, &self.ops));
+        try!(out.write(4, &self.comment));
+        Ok(())
+    }
+}
+
+impl ObjectHash for Body {
+    #[inline]
+    fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
+        objecthash_struct!(
+            hasher,
+            "parent" => self.parent_id,
+            "timestamp" => self.timestamp,
+            "ops" => self.ops,
+            "comment" => self.comment
+        )
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct Block {
+    pub body: Body,
+    pub witness: Witness,
 }
 
 impl Block {
@@ -72,15 +123,15 @@ impl Block {
     // This block contains the initial administrative signature key which will
     // be used as the initial root authority for new blocks in the log.
     // The block is self-signed with the initial administrator key.
-    pub fn initial_block(admin_username: &str,
-                         admin_keypair: &KeyPair,
-                         admin_keypair_sealed: &[u8],
-                         admin_keypair_salt: &[u8],
-                         comment: &str,
-                         digest_alg: DigestAlgorithm,
-                         encryption_alg: EncryptionAlgorithm,
-                         signature_alg: SignatureAlgorithm)
-                         -> Block {
+    pub fn create_initial(admin_username: &str,
+                          admin_keypair: &KeyPair,
+                          admin_keypair_sealed: &[u8],
+                          admin_keypair_salt: &[u8],
+                          comment: &str,
+                          digest_alg: DigestAlgorithm,
+                          encryption_alg: EncryptionAlgorithm,
+                          signature_alg: SignatureAlgorithm)
+                          -> Block {
         // SHA256 is the only algorithm we presently support
         assert!(digest_alg == DigestAlgorithm::Sha256);
 
@@ -129,31 +180,18 @@ impl Block {
                          path,
                          Object::Credential(admin_signing_credential)));
 
-        Block::new(Id::zero(), timestamp, ops, comment, admin_keypair)
+        Block::new(Body::new(Id::zero(), timestamp, ops, comment.to_string()),
+                   admin_keypair)
     }
 
-    pub fn new(parent: Id,
-               timestamp: Timestamp,
-               ops: Vec<Op>,
-               comment: &str,
-               keypair: &KeyPair)
-               -> Block {
-        let mut signed_by = [0u8; DIGEST_SIZE];
-        signed_by.copy_from_slice(keypair.public_key_bytes());
+    pub fn new(body: Body, keypair: &KeyPair) -> Block {
+        let mut message = String::from("ithos.block.body.ni:///sha-256;");
+        message.push_str(&objecthash::digest(&body).as_ref().to_base64(base64::URL_SAFE));
 
-        let mut block = Block {
-            parent_id: parent,
-            timestamp: timestamp,
-            ops: ops,
-            comment: String::from(comment),
-            signed_by: signed_by,
-            signature: [0u8; SIGNATURE_SIZE],
-        };
-
-        let id = block.id();
-        block.signature.copy_from_slice(keypair.sign(id.as_ref()).as_slice());
-
-        block
+        Block {
+            body: body,
+            witness: Witness { signatures: vec![keypair.sign(&message.as_bytes())] },
+        }
     }
 
     // Compute the Id of this block
@@ -161,36 +199,34 @@ impl Block {
         Id::from_bytes(objecthash::digest(self).as_ref()).unwrap()
     }
 
+    // Parent ID of this block
+    pub fn parent_id(&self) -> Id {
+        self.body.parent_id
+    }
+
     // Apply the operations contained within the block to the database
     pub fn apply<'a, A>(&self, adapter: &A, txn: &mut A::W) -> Result<()>
         where A: Adapter<'a>
     {
+        let block_id = self.id();
         let mut state = op::State::new(try!(adapter.next_free_entry_id(txn)));
 
         // NOTE: This only stores the block in the database. It does not process it
         try!(adapter.add_block(txn, self));
 
-        let ops = &self.ops;
+        let ops = &self.body.ops;
 
         // Process the operations in the block and apply them to the database
         for op in ops {
-            try!(op.apply(adapter, txn, &mut state, &self.id(), self.timestamp));
+            try!(op.apply(adapter, txn, &mut state, &block_id, self.body.timestamp));
         }
 
         Ok(())
     }
 
     pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
-        builder.insert("id", self.id().as_ref().to_base64(base64::URL_SAFE))
-            .insert("parent",
-                    self.parent_id.as_ref().to_base64(base64::URL_SAFE))
-            .insert("timestamp", self.timestamp)
-            .insert_array("ops", |builder| {
-                self.ops.iter().fold(builder, |b, op| b.push_object(|b| op.build_json(b)))
-            })
-            .insert("comment", self.comment.clone())
-            .insert("signed_by", self.signed_by.to_base64(base64::URL_SAFE))
-            .insert("signature", self.signature.to_base64(base64::URL_SAFE))
+        builder.insert_object("body", |b| self.body.build_json(b))
+            .insert_object("witness", |b| self.witness.build_json(b))
     }
 
     pub fn to_json(&self) -> String {
@@ -204,12 +240,8 @@ impl ToProto for Block {}
 
 impl Serialize for Block {
     fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
-        try!(out.write(1, self.parent_id.as_ref()));
-        try!(out.write(2, &self.timestamp));
-        try!(out.write_repeated(3, &self.ops));
-        try!(out.write(4, &self.comment));
-        try!(out.write(5, &self.signed_by[..]));
-        try!(out.write(6, &self.signature[..]));
+        try!(out.write(1, &self.body));
+        try!(out.write(2, &self.witness));
         Ok(())
     }
 }
@@ -219,17 +251,14 @@ impl ObjectHash for Block {
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
         objecthash_struct!(
             hasher,
-            "parent" => self.parent_id,
-            "timestamp" => self.timestamp,
-            "ops" => self.ops,
-            "comment" => self.comment
+            "body" => self.body,
+            "witness" => self.witness
         )
     }
 }
 
 #[cfg(test)]
 pub mod tests {
-
     use algorithm::{DigestAlgorithm, EncryptionAlgorithm, SignatureAlgorithm};
     use block::Block;
     use buffoon;
@@ -245,14 +274,14 @@ pub mod tests {
         let rng = rand::SystemRandom::new();
         let admin_keypair = KeyPair::generate(&rng);
 
-        Block::initial_block(ADMIN_USERNAME,
-                             &admin_keypair,
-                             ADMIN_KEYPAIR_SEALED,
-                             ADMIN_KEYPAIR_SALT,
-                             COMMENT,
-                             DigestAlgorithm::Sha256,
-                             EncryptionAlgorithm::Aes256Gcm,
-                             SignatureAlgorithm::Ed25519)
+        Block::create_initial(ADMIN_USERNAME,
+                              &admin_keypair,
+                              ADMIN_KEYPAIR_SEALED,
+                              ADMIN_KEYPAIR_SALT,
+                              COMMENT,
+                              DigestAlgorithm::Sha256,
+                              EncryptionAlgorithm::Aes256Gcm,
+                              SignatureAlgorithm::Ed25519)
     }
 
     #[test]

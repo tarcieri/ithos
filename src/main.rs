@@ -37,7 +37,7 @@ mod proto;
 mod server;
 mod signature;
 mod timestamp;
-
+pub mod witness;
 
 use adapter::lmdb::LmdbAdapter;
 use encryption::AES256GCM_KEY_SIZE;

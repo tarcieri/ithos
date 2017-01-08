@@ -1,6 +1,6 @@
 use adapter::{Adapter, Transaction};
 use algorithm::{DigestAlgorithm, EncryptionAlgorithm, SignatureAlgorithm};
-use block::Block;
+use block::{Block, Body};
 use encryption::{AES256GCM_KEY_SIZE, AES256GCM_NONCE_SIZE};
 use error::{Error, Result};
 use object::Object;
@@ -55,14 +55,14 @@ impl<A> Server<A>
                                        &admin_symmetric_key,
                                        &nonce));
 
-        let initial_block = Block::initial_block(admin_username,
-                                                 &admin_keypair,
-                                                 &admin_keypair_sealed,
-                                                 &admin_keypair_salt,
-                                                 DEFAULT_INITIAL_BLOCK_COMMENT,
-                                                 DigestAlgorithm::Sha256,
-                                                 encryption_alg,
-                                                 signature_alg);
+        let initial_block = Block::create_initial(admin_username,
+                                                  &admin_keypair,
+                                                  &admin_keypair_sealed,
+                                                  &admin_keypair_salt,
+                                                  DEFAULT_INITIAL_BLOCK_COMMENT,
+                                                  DigestAlgorithm::Sha256,
+                                                  encryption_alg,
+                                                  signature_alg);
 
         let adapter = try!(A::create_database(path));
         let mut txn = try!(adapter.rw_transaction());
@@ -95,7 +95,9 @@ impl<A> Server<A>
 
         let mut txn = try!(self.adapter.rw_transaction());
         let parent_id = try!(self.adapter.current_block_id(&txn));
-        let block = Block::new(parent_id, timestamp, ops, comment, admin_keypair);
+
+        let body = Body::new(parent_id, timestamp, ops, comment.to_string());
+        let block = Block::new(body, admin_keypair);
 
         // TODO: authenticate signature before committing
         try!(block.apply(&self.adapter, &mut txn));
