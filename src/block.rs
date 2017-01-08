@@ -67,12 +67,58 @@ pub struct Body {
 }
 
 impl Body {
-    pub fn new(parent_id: Id, timestamp: Timestamp, ops: Vec<Op>, comment: String) -> Body {
+    // Create the first block in a new log, with a parent ID of zero.
+    // This block contains the initial administrative signature key which will
+    // be used as the initial root authority for new blocks in the log.
+    pub fn create_initial(digest_alg: DigestAlgorithm,
+                          admin_username: &str,
+                          admin_signing_credential: CredentialEntry,
+                          timestamp: Timestamp,
+                          comment: &str)
+                          -> Body {
+        // SHA256 is the only algorithm we presently support
+        assert!(digest_alg == DigestAlgorithm::Sha256);
+
+        let mut ops = Vec::new();
+        let mut path = PathBuf::new();
+
+        ops.push(Op::new(op::Type::Add,
+                         path.clone(),
+                         Object::Root(RootEntry::new(digest_alg))));
+
+        let global_domain = DomainEntry::new(Some(String::from("Global system users and config")));
+
+        path.push("global");
+        ops.push(Op::new(op::Type::Add, path.clone(), Object::Domain(global_domain)));
+
+        let global_users_ou = OrgUnitEntry::new(Some(String::from("Core system users")));
+
+        path.push("users");
+        ops.push(Op::new(op::Type::Add,
+                         path.clone(),
+                         Object::OrgUnit(global_users_ou)));
+
+        let admin_user = SystemEntry::new(String::from(admin_username));
+
+        path.push(&admin_username);
+        ops.push(Op::new(op::Type::Add, path.clone(), Object::System(admin_user)));
+
+        let admin_keys_ou = OrgUnitEntry::new(Some(String::from("Admin credentials")));
+
+        path.push("keys");
+        ops.push(Op::new(op::Type::Add, path.clone(), Object::OrgUnit(admin_keys_ou)));
+
+        // TODO: Verify we have a valid Ed25519 signing credential
+        path.push("signing");
+        ops.push(Op::new(op::Type::Add,
+                         path,
+                         Object::Credential(admin_signing_credential)));
+
         Body {
-            parent_id: parent_id,
+            parent_id: Id::zero(),
             timestamp: timestamp,
             ops: ops,
-            comment: comment,
+            comment: comment.to_string(),
         }
     }
 
@@ -120,51 +166,17 @@ pub struct Block {
 
 impl Block {
     // Create the first block in a new log, with a parent ID of zero.
-    // This block contains the initial administrative signature key which will
-    // be used as the initial root authority for new blocks in the log.
     // The block is self-signed with the initial administrator key.
-    pub fn create_initial(admin_username: &str,
+    pub fn create_initial(digest_alg: DigestAlgorithm,
+                          signature_alg: SignatureAlgorithm,
+                          encryption_alg: EncryptionAlgorithm,
+                          admin_username: &str,
                           admin_keypair: &KeyPair,
                           admin_keypair_sealed: &[u8],
                           admin_keypair_salt: &[u8],
-                          comment: &str,
-                          digest_alg: DigestAlgorithm,
-                          encryption_alg: EncryptionAlgorithm,
-                          signature_alg: SignatureAlgorithm)
+                          comment: &str)
                           -> Block {
-        // SHA256 is the only algorithm we presently support
-        assert!(digest_alg == DigestAlgorithm::Sha256);
-
         let timestamp = Timestamp::now();
-        let mut ops = Vec::new();
-        let mut path = PathBuf::new();
-
-        ops.push(Op::new(op::Type::Add,
-                         path.clone(),
-                         Object::Root(RootEntry::new(digest_alg))));
-
-        let global_domain = DomainEntry::new(Some(String::from("Global system users and config")));
-
-        path.push("global");
-        ops.push(Op::new(op::Type::Add, path.clone(), Object::Domain(global_domain)));
-
-        let global_users_ou = OrgUnitEntry::new(Some(String::from("Core system users")));
-
-        path.push("users");
-        ops.push(Op::new(op::Type::Add,
-                         path.clone(),
-                         Object::OrgUnit(global_users_ou)));
-
-        let admin_user = SystemEntry::new(String::from(admin_username));
-
-        path.push(&admin_username);
-        ops.push(Op::new(op::Type::Add, path.clone(), Object::System(admin_user)));
-
-        let admin_keys_ou = OrgUnitEntry::new(Some(String::from("Admin credentials")));
-
-        path.push("keys");
-        ops.push(Op::new(op::Type::Add, path.clone(), Object::OrgUnit(admin_keys_ou)));
-
         let admin_signing_credential =
             CredentialEntry::from_signature_keypair(signature_alg,
                                                     encryption_alg,
@@ -175,13 +187,12 @@ impl Block {
                                                     timestamp.extend(ADMIN_KEYPAIR_LIFETIME),
                                                     Some(String::from("Root signing key")));
 
-        path.push("signing");
-        ops.push(Op::new(op::Type::Add,
-                         path,
-                         Object::Credential(admin_signing_credential)));
-
-        Block::new(Body::new(Id::zero(), timestamp, ops, comment.to_string()),
-                   admin_keypair)
+        let body = Body::create_initial(digest_alg,
+                                        admin_username,
+                                        admin_signing_credential,
+                                        timestamp,
+                                        comment);
+        Block::new(body, admin_keypair)
     }
 
     pub fn new(body: Body, keypair: &KeyPair) -> Block {
@@ -274,14 +285,14 @@ pub mod tests {
         let rng = rand::SystemRandom::new();
         let admin_keypair = KeyPair::generate(&rng);
 
-        Block::create_initial(ADMIN_USERNAME,
+        Block::create_initial(DigestAlgorithm::Sha256,
+                              SignatureAlgorithm::Ed25519,
+                              EncryptionAlgorithm::Aes256Gcm,
+                              ADMIN_USERNAME,
                               &admin_keypair,
                               ADMIN_KEYPAIR_SEALED,
                               ADMIN_KEYPAIR_SALT,
-                              COMMENT,
-                              DigestAlgorithm::Sha256,
-                              EncryptionAlgorithm::Aes256Gcm,
-                              SignatureAlgorithm::Ed25519)
+                              COMMENT)
     }
 
     #[test]
