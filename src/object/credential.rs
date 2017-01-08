@@ -32,11 +32,11 @@ impl Type {
     // TODO: actually support more algorithms
     fn from_id_and_alg(credential_id: Option<u32>, credential_alg: Option<String>) -> Result<Type> {
         if credential_id != Some(1) {
-            return Err(Error::Parse);
+            return Err(Error::parse(None));
         }
 
         if credential_alg != Some(String::from("Ed25519")) {
-            return Err(Error::Parse);
+            return Err(Error::parse(None));
         }
 
         Ok(Type::SignatureKeyPair(SignatureAlgorithm::Ed25519))
@@ -93,19 +93,19 @@ impl CredentialEntry {
     pub fn unseal_signature_keypair(&self, symmetric_key_bytes: &[u8]) -> Result<KeyPair> {
         // Ed25519 is the only signature algorithm we presently support
         if self.credential_type != Type::SignatureKeyPair(SignatureAlgorithm::Ed25519) {
-            return Err(Error::BadType);
+            return Err(Error::bad_type(None));
         }
 
         let encrypted_value = match self.encrypted_value {
             Some(ref value) => value,
-            None => return Err(Error::CorruptData),
+            None => return Err(Error::corrupt_data(None)),
         };
 
-        let sealing_alg = try!(self.sealing_alg.ok_or(Error::CorruptData));
+        let sealing_alg = try!(self.sealing_alg.ok_or(Error::corrupt_data(None)));
 
         let public_key = match self.public_key {
             Some(ref key) => key,
-            None => return Err(Error::CorruptData),
+            None => return Err(Error::corrupt_data(None)),
         };
 
         KeyPair::unseal(SignatureAlgorithm::Ed25519,

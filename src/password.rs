@@ -38,13 +38,13 @@ pub fn generate(rng: &SecureRandom) -> String {
 
 pub fn random_salt(rng: &SecureRandom) -> Result<[u8; RANDOM_SALT_SIZE]> {
     let mut salt = [0u8; RANDOM_SALT_SIZE];
-    try!(rng.fill(&mut salt).map_err(|_| Error::Rng));
+    try!(rng.fill(&mut salt).map_err(|_| Error::rng(None)));
     Ok(salt)
 }
 
 // Prompt for a password from standard input
 pub fn prompt(message: &str) -> Result<String> {
-    rpassword::prompt_password_stdout(message).map_err(|_| Error::System)
+    rpassword::prompt_password_stdout(message).map_err(|_| Error::system(None))
 }
 
 // Use a weak set of parameters when running tests to reduce test times

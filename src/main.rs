@@ -39,10 +39,10 @@ mod signature;
 mod timestamp;
 pub mod witness;
 
-use algorithm::CipherSuite;
 use adapter::lmdb::LmdbAdapter;
+use algorithm::CipherSuite;
 use encryption::AES256GCM_KEY_SIZE;
-use error::Error;
+use error::ErrorKind;
 use path::PathBuf;
 use ring::rand;
 use server::Server;
@@ -112,11 +112,15 @@ fn db_create(database_path: &str, admin_username: &str) {
 
             println!("{password}", password = admin_password);
         }
-        Err(Error::EntryAlreadyExists) => {
-            println!("*** Error: a database already exists at {path}",
-                     path = database_path);
+        Err(err) => {
+            match err.kind {
+                ErrorKind::EntryAlreadyExists => {
+                    println!("*** Error: a database already exists at {path}",
+                             path = database_path)
+                }
+                _ => panic!(err),
+            }
         }
-        Err(err) => panic!(err),
     }
 }
 
