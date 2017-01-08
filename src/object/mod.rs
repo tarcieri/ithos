@@ -16,7 +16,6 @@ use self::domain::DomainEntry;
 use self::ou::OrgUnitEntry;
 use self::root::RootEntry;
 use self::system::SystemEntry;
-use serde_json::builder::ObjectBuilder;
 use std::io;
 use std::mem;
 
@@ -129,16 +128,6 @@ impl Object {
         let entry = try!(adapter.find_entry(&txn, &direntry.id));
 
         Self::from_entry(&entry)
-    }
-
-    pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
-        builder.insert_object(self.class().to_string(), |b| match *self {
-            Object::Root(ref root) => root.build_json(b),
-            Object::Domain(ref domain) => domain.build_json(b),
-            Object::OrgUnit(ref ou) => ou.build_json(b),
-            Object::System(ref system) => system.build_json(b),
-            Object::Credential(ref credential) => credential.build_json(b),
-        })
     }
 
     pub fn to_proto(&self) -> Result<Vec<u8>> {

@@ -1,6 +1,5 @@
 use buffoon::{self, Field, InputStream, OutputStream};
 use objecthash::{ObjectHash, ObjectHasher};
-use serde;
 use std::io;
 use time;
 
@@ -8,6 +7,7 @@ use time;
 pub struct Timestamp(u64);
 
 impl Timestamp {
+    #[allow(dead_code)]
     pub fn at(secs: u64) -> Timestamp {
         Timestamp(secs)
     }
@@ -24,15 +24,6 @@ impl Timestamp {
 impl ObjectHash for Timestamp {
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
         self.0.objecthash(hasher);
-    }
-}
-
-impl serde::ser::Serialize for Timestamp {
-    #[inline]
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-        where S: serde::ser::Serializer
-    {
-        serializer.serialize_u64(self.0)
     }
 }
 

@@ -14,8 +14,6 @@ extern crate ring;
 extern crate ring_pwhash as pwhash;
 extern crate rpassword;
 extern crate rustc_serialize;
-extern crate serde;
-extern crate serde_json;
 extern crate time;
 
 #[cfg(test)]

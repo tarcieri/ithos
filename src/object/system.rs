@@ -2,7 +2,6 @@ use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
 use object::{AllowsChild, Object};
 use objecthash::{self, ObjectHash, ObjectHasher};
 use proto::{ToProto, FromProto};
-use serde_json::builder::ObjectBuilder;
 use std::io;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -13,10 +12,6 @@ pub struct SystemEntry {
 impl SystemEntry {
     pub fn new(username: String) -> SystemEntry {
         SystemEntry { username: username }
-    }
-
-    pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
-        builder.insert("username", &self.username)
     }
 }
 

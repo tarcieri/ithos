@@ -3,7 +3,6 @@ use buffoon::{Serialize, Deserialize, OutputStream, InputStream};
 use object::{AllowsChild, Object};
 use objecthash::{self, ObjectHash, ObjectHasher};
 use proto::{ToProto, FromProto};
-use serde_json::builder::ObjectBuilder;
 use std::io;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -14,10 +13,6 @@ pub struct RootEntry {
 impl RootEntry {
     pub fn new(digest_alg: DigestAlgorithm) -> RootEntry {
         RootEntry { digest_alg: digest_alg }
-    }
-
-    pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
-        builder.insert("digest_alg", self.digest_alg.to_string())
     }
 }
 

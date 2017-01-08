@@ -13,8 +13,6 @@ use op::{self, Op};
 use path::PathBuf;
 use proto::ToProto;
 use rustc_serialize::base64::{self, ToBase64};
-use serde_json;
-use serde_json::builder::ObjectBuilder;
 use signature::KeyPair;
 use std::io;
 use timestamp::Timestamp;
@@ -121,16 +119,6 @@ impl Body {
             comment: comment.to_string(),
         }
     }
-
-    pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
-        builder.insert("parent",
-                    self.parent_id.as_ref().to_base64(base64::URL_SAFE))
-            .insert("timestamp", self.timestamp)
-            .insert_array("ops", |builder| {
-                self.ops.iter().fold(builder, |b, op| b.push_object(|b| op.build_json(b)))
-            })
-            .insert("comment", self.comment.clone())
-    }
 }
 
 impl ToProto for Body {}
@@ -234,17 +222,6 @@ impl Block {
 
         Ok(())
     }
-
-    pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
-        builder.insert_object("body", |b| self.body.build_json(b))
-            .insert_object("witness", |b| self.witness.build_json(b))
-    }
-
-    pub fn to_json(&self) -> String {
-        let value = self.build_json(ObjectBuilder::new()).build();
-
-        serde_json::to_string(&value).unwrap()
-    }
 }
 
 impl ToProto for Block {}
@@ -298,11 +275,5 @@ pub mod tests {
         let block = example_block();
         // TODO: better test of the serialized proto
         buffoon::serialize(&block).unwrap();
-    }
-
-    #[test]
-    fn test_json_serialization() {
-        // TODO: better test of the serialized JSON
-        example_block().to_json();
     }
 }

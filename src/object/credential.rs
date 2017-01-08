@@ -4,8 +4,6 @@ use error::{Error, Result};
 use object::{AllowsChild, Object};
 use objecthash::{self, ObjectHash, ObjectHasher};
 use proto::{ToProto, FromProto};
-use rustc_serialize::base64::{self, ToBase64};
-use serde_json::builder::ObjectBuilder;
 use signature::KeyPair;
 use std::io;
 use timestamp::Timestamp;
@@ -113,52 +111,6 @@ impl CredentialEntry {
                         symmetric_key_bytes,
                         encrypted_value,
                         public_key)
-    }
-
-    pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
-        let builder = builder.insert("keyid", self.keyid.to_base64(base64::URL_SAFE))
-            .insert("credential_type", self.credential_type.to_string())
-            .insert("credential_alg", self.credential_type.alg());
-
-        let builder = match self.sealing_alg {
-            Some(ref sealing_alg) => builder.insert("sealing_alg", sealing_alg.to_string()),
-            None => builder,
-        };
-
-        let builder = match self.encrypted_value {
-            Some(ref encrypted_value) => {
-                builder.insert("encrypted_value",
-                               encrypted_value.to_base64(base64::URL_SAFE))
-            }
-            None => builder,
-        };
-
-        let builder = match self.salt {
-            Some(ref salt) => builder.insert("salt", salt.to_base64(base64::URL_SAFE)),
-            None => builder,
-        };
-
-        let builder = match self.public_key {
-            Some(ref public_key) => {
-                builder.insert("public_key", public_key.to_base64(base64::URL_SAFE))
-            }
-            None => builder,
-        };
-
-        let builder = match self.not_before {
-            Some(ref not_before) => builder.insert("not_before", not_before),
-            None => builder,
-        };
-
-        let builder = match self.not_after {
-            Some(ref not_after) => builder.insert("not_after", not_after),
-            None => builder,
-        };
-
-        match self.description {
-            Some(ref description) => builder.insert("description", description),
-            None => builder,
-        }
     }
 }
 
@@ -312,8 +264,6 @@ mod tests {
     use algorithm::{EncryptionAlgorithm, SignatureAlgorithm};
     use object::credential::{CredentialEntry, Type};
     use proto::{FromProto, ToProto};
-    use serde_json;
-    use serde_json::builder::ObjectBuilder;
     use timestamp::Timestamp;
 
     const EXAMPLE_PUBLIC_KEY: &'static [u8] = b"public-key-placeholder";
@@ -345,13 +295,5 @@ mod tests {
 
         let credential = CredentialEntry::from_proto(&proto.unwrap());
         assert!(credential.is_ok());
-    }
-
-    #[test]
-    fn test_json_serialization() {
-        let value = example_credential().build_json(ObjectBuilder::new()).build();
-        let result = serde_json::to_string(&value);
-
-        assert!(result.is_ok());
     }
 }

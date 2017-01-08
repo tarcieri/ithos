@@ -6,8 +6,6 @@ use objecthash::{self, ObjectHash, ObjectHasher};
 use proto::ToProto;
 use ring::rand::SecureRandom;
 use ring::signature as signature_impl;
-use rustc_serialize::base64::{self, ToBase64};
-use serde_json::builder::ObjectBuilder;
 use std::io;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -15,14 +13,6 @@ pub struct Signature {
     pub algorithm: SignatureAlgorithm,
     pub public_key: Vec<u8>,
     pub value: Vec<u8>,
-}
-
-impl Signature {
-    pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
-        builder.insert("algorithm", self.algorithm.to_string())
-            .insert("public_key", self.public_key.to_base64(base64::URL_SAFE))
-            .insert("value", self.value.to_base64(base64::URL_SAFE))
-    }
 }
 
 impl ToProto for Signature {}

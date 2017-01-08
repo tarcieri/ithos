@@ -1,21 +1,12 @@
 use buffoon::{OutputStream, Serialize};
 use objecthash::{self, ObjectHash, ObjectHasher};
 use proto::ToProto;
-use serde_json::builder::ObjectBuilder;
 use signature::Signature;
 use std::io;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Witness {
     pub signatures: Vec<Signature>,
-}
-
-impl Witness {
-    pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
-        builder.insert_array("signatures", |builder| {
-            self.signatures.iter().fold(builder, |b, sig| b.push_object(|b| sig.build_json(b)))
-        })
-    }
 }
 
 impl ToProto for Witness {}

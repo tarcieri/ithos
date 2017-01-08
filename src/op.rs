@@ -7,7 +7,6 @@ use metadata::Metadata;
 use object::{Class, Object};
 use objecthash::{self, ObjectHash, ObjectHasher};
 use path::{Path, PathBuf};
-use serde_json::builder::ObjectBuilder;
 use std::collections::HashMap;
 use std::io;
 use std::string::ToString;
@@ -74,12 +73,6 @@ impl Op {
         match self.optype {
             Type::Add => self.add(adapter, txn, state, block_id, timestamp),
         }
-    }
-
-    pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
-        builder.insert("optype", self.optype.to_string())
-            .insert("path", self.path.as_path().to_string())
-            .insert_object("object", |b| self.object.build_json(b))
     }
 
     fn add<'a, A>(&self,
