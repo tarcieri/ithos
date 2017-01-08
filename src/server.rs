@@ -55,14 +55,14 @@ impl<A> Server<A>
                                        &admin_symmetric_key,
                                        &nonce));
 
-        let initial_block = Block::create_initial(admin_username,
+        let initial_block = Block::create_initial(DigestAlgorithm::Sha256,
+                                                  signature_alg,
+                                                  encryption_alg,
+                                                  admin_username,
                                                   &admin_keypair,
                                                   &admin_keypair_sealed,
                                                   &admin_keypair_salt,
-                                                  DEFAULT_INITIAL_BLOCK_COMMENT,
-                                                  DigestAlgorithm::Sha256,
-                                                  encryption_alg,
-                                                  signature_alg);
+                                                  DEFAULT_INITIAL_BLOCK_COMMENT);
 
         let adapter = try!(A::create_database(path));
         let mut txn = try!(adapter.rw_transaction());
@@ -96,7 +96,12 @@ impl<A> Server<A>
         let mut txn = try!(self.adapter.rw_transaction());
         let parent_id = try!(self.adapter.current_block_id(&txn));
 
-        let body = Body::new(parent_id, timestamp, ops, comment.to_string());
+        let body = Body {
+            parent_id: parent_id,
+            timestamp: timestamp,
+            ops: ops,
+            comment: comment.to_string(),
+        };
         let block = Block::new(body, admin_keypair);
 
         // TODO: authenticate signature before committing

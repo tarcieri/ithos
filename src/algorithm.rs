@@ -8,13 +8,13 @@ pub enum DigestAlgorithm {
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub enum EncryptionAlgorithm {
-    Aes256Gcm,
+pub enum SignatureAlgorithm {
+    Ed25519,
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub enum SignatureAlgorithm {
-    Ed25519,
+pub enum EncryptionAlgorithm {
+    Aes256Gcm,
 }
 
 // TODO: Support more than one algorithm type per enum
@@ -65,5 +65,5 @@ macro_rules! impl_algorithm (($algorithm:ident, $only:expr, $string:expr) => (
 ));
 
 impl_algorithm!(DigestAlgorithm, DigestAlgorithm::Sha256, "SHA256");
-impl_algorithm!(EncryptionAlgorithm, EncryptionAlgorithm::Aes256Gcm, "AES256GCM");
 impl_algorithm!(SignatureAlgorithm, SignatureAlgorithm::Ed25519, "Ed25519");
+impl_algorithm!(EncryptionAlgorithm, EncryptionAlgorithm::Aes256Gcm, "AES256GCM");
