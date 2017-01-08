@@ -1,15 +1,66 @@
 use algorithm::{EncryptionAlgorithm, SignatureAlgorithm};
+use buffoon::{OutputStream, Serialize};
 use encryption;
 use error::{Error, Result};
+use objecthash::{self, ObjectHash, ObjectHasher};
+use proto::ToProto;
 use ring::rand::SecureRandom;
-use ring::signature;
+use ring::signature as signature_impl;
+use rustc_serialize::base64::{self, ToBase64};
+use serde_json::builder::ObjectBuilder;
+use std::io;
 
-pub struct KeyPair(signature::Ed25519KeyPair);
+#[derive(Debug, Eq, PartialEq)]
+pub struct Signature {
+    pub algorithm: SignatureAlgorithm,
+    pub public_key: Vec<u8>,
+    pub value: Vec<u8>,
+}
+
+impl Signature {
+    pub fn build_json(&self, builder: ObjectBuilder) -> ObjectBuilder {
+        builder.insert("algorithm", self.algorithm.to_string())
+            .insert("public_key", self.public_key.to_base64(base64::URL_SAFE))
+            .insert("value", self.value.to_base64(base64::URL_SAFE))
+    }
+}
+
+impl ToProto for Signature {}
+
+impl Serialize for Signature {
+    fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
+        try!(out.write(1, &self.algorithm));
+        try!(out.write(2, &self.public_key));
+        try!(out.write(3, &self.value));
+
+        Ok(())
+    }
+}
+
+impl ObjectHash for Signature {
+    #[inline]
+    fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
+        objecthash_struct!(
+            hasher,
+            "algorithm" => self.algorithm.to_string(),
+            "public_key" => self.public_key,
+            "value" => self.value
+        )
+    }
+}
+
+pub struct KeyPair {
+    pub algorithm: SignatureAlgorithm,
+    keypair: signature_impl::Ed25519KeyPair,
+}
 
 impl<'a> KeyPair {
     #[cfg(test)]
     pub fn generate(rng: &SecureRandom) -> KeyPair {
-        KeyPair(signature::Ed25519KeyPair::generate(rng).unwrap())
+        KeyPair {
+            algorithm: SignatureAlgorithm::Ed25519,
+            keypair: signature_impl::Ed25519KeyPair::generate(rng).unwrap(),
+        }
     }
 
     // Generate a new keypair and seal it with the given encryption algorithm and key
@@ -23,7 +74,7 @@ impl<'a> KeyPair {
         assert!(signature_alg == SignatureAlgorithm::Ed25519);
 
         let (keypair, serializable_keypair) =
-            try!(signature::Ed25519KeyPair::generate_serializable(rng)
+            try!(signature_impl::Ed25519KeyPair::generate_serializable(rng)
                 .map_err(|_| Error::CryptoFailure));
 
         let ciphertext = try!(encryption::seal(encryption_alg,
@@ -31,7 +82,12 @@ impl<'a> KeyPair {
                                                nonce,
                                                &serializable_keypair.private_key));
 
-        Ok((KeyPair(keypair), ciphertext))
+        let result = KeyPair {
+            algorithm: SignatureAlgorithm::Ed25519,
+            keypair: keypair,
+        };
+
+        Ok((result, ciphertext))
     }
 
     pub fn unseal(signature_alg: SignatureAlgorithm,
@@ -45,24 +101,32 @@ impl<'a> KeyPair {
 
         let private_key = try!(encryption::unseal(encryption_alg, sealing_key, sealed_keypair));
 
-        let keypair = try!(signature::Ed25519KeyPair::from_bytes(&private_key, &public_key)
+        let keypair = try!(signature_impl::Ed25519KeyPair::from_bytes(&private_key, &public_key)
             .map_err(|_| Error::CryptoFailure));
 
-        Ok(KeyPair(keypair))
+        Ok(KeyPair {
+            algorithm: SignatureAlgorithm::Ed25519,
+            keypair: keypair,
+        })
     }
 
     pub fn public_key_bytes(&'a self) -> &'a [u8] {
-        self.0.public_key_bytes()
+        self.keypair.public_key_bytes()
     }
 
-    pub fn sign(&self, msg: &[u8]) -> signature::Signature {
-        self.0.sign(msg)
+    pub fn sign(&self, msg: &[u8]) -> Signature {
+        let signature = self.keypair.sign(msg);
+
+        Signature {
+            algorithm: self.algorithm,
+            public_key: Vec::from(self.public_key_bytes()),
+            value: Vec::from(signature.as_slice()),
+        }
     }
 }
 
 #[cfg(test)]
 pub mod tests {
-
     use algorithm::{EncryptionAlgorithm, SignatureAlgorithm};
     use encryption::{AES256GCM_KEY_SIZE, AES256GCM_NONCE_SIZE};
     use ring::rand;

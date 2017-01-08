@@ -112,13 +112,13 @@ impl<'a> Adapter<'a> for LmdbAdapter {
 
     fn add_block<'t>(&'t self, txn: &'t mut RwTransaction, block: &Block) -> Result<()> {
         // Ensure the block we're adding is the next in the chain
-        if block.parent_id == block::Id::zero() {
+        if block.parent_id() == block::Id::zero() {
             if txn.get(self.state, LOG_ID_KEY) != Err(Error::NotFound) {
                 return Err(Error::EntryAlreadyExists);
             }
 
             try!(txn.put(self.state, LOG_ID_KEY, block.id().as_ref()));
-        } else if block.parent_id != try!(self.current_block_id(txn)) {
+        } else if block.parent_id() != try!(self.current_block_id(txn)) {
             return Err(Error::Ordering);
         }
 

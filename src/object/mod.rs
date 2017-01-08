@@ -161,7 +161,7 @@ impl Serialize for Object {
                                       format!("couldn't serialize {:?}", self.class())));
         }
 
-        try!(out.write(self.class() as u32, &object_proto.unwrap()));
+        try!(out.write(self.class() as u32 + 1, &object_proto.unwrap()));
 
         Ok(())
     }

@@ -10,10 +10,10 @@ import "object/system.proto";
 
 message Object {
   oneof value {
-    ithos.object.Root       root       = 0;
-    ithos.object.Domain     domain     = 1;
-    ithos.object.OrgUnit    org_unit   = 2;
-    ithos.object.System     system     = 3;
-    ithos.object.Credential credential = 4;
+    ithos.object.Root       root       = 1;
+    ithos.object.Domain     domain     = 2;
+    ithos.object.OrgUnit    org_unit   = 3;
+    ithos.object.System     system     = 4;
+    ithos.object.Credential credential = 5;
   }
 }

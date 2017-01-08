@@ -3,16 +3,16 @@ syntax = "proto3";
 package ithos;
 
 import "op.proto";
+import "witness.proto";
 
-// Blocks are the fundamental replication unit of Ithos, and consist of
-// multiple operations plus the cryptographic authority (in the form of
-// a signature) to carry them out. Some might call it a "blockchain",
-// but in Ithos it is referred to as the log
-message Block {
+message Body {
   bytes parent     = 1;
   uint64 timestamp = 2;
   repeated Op ops  = 3;
   string comment   = 4;
-  bytes signed_by  = 5;
-  bytes signature  = 6;
+}
+
+message Block {
+  Body body       = 1;
+  Witness witness = 2;
 }

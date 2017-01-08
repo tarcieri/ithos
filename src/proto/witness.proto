@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package ithos;
+
+import "signature.proto";
+
+// Witness (i.e. signature) data assocaited with a particular block
+message Witness {
+    repeated Signature signatures = 1;
+}
