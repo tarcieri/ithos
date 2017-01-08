@@ -35,7 +35,7 @@ impl Id {
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Id> {
         if bytes.len() != DIGEST_SIZE {
-            return Err(Error::Parse);
+            return Err(Error::parse(None));
         }
 
         let mut id = [0u8; DIGEST_SIZE];

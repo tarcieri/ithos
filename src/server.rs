@@ -113,15 +113,15 @@ impl<A> Server<A>
     pub fn find_credential(&self, path: &Path) -> Result<CredentialEntry> {
         match try!(Object::find(&self.adapter, path)) {
             Object::Credential(credential_entry) => Ok(credential_entry),
-            _ => Err(Error::BadType),
+            _ => Err(Error::bad_type(None)),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use algorithm::CipherSuite;
     use adapter::lmdb::LmdbAdapter;
+    use algorithm::CipherSuite;
     use encryption::AES256GCM_KEY_SIZE;
     use password::{self, PasswordAlgorithm};
     use path::PathBuf;
@@ -137,7 +137,11 @@ mod tests {
     fn create_database() -> Server<LmdbAdapter> {
         let rng = rand::SystemRandom::new();
         let dir = TempDir::new("ithos-test").unwrap();
-        Server::<LmdbAdapter>::create_database(dir.path(), &rng, CipherSuite::Ed25519Aes256GcmSha256, ADMIN_USERNAME, ADMIN_PASSWORD)
+        Server::<LmdbAdapter>::create_database(dir.path(),
+                                               &rng,
+                                               CipherSuite::Ed25519Aes256GcmSha256,
+                                               ADMIN_USERNAME,
+                                               ADMIN_PASSWORD)
             .unwrap();
         Server::<LmdbAdapter>::open_database(dir.path()).unwrap()
     }

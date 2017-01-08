@@ -75,7 +75,7 @@ impl<'a> KeyPair {
 
         let (keypair, serializable_keypair) =
             try!(signature_impl::Ed25519KeyPair::generate_serializable(rng)
-                .map_err(|_| Error::CryptoFailure));
+                .map_err(|_| Error::crypto_failure(None)));
 
         let ciphertext = try!(encryption::seal(encryption_alg,
                                                sealing_key,
@@ -102,7 +102,7 @@ impl<'a> KeyPair {
         let private_key = try!(encryption::unseal(encryption_alg, sealing_key, sealed_keypair));
 
         let keypair = try!(signature_impl::Ed25519KeyPair::from_bytes(&private_key, &public_key)
-            .map_err(|_| Error::CryptoFailure));
+            .map_err(|_| Error::crypto_failure(None)));
 
         Ok(KeyPair {
             algorithm: SignatureAlgorithm::Ed25519,

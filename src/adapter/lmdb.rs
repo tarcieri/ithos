@@ -13,6 +13,7 @@ use self::lmdb::{Environment, Database, DatabaseFlags, Cursor, WriteFlags, DUP_S
 use self::lmdb::Error as LmdbError;
 use self::lmdb::Transaction as LmdbTransaction;
 use std::{self, str};
+use std::error::Error as StdError;
 use std::io::Write;
 
 const MAX_DBS: u32 = 8;
@@ -88,14 +89,14 @@ impl<'a> Adapter<'a> for LmdbAdapter {
     fn ro_transaction(&'a self) -> Result<RoTransaction<'a>> {
         match self.env.begin_ro_txn() {
             Ok(txn) => Ok(RoTransaction(txn)),
-            Err(_) => Err(Error::Transaction),
+            Err(_) => Err(Error::transaction(None)),
         }
     }
 
     fn rw_transaction(&'a self) -> Result<RwTransaction<'a>> {
         match self.env.begin_rw_txn() {
             Ok(txn) => Ok(RwTransaction(txn)),
-            Err(_) => Err(Error::Transaction),
+            Err(_) => Err(Error::transaction(None)),
         }
     }
 
@@ -113,18 +114,18 @@ impl<'a> Adapter<'a> for LmdbAdapter {
     fn add_block<'t>(&'t self, txn: &'t mut RwTransaction, block: &Block) -> Result<()> {
         // Ensure the block we're adding is the next in the chain
         if block.parent_id() == block::Id::zero() {
-            if txn.get(self.state, LOG_ID_KEY) != Err(Error::NotFound) {
-                return Err(Error::EntryAlreadyExists);
+            if txn.get(self.state, LOG_ID_KEY) != Err(Error::not_found(None)) {
+                return Err(Error::entry_already_exists(None));
             }
 
             try!(txn.put(self.state, LOG_ID_KEY, block.id().as_ref()));
         } else if block.parent_id() != try!(self.current_block_id(txn)) {
-            return Err(Error::Ordering);
+            return Err(Error::ordering(None));
         }
 
         // This check should be redundant given the one above, but is here just in case
-        if txn.get(self.blocks, block.id().as_ref()) != Err(Error::NotFound) {
-            return Err(Error::EntryAlreadyExists);
+        if txn.get(self.blocks, block.id().as_ref()) != Err(Error::not_found(None)) {
+            return Err(Error::entry_already_exists(None));
         }
 
         // Store the new block
@@ -149,13 +150,13 @@ impl<'a> Adapter<'a> for LmdbAdapter {
                      parent_id: entry::Id,
                      metadata: &Metadata)
                      -> Result<DirEntry> {
-        if txn.get(self.entries, entry.id.as_ref()) != Err(Error::NotFound) {
-            return Err(Error::EntryAlreadyExists);
+        if txn.get(self.entries, entry.id.as_ref()) != Err(Error::not_found(None)) {
+            return Err(Error::entry_already_exists(None));
         }
 
-        if txn.get(self.directories, parent_id.as_ref()) != Err(Error::NotFound) &&
-           self.find_child(txn, parent_id, name) != Err(Error::NotFound) {
-            return Err(Error::EntryAlreadyExists);
+        if txn.get(self.directories, parent_id.as_ref()) != Err(Error::not_found(None)) &&
+           self.find_child(txn, parent_id, name) != Err(Error::not_found(None)) {
+            return Err(Error::entry_already_exists(None));
         }
 
         let direntry = DirEntry {
@@ -172,9 +173,9 @@ impl<'a> Adapter<'a> for LmdbAdapter {
 
         let mut buffer = try!(txn.reserve(self.entries, entry.id.as_ref(), 4 + entry.data.len()));
         try!(buffer.write_all(&entry.class.as_bytes())
-            .map_err(|_| Error::Serialize));
+            .map_err(|_| Error::serialize(None)));
         try!(buffer.write_all(entry.data)
-            .map_err(|_| Error::Serialize));
+            .map_err(|_| Error::serialize(None)));
 
         Ok(direntry)
     }
@@ -224,7 +225,7 @@ macro_rules! impl_transaction (($newtype:ident) => (
         type D = Database;
 
         fn get(&self, db: Database, key: &[u8]) -> Result<&[u8]> {
-            self.0.get(db, &key).map_err(|_| Error::NotFound)
+            self.0.get(db, &key).map_err(|_| Error::not_found(None))
         }
 
         fn find<P>(&self, db: Database, key: &[u8], predicate: P) -> Result<&[u8]>
@@ -235,7 +236,7 @@ macro_rules! impl_transaction (($newtype:ident) => (
 
             for (cursor_key, value) in cursor.iter_from(key) {
                 if cursor_key != key {
-                    return Err(Error::NotFound);
+                    return Err(Error::not_found(None));
                 }
 
                 if predicate(value) {
@@ -244,11 +245,11 @@ macro_rules! impl_transaction (($newtype:ident) => (
                 }
             }
 
-            result.ok_or(Error::NotFound)
+            result.ok_or(Error::not_found(None))
         }
 
         fn commit(self) -> Result<()> {
-            self.0.commit().map_err(|_| Error::Transaction)
+            self.0.commit().map_err(|_| Error::transaction(None))
         }
     }
 ));
@@ -260,22 +261,28 @@ impl<'a> RwTransaction<'a> {
     pub fn reserve(&mut self, database: Database, key: &[u8], len: usize) -> Result<&mut [u8]> {
         self.0
             .reserve(database, &key, len, WriteFlags::empty())
-            .map_err(|_| Error::Transaction)
+            .map_err(|_| Error::transaction(None))
     }
 
     fn put(&mut self, database: Database, key: &[u8], data: &[u8]) -> Result<()> {
         self.0
             .put(database, &key, &data, WriteFlags::empty())
-            .map_err(|_| Error::Transaction)
+            .map_err(|_| Error::transaction(None))
     }
 }
 
 impl From<LmdbError> for Error {
     fn from(error: LmdbError) -> Error {
         match error {
-            LmdbError::KeyExist => Error::EntryAlreadyExists,
-            LmdbError::NotFound => Error::NotFound,
-            _ => Error::Adapter(error.to_err_code() as i32),
+            LmdbError::KeyExist => Error::entry_already_exists(None),
+            LmdbError::NotFound => Error::not_found(None),
+            _ => {
+                let message = format!("{description} (code: {code})",
+                                      description = error.description(),
+                                      code = error.to_err_code() as i32);
+
+                Error::adapter(Some(&message))
+            }
         }
     }
 }
@@ -325,7 +332,7 @@ mod tests {
 
         let mut txn = adapter.rw_transaction().unwrap();
         let result = adapter.add_block(&mut txn, &block);
-        assert_eq!(result, Err(Error::EntryAlreadyExists));
+        assert_eq!(result, Err(Error::entry_already_exists(None)));
     }
 
     #[test]
@@ -403,7 +410,7 @@ mod tests {
                                        Id::root(),
                                        &example_metadata());
 
-        assert_eq!(result, Err(Error::EntryAlreadyExists));
+        assert_eq!(result, Err(Error::entry_already_exists(None)));
     }
 
     #[test]
@@ -426,6 +433,6 @@ mod tests {
                                        Id::root(),
                                        &example_metadata());
 
-        assert_eq!(result, Err(Error::EntryAlreadyExists));
+        assert_eq!(result, Err(Error::entry_already_exists(None)));
     }
 }

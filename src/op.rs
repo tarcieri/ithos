@@ -98,21 +98,21 @@ impl Op {
                 let parent_entry = try!(state.get_entry(adapter, txn, path));
 
                 if !parent_entry.class.allows_child(&self.object) {
-                    return Err(Error::NestingInvalid);
+                    return Err(Error::nesting_invalid(None));
                 }
 
                 (parent_entry.id, state.get_next_entry_id())
             }
             None => {
                 if self.object.class() != Class::Root {
-                    return Err(Error::NestingInvalid);
+                    return Err(Error::nesting_invalid(None));
                 }
 
                 (entry::Id::root(), entry::Id::root())
             }
         };
 
-        let name = try!(self.path.as_path().entry_name().ok_or(Error::PathInvalid));
+        let name = try!(self.path.as_path().entry_name().ok_or(Error::path_invalid(None)));
         let metadata = Metadata::new(*block_id, timestamp);
         let proto = try!(self.object.to_proto());
 
@@ -247,7 +247,7 @@ pub mod tests {
                                   &example_block_id,
                                   example_timestamp());
 
-            assert_eq!(result, Err(Error::NestingInvalid));
+            assert_eq!(result, Err(Error::nesting_invalid(None)));
         }
 
         // Test nesting constraints on a non-root entry
@@ -280,7 +280,7 @@ pub mod tests {
                                     &example_block_id,
                                     example_timestamp());
 
-            assert_eq!(result2, Err(Error::NestingInvalid));
+            assert_eq!(result2, Err(Error::nesting_invalid(None)));
         }
     }
 }

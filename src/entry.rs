@@ -14,7 +14,7 @@ impl Id {
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Id> {
         if bytes.len() != 8 {
-            return Err(Error::Parse);
+            return Err(Error::parse(None));
         }
 
         let mut id = [0u8; 8];
@@ -44,7 +44,7 @@ pub struct Entry<'a> {
 impl<'a> Entry<'a> {
     pub fn from_bytes(id: Id, bytes: &[u8]) -> Result<Entry> {
         if bytes.len() < 4 {
-            return Err(Error::Parse);
+            return Err(Error::parse(None));
         }
 
         Ok(Entry {

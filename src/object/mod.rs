@@ -37,7 +37,7 @@ pub enum Class {
 impl Class {
     pub fn from_bytes(bytes: &[u8]) -> Result<Class> {
         if bytes.len() != 4 {
-            return Err(Error::Parse);
+            return Err(Error::parse(None));
         }
 
         let mut id_bytes = [0u8; 4];
@@ -51,7 +51,7 @@ impl Class {
             2 => Class::OrgUnit,
             3 => Class::System,
             4 => Class::Credential,
-            _ => return Err(Error::Parse),
+            _ => return Err(Error::parse(None)),
         };
 
         Ok(result)

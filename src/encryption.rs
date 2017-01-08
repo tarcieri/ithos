@@ -14,7 +14,7 @@ pub fn seal(algorithm: EncryptionAlgorithm,
     assert!(algorithm == EncryptionAlgorithm::Aes256Gcm);
 
     let sealing_key = try!(aead::SealingKey::new(&aead::AES_256_GCM, secret_key)
-        .map_err(|_| Error::CryptoFailure));
+        .map_err(|_| Error::crypto_failure(None)));
 
     let max_overhead_len = sealing_key.algorithm().max_overhead_len();
     let mut buffer = Vec::with_capacity(AES256GCM_NONCE_SIZE + plaintext.len() + max_overhead_len);
@@ -32,7 +32,7 @@ pub fn seal(algorithm: EncryptionAlgorithm,
                              &mut buffer[AES256GCM_NONCE_SIZE..],
                              max_overhead_len,
                              &b""[..])
-        .map_err(|_| Error::CryptoFailure));
+        .map_err(|_| Error::crypto_failure(None)));
 
     Ok(buffer)
 }
@@ -46,17 +46,17 @@ pub fn unseal(algorithm: EncryptionAlgorithm,
 
     // The sealed keypair MUST be larger than a nonce
     if ciphertext.len() <= AES256GCM_NONCE_SIZE {
-        return Err(Error::CryptoFailure);
+        return Err(Error::crypto_failure(None));
     }
 
     let opening_key = try!(aead::OpeningKey::new(&aead::AES_256_GCM, secret_key)
-        .map_err(|_| Error::CryptoFailure));
+        .map_err(|_| Error::crypto_failure(None)));
 
     let nonce = &ciphertext[0..AES256GCM_NONCE_SIZE];
     let mut buffer = Vec::from(&ciphertext[AES256GCM_NONCE_SIZE..]);
 
     let pt_len = try!(aead::open_in_place(&opening_key, nonce, 0, &mut buffer, &b""[..])
-        .map_err(|_| Error::CryptoFailure));
+        .map_err(|_| Error::crypto_failure(None)));
 
     buffer.truncate(pt_len);
     Ok(buffer)

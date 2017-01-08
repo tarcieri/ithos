@@ -70,25 +70,25 @@ impl_algorithm!(EncryptionAlgorithm, EncryptionAlgorithm::Aes256Gcm, "AES256GCM"
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum CipherSuite {
-    Ed25519Aes256GcmSha256
+    Ed25519Aes256GcmSha256,
 }
 
 impl CipherSuite {
     pub fn signature_alg(&self) -> SignatureAlgorithm {
         match *self {
-            CipherSuite::Ed25519Aes256GcmSha256 => SignatureAlgorithm::Ed25519
+            CipherSuite::Ed25519Aes256GcmSha256 => SignatureAlgorithm::Ed25519,
         }
     }
 
     pub fn encryption_alg(&self) -> EncryptionAlgorithm {
         match *self {
-            CipherSuite::Ed25519Aes256GcmSha256 => EncryptionAlgorithm::Aes256Gcm
+            CipherSuite::Ed25519Aes256GcmSha256 => EncryptionAlgorithm::Aes256Gcm,
         }
     }
 
     pub fn digest_alg(&self) -> DigestAlgorithm {
         match *self {
-            CipherSuite::Ed25519Aes256GcmSha256 => DigestAlgorithm::Sha256
+            CipherSuite::Ed25519Aes256GcmSha256 => DigestAlgorithm::Sha256,
         }
     }
 }
