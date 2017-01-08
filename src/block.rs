@@ -1,5 +1,5 @@
 use adapter::Adapter;
-use algorithm::{DigestAlgorithm, EncryptionAlgorithm, SignatureAlgorithm};
+use algorithm::{CipherSuite, DigestAlgorithm};
 use buffoon::{OutputStream, Serialize};
 use error::{Error, Result};
 use object::Object;
@@ -167,9 +167,7 @@ pub struct Block {
 impl Block {
     // Create the first block in a new log, with a parent ID of zero.
     // The block is self-signed with the initial administrator key.
-    pub fn create_initial(digest_alg: DigestAlgorithm,
-                          signature_alg: SignatureAlgorithm,
-                          encryption_alg: EncryptionAlgorithm,
+    pub fn create_initial(ciphersuite: CipherSuite,
                           admin_username: &str,
                           admin_keypair: &KeyPair,
                           admin_keypair_sealed: &[u8],
@@ -177,9 +175,10 @@ impl Block {
                           comment: &str)
                           -> Block {
         let timestamp = Timestamp::now();
+
         let admin_signing_credential =
-            CredentialEntry::from_signature_keypair(signature_alg,
-                                                    encryption_alg,
+            CredentialEntry::from_signature_keypair(ciphersuite.signature_alg(),
+                                                    ciphersuite.encryption_alg(),
                                                     admin_keypair_sealed,
                                                     admin_keypair_salt,
                                                     admin_keypair.public_key_bytes(),
@@ -187,11 +186,12 @@ impl Block {
                                                     timestamp.extend(ADMIN_KEYPAIR_LIFETIME),
                                                     Some(String::from("Root signing key")));
 
-        let body = Body::create_initial(digest_alg,
+        let body = Body::create_initial(ciphersuite.digest_alg(),
                                         admin_username,
                                         admin_signing_credential,
                                         timestamp,
                                         comment);
+
         Block::new(body, admin_keypair)
     }
 
@@ -270,7 +270,7 @@ impl ObjectHash for Block {
 
 #[cfg(test)]
 pub mod tests {
-    use algorithm::{DigestAlgorithm, EncryptionAlgorithm, SignatureAlgorithm};
+    use algorithm::CipherSuite;
     use block::Block;
     use buffoon;
     use ring::rand;
@@ -285,9 +285,7 @@ pub mod tests {
         let rng = rand::SystemRandom::new();
         let admin_keypair = KeyPair::generate(&rng);
 
-        Block::create_initial(DigestAlgorithm::Sha256,
-                              SignatureAlgorithm::Ed25519,
-                              EncryptionAlgorithm::Aes256Gcm,
+        Block::create_initial(CipherSuite::Ed25519Aes256GcmSha256,
                               ADMIN_USERNAME,
                               &admin_keypair,
                               ADMIN_KEYPAIR_SEALED,

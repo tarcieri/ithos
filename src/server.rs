@@ -1,5 +1,5 @@
 use adapter::{Adapter, Transaction};
-use algorithm::{DigestAlgorithm, EncryptionAlgorithm, SignatureAlgorithm};
+use algorithm::CipherSuite;
 use block::{Block, Body};
 use encryption::{AES256GCM_KEY_SIZE, AES256GCM_NONCE_SIZE};
 use error::{Error, Result};
@@ -32,9 +32,13 @@ impl<A> Server<A>
 {
     pub fn create_database(path: &std::path::Path,
                            rng: &SecureRandom,
+                           ciphersuite: CipherSuite,
                            admin_username: &str,
                            admin_password: &str)
                            -> Result<()> {
+        // We presently only support one ciphersuite
+        assert!(ciphersuite == CipherSuite::Ed25519Aes256GcmSha256);
+
         let admin_keypair_salt = try!(password::random_salt(rng));
 
         let mut admin_symmetric_key = [0u8; AES256GCM_KEY_SIZE];
@@ -43,21 +47,16 @@ impl<A> Server<A>
                          admin_password,
                          &mut admin_symmetric_key);
 
-        let encryption_alg = EncryptionAlgorithm::Aes256Gcm;
-        let signature_alg = SignatureAlgorithm::Ed25519;
-
         // NOTE: Fixed nonce. The admin password should be randomly generated and never reused
         let nonce = [0u8; AES256GCM_NONCE_SIZE];
         let (admin_keypair, admin_keypair_sealed) = try!(KeyPair::generate_and_seal(
-                                       signature_alg,
-                                       encryption_alg,
+                                       ciphersuite.signature_alg(),
+                                       ciphersuite.encryption_alg(),
                                        rng,
                                        &admin_symmetric_key,
                                        &nonce));
 
-        let initial_block = Block::create_initial(DigestAlgorithm::Sha256,
-                                                  signature_alg,
-                                                  encryption_alg,
+        let initial_block = Block::create_initial(ciphersuite,
                                                   admin_username,
                                                   &admin_keypair,
                                                   &admin_keypair_sealed,
@@ -121,7 +120,7 @@ impl<A> Server<A>
 
 #[cfg(test)]
 mod tests {
-
+    use algorithm::CipherSuite;
     use adapter::lmdb::LmdbAdapter;
     use encryption::AES256GCM_KEY_SIZE;
     use password::{self, PasswordAlgorithm};
@@ -138,7 +137,7 @@ mod tests {
     fn create_database() -> Server<LmdbAdapter> {
         let rng = rand::SystemRandom::new();
         let dir = TempDir::new("ithos-test").unwrap();
-        Server::<LmdbAdapter>::create_database(dir.path(), &rng, ADMIN_USERNAME, ADMIN_PASSWORD)
+        Server::<LmdbAdapter>::create_database(dir.path(), &rng, CipherSuite::Ed25519Aes256GcmSha256, ADMIN_USERNAME, ADMIN_PASSWORD)
             .unwrap();
         Server::<LmdbAdapter>::open_database(dir.path()).unwrap()
     }

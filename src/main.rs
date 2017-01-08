@@ -39,6 +39,7 @@ mod signature;
 mod timestamp;
 pub mod witness;
 
+use algorithm::CipherSuite;
 use adapter::lmdb::LmdbAdapter;
 use encryption::AES256GCM_KEY_SIZE;
 use error::Error;
@@ -101,6 +102,7 @@ fn db_create(database_path: &str, admin_username: &str) {
 
     match Server::<LmdbAdapter>::create_database(std::path::Path::new(database_path),
                                                  &rng,
+                                                 CipherSuite::Ed25519Aes256GcmSha256,
                                                  admin_username,
                                                  &admin_password) {
         Ok(_) => {
