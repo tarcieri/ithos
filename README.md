@@ -53,15 +53,20 @@ install Rust.
 
 1. Clone the **ithos** git repository:
 
+    ```
     $ git clone https://github.com/cryptosphere/ithos.git
     Cloning into 'ithos'...
+    ```
 
 2. Compile **ithos** with Cargo:
 
+    ```
     $ cargo build --release
-
+    ```
+    
 3. Ensure binary works:
 
+    ```
     $ target/release/ithos -h
     ithos v0.1
 
@@ -76,6 +81,7 @@ install Rust.
         db        Creates a new ithos database
         domain    Adds a new domain to an ithos database
         help      Prints this message or the help of the given subcommand(s)
+    ```
 
 ## Usage
 
@@ -83,10 +89,13 @@ install Rust.
 
 1. Create a filesystem directory where the database will live:
 
+    ```
     $ mkdir my_ithos
+    ```
 
 2. Create a new **ithos** database inside the newly created directory:
 
+    ```
     $ target/release/ithos db my_ithos
     Creating database at: my_ithos
     
@@ -94,13 +103,16 @@ install Rust.
     Don't lose it! You will need it to perform administrative actions:
     
     ITHOS-GENPASS-xitak-refuk-lipef-zuxax-48214
+    ```
 
 3. Create an initial domain within your **ithos** database
 
+    ```
     $ target/release/ithos domain example.com --path my_ithos
     Creating domain 'example.com' in database at my_ithos
     manager's password:
     Domain example.com created!
+    ```
 
 ## License
 
