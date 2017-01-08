@@ -28,9 +28,88 @@ or automated processes who authorized the change.
 [JSON]: http://www.json.org
 [Rust]: https://www.rust-lang.org/
 
+### Is it any good?
+
+[Yes.](http://news.ycombinator.com/item?id=3067434)
+
+### Is it "Production Ready™"?
+
+![DANGER: EXPERIMENTAL](https://raw.github.com/cryptosphere/cryptosphere/master/images/experimental.png)
+
+**ithos** does not yet provide the minimum viable functionality it needs to
+be useful. The documentation below covers the current functionality, but
+it does not yet explain how to deploy a practical production system.
+
+tl;dr: Not ready yet. Check back later.
+
+## Building
+
+These instructions assume you have a Rust installation. If you haven't yet
+installed Rust, please visit https://www.rustup.rs/ for instructions on how to
+install Rust.
+
+1. Clone the **ithos** git repository:
+
+```
+$ git clone https://github.com/cryptosphere/ithos.git
+Cloning into 'ithos'...
+```
+
+2. Compile **ithos** with Cargo:
+
+```
+$ cargo build --release
+```
+
+3. Ensure binary works:
+
+```
+$ target/release/ithos -h
+ithos v0.1
+
+USAGE:
+    ithos [SUBCOMMAND]
+
+FLAGS:
+    -h, --help       Prints help information
+    -V, --version    Prints version information
+
+SUBCOMMANDS:
+    db        Creates a new ithos database
+    domain    Adds a new domain to an ithos database
+    help      Prints this message or the help of the given subcommand(s)
+```
+
 ## Usage
 
-Coming "soon"!
+### Creating a new **ithos** database
+
+1. Create a filesystem directory where the database will live:
+
+```
+$ mkdir my_ithos
+```
+
+2. Create a new **ithos** database inside the newly created directory:
+
+```
+$ target/release/ithos db my_ithos
+Creating database at: my_ithos
+
+Database created! Below is the password for the admin user ('manager')
+Don't lose it! You will need it to perform administrative actions:
+
+ITHOS-GENPASS-xitak-refuk-lipef-zuxax-48214
+```
+
+3. Create an initial domain within your **ithos** database
+
+```
+$ target/release/ithos domain example.com --path my_ithos
+Creating domain 'example.com' in database at my_ithos
+manager's password:
+Domain example.com created!
+```
 
 ## License
 

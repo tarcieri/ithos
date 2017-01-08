@@ -8,7 +8,7 @@ use rpassword;
 const RANDOM_SALT_SIZE: usize = 16;
 
 // Prefix added to all randomly generated passwords
-const GENPASS_PREFIX: &'static str = "ithos-genpass";
+const GENPASS_PREFIX: &'static str = "ITHOS-GENPASS";
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum PasswordAlgorithm {
