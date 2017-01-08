@@ -3,11 +3,6 @@ use objecthash::{ObjectHash, ObjectHasher};
 use std::io;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub enum DigestAlgorithm {
-    Sha256,
-}
-
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum SignatureAlgorithm {
     Ed25519,
 }
@@ -15,6 +10,11 @@ pub enum SignatureAlgorithm {
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum EncryptionAlgorithm {
     Aes256Gcm,
+}
+
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+pub enum DigestAlgorithm {
+    Sha256,
 }
 
 // TODO: Support more than one algorithm type per enum
@@ -67,3 +67,28 @@ macro_rules! impl_algorithm (($algorithm:ident, $only:expr, $string:expr) => (
 impl_algorithm!(DigestAlgorithm, DigestAlgorithm::Sha256, "SHA256");
 impl_algorithm!(SignatureAlgorithm, SignatureAlgorithm::Ed25519, "Ed25519");
 impl_algorithm!(EncryptionAlgorithm, EncryptionAlgorithm::Aes256Gcm, "AES256GCM");
+
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+pub enum CipherSuite {
+    Ed25519Aes256GcmSha256
+}
+
+impl CipherSuite {
+    pub fn signature_alg(&self) -> SignatureAlgorithm {
+        match *self {
+            CipherSuite::Ed25519Aes256GcmSha256 => SignatureAlgorithm::Ed25519
+        }
+    }
+
+    pub fn encryption_alg(&self) -> EncryptionAlgorithm {
+        match *self {
+            CipherSuite::Ed25519Aes256GcmSha256 => EncryptionAlgorithm::Aes256Gcm
+        }
+    }
+
+    pub fn digest_alg(&self) -> DigestAlgorithm {
+        match *self {
+            CipherSuite::Ed25519Aes256GcmSha256 => DigestAlgorithm::Sha256
+        }
+    }
+}
