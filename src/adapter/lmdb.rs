@@ -4,11 +4,11 @@ extern crate lmdb_sys;
 use adapter::{Adapter, Transaction};
 use block::{self, Block};
 use direntry::DirEntry;
-use entry::{self, Entry};
-use error::{Error, Result};
+use entry::{self, SerializedEntry};
+use error::{Error, ErrorKind, Result};
 use metadata::Metadata;
 use path::Path;
-use proto::{FromProto, ToProto};
+use protobuf::{self, Message};
 use self::lmdb::{Environment, Database, DatabaseFlags, Cursor, WriteFlags, DUP_SORT, INTEGER_KEY};
 use self::lmdb::Error as LmdbError;
 use self::lmdb::Transaction as LmdbTransaction;
@@ -112,27 +112,32 @@ impl<'a> Adapter<'a> for LmdbAdapter {
     }
 
     fn add_block<'t>(&'t self, txn: &'t mut RwTransaction, block: &Block) -> Result<()> {
+        let block_id = block::Id::of(block);
+        let parent_id = block.get_body().get_parent_id();
+
         // Ensure the block we're adding is the next in the chain
-        if block.parent_id() == block::Id::zero() {
+        if parent_id == block::Id::zero().as_ref() {
             if txn.get(self.state, LOG_ID_KEY) != Err(Error::not_found(None)) {
-                return Err(Error::entry_already_exists(None));
+                return Err(Error::entry_already_exists(Some("initial block already set")));
             }
 
-            try!(txn.put(self.state, LOG_ID_KEY, block.id().as_ref()));
-        } else if block.parent_id() != try!(self.current_block_id(txn)) {
-            return Err(Error::ordering(None));
+            try!(txn.put(self.state, LOG_ID_KEY, block_id.as_ref()));
+        } else if parent_id != try!(self.current_block_id(txn)).as_ref() {
+            return Err(Error::ordering(Some("new block's parent does not match current ID")));
         }
 
         // This check should be redundant given the one above, but is here just in case
-        if txn.get(self.blocks, block.id().as_ref()) != Err(Error::not_found(None)) {
-            return Err(Error::entry_already_exists(None));
+        if txn.get(self.blocks, block_id.as_ref()) != Err(Error::not_found(None)) {
+            return Err(Error::entry_already_exists(Some("new block has already been committed")));
         }
 
         // Store the new block
-        try!(txn.put(self.blocks, block.id().as_ref(), &try!(block.to_proto())));
+        try!(txn.put(self.blocks,
+                     block_id.as_ref(),
+                     &try!(block.write_to_bytes())));
 
         // Update the current block ID in the state table
-        try!(txn.put(self.state, LATEST_BLOCK_ID_KEY, block.id().as_ref()));
+        try!(txn.put(self.state, LATEST_BLOCK_ID_KEY, block_id.as_ref()));
 
         Ok(())
     }
@@ -145,7 +150,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
 
     fn add_entry<'t>(&'t self,
                      txn: &'t mut RwTransaction,
-                     entry: &Entry,
+                     entry: &SerializedEntry,
                      name: &'t str,
                      parent_id: entry::Id,
                      metadata: &Metadata)
@@ -169,7 +174,9 @@ impl<'a> Adapter<'a> for LmdbAdapter {
             try!(txn.put(self.directories, parent_id.as_ref(), &direntry.to_bytes()));
         }
 
-        try!(txn.put(self.metadata, entry.id.as_ref(), &try!(metadata.to_proto())));
+        try!(txn.put(self.metadata,
+                     entry.id.as_ref(),
+                     &try!(metadata.write_to_bytes())));
 
         let mut buffer = try!(txn.reserve(self.entries, entry.id.as_ref(), 4 + entry.data.len()));
         try!(buffer.write_all(&entry.class.as_bytes())
@@ -183,8 +190,16 @@ impl<'a> Adapter<'a> for LmdbAdapter {
     fn find_direntry<'t, T>(&'t self, txn: &'t T, path: &Path) -> Result<DirEntry>
         where T: Transaction<D = Database>
     {
-        path.components().iter().fold(Ok(DirEntry::root()), |parent_direntry, component| {
-            self.find_child(txn, try!(parent_direntry).id, component)
+        let result =
+            path.components().iter().fold(Ok(DirEntry::root()), |parent_direntry, component| {
+                self.find_child(txn, try!(parent_direntry).id, component)
+            });
+
+        result.map_err(|e| {
+            match e.kind {
+                ErrorKind::NotFound => Error::not_found(Some(path.as_ref())),
+                _ => e,
+            }
         })
     }
 
@@ -192,14 +207,14 @@ impl<'a> Adapter<'a> for LmdbAdapter {
         where T: Transaction<D = Database>
     {
         let proto = try!(txn.get(self.metadata, id.as_ref()));
-        Metadata::from_proto(proto)
+        Ok(try!(protobuf::parse_from_bytes::<Metadata>(proto)))
     }
 
-    fn find_entry<'t, T>(&'t self, txn: &'t T, id: &entry::Id) -> Result<Entry>
+    fn find_entry<'t, T>(&'t self, txn: &'t T, id: &entry::Id) -> Result<SerializedEntry>
         where T: Transaction<D = Database>
     {
         let bytes = try!(txn.get(self.entries, id.as_ref()));
-        Entry::from_bytes(*id, bytes)
+        SerializedEntry::from_bytes(*id, bytes)
     }
 }
 
@@ -231,9 +246,14 @@ macro_rules! impl_transaction (($newtype:ident) => (
         fn find<P>(&self, db: Database, key: &[u8], predicate: P) -> Result<&[u8]>
             where P: Fn(&[u8]) -> bool
         {
+            // Ensure the entry exists
+            // TODO: Fix upstream unwrap in lmdb crate's iter_from
+            try!(self.get(db, key));
+
             let mut cursor = try!(self.0.open_ro_cursor(db));
             let mut result = None;
 
+            // TODO: this triggers an unwrap if the key is missing
             for (cursor_key, value) in cursor.iter_from(key) {
                 if cursor_key != key {
                     return Err(Error::not_found(None));
@@ -291,12 +311,15 @@ impl From<LmdbError> for Error {
 mod tests {
     use adapter::{Adapter, Transaction};
     use adapter::lmdb::LmdbAdapter;
-    use block;
-    use entry::{Entry, Id};
+    use algorithm::CipherSuite;
+    use block::{self, Block};
+    use crypto::signing::KeyPair;
+    use entry::{Class, Id, SerializedEntry};
     use error::Error;
     use metadata::Metadata;
-    use object::Class;
     use path::Path;
+    use ring::rand;
+    use setup;
     use tempdir::TempDir;
     use timestamp::Timestamp;
 
@@ -309,12 +332,33 @@ mod tests {
         Timestamp::at(1_231_006_505)
     }
 
-    fn example_metadata() -> Metadata {
-        Metadata::new(block::Id::zero(), example_timestamp())
+    fn example_block() -> Block {
+        let rng = rand::SystemRandom::new();
+        let admin_keypair = KeyPair::generate(&rng);
+
+        setup::create_log(CipherSuite::Ed25519_AES256GCM_SHA256,
+                          setup::tests::ADMIN_USERNAME,
+                          &admin_keypair,
+                          setup::tests::ADMIN_KEYPAIR_SEALED,
+                          setup::tests::ADMIN_KEYPAIR_SALT,
+                          setup::tests::COMMENT)
     }
 
-    fn example_entry(id: Id, data: &[u8]) -> Entry {
-        Entry {
+    fn example_metadata() -> Metadata {
+        let mut metadata = Metadata::new();
+
+        let block_id = block::Id::zero();
+
+        metadata.set_created_id(Vec::from(block_id.as_ref()));
+        metadata.set_updated_id(Vec::from(block_id.as_ref()));
+        metadata.set_created_at(example_timestamp().to_int());
+        metadata.set_updated_at(example_timestamp().to_int());
+
+        metadata
+    }
+
+    fn example_entry(id: Id, data: &[u8]) -> SerializedEntry {
+        SerializedEntry {
             id: id,
             class: Class::Root,
             data: data,
@@ -324,7 +368,7 @@ mod tests {
     #[test]
     fn duplicate_block() {
         let adapter = create_database();
-        let block = block::tests::example_block();
+        let block = example_block();
 
         let mut txn = adapter.rw_transaction().unwrap();
         adapter.add_block(&mut txn, &block).unwrap();
@@ -332,7 +376,7 @@ mod tests {
 
         let mut txn = adapter.rw_transaction().unwrap();
         let result = adapter.add_block(&mut txn, &block);
-        assert_eq!(result, Err(Error::entry_already_exists(None)));
+        assert_eq!(result, Err(Error::entry_already_exists(Some("initial block already set"))));
     }
 
     #[test]
@@ -380,7 +424,7 @@ mod tests {
                 assert_eq!(direntry.name, "master.example.com");
 
                 let metadata = adapter.find_metadata(&txn, &direntry.id).unwrap();
-                assert_eq!(metadata.created_at, example_timestamp());
+                assert_eq!(metadata.get_created_at(), example_timestamp().to_int());
 
                 let entry = adapter.find_entry(&txn, &direntry.id).unwrap();
                 assert_eq!(entry.data, &example_data[..]);

@@ -4,12 +4,12 @@ package ithos;
 
 import "object.proto";
 
+enum Type {
+  ADD = 0;
+}
+
 // Ops make modifications to the state of the database
 message Op {
-  enum Type {
-    ADD = 0;
-  }
-
   Type optype   = 1;
   string path   = 2;
   Object object = 3;

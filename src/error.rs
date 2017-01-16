@@ -1,3 +1,4 @@
+use protobuf::ProtobufError;
 use std::error::Error as StdError;
 use std::fmt;
 use std::result::Result as StdResult;
@@ -12,7 +13,7 @@ impl Error {
     pub fn new(kind: ErrorKind, msg: Option<&str>) -> Error {
         Error {
             kind: kind,
-            msg: msg.map(|s| s.to_string()),
+            msg: msg.map(|s| s.to_owned()),
         }
     }
 
@@ -64,10 +65,6 @@ impl Error {
         Error::new(ErrorKind::BadType, msg)
     }
 
-    pub fn corrupt_data(msg: Option<&str>) -> Error {
-        Error::new(ErrorKind::CorruptData, msg)
-    }
-
     pub fn crypto_failure(msg: Option<&str>) -> Error {
         Error::new(ErrorKind::CryptoFailure, msg)
     }
@@ -87,7 +84,6 @@ pub enum ErrorKind {
     EntryAlreadyExists,
     NestingInvalid,
     BadType,
-    CorruptData,
     CryptoFailure,
 }
 
@@ -106,7 +102,6 @@ impl StdError for Error {
             ErrorKind::EntryAlreadyExists => "an attempt was made to insert a duplicate entry",
             ErrorKind::NestingInvalid => "attempted to add an object outside of allowed locations",
             ErrorKind::BadType => "expecting an object of a different type",
-            ErrorKind::CorruptData => "data was in a corrupt or unexpected state",
             ErrorKind::CryptoFailure => "a cryptographic operation failed",
         }
     }
@@ -123,3 +118,9 @@ impl fmt::Display for Error {
 }
 
 pub type Result<T> = StdResult<T, Error>;
+
+impl From<ProtobufError> for Error {
+    fn from(_error: ProtobufError) -> Error {
+        Error::serialize(Some("protobuf error"))
+    }
+}

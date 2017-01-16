@@ -1,279 +1,412 @@
-use adapter::Adapter;
-use block;
-use buffoon::{OutputStream, Serialize};
-use entry::{self, Entry};
-use error::{Error, Result};
-use metadata::Metadata;
-use object::{Class, Object};
+// This file is generated. Do not edit
+// @generated
+
+// https://github.com/Manishearth/rust-clippy/issues/702
+#![allow(unknown_lints)]
+#![allow(clippy)]
+
+#![cfg_attr(rustfmt, rustfmt_skip)]
+
+#![allow(box_pointers)]
+#![allow(dead_code)]
+#![allow(non_camel_case_types)]
+#![allow(non_snake_case)]
+#![allow(non_upper_case_globals)]
+#![allow(trivial_casts)]
+#![allow(unsafe_code)]
+#![allow(unused_imports)]
+#![allow(unused_results)]
+
 use objecthash::{self, ObjectHash, ObjectHasher};
-use path::{Path, PathBuf};
-use std::collections::HashMap;
-use std::io;
-use std::string::ToString;
-use timestamp::Timestamp;
+use protobuf::Message as Message_imported_for_functions;
+use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
 
-#[cfg(test)]
-extern crate tempdir;
-
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub enum Type {
-    Add,
-}
-
-impl ObjectHash for Type {
-    #[inline]
-    fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
-        self.to_string().objecthash(hasher);
-    }
-}
-
-impl Serialize for Type {
-    fn serialize<O: OutputStream>(&self, _: &mut O) -> io::Result<()> {
-        unimplemented!();
-    }
-
-    fn serialize_nested<O: OutputStream>(&self, field: u32, out: &mut O) -> io::Result<()> {
-        out.write_varint(field, *self as u32)
-    }
-}
-
-impl ToString for Type {
-    fn to_string(&self) -> String {
-        match *self {
-            Type::Add => "ADD".to_string(),
-        }
-    }
-}
-
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone,Default)]
 pub struct Op {
-    pub optype: Type,
-    pub path: PathBuf,
-    pub object: Object,
+    // message fields
+    optype: ::std::option::Option<Type>,
+    path: ::protobuf::SingularField<::std::string::String>,
+    object: ::protobuf::SingularPtrField<super::object::Object>,
+    // special fields
+    unknown_fields: ::protobuf::UnknownFields,
+    cached_size: ::std::cell::Cell<u32>,
 }
+
+// see codegen.rs for the explanation why impl Sync explicitly
+unsafe impl ::std::marker::Sync for Op {}
 
 impl Op {
-    pub fn new(optype: Type, path: PathBuf, object: Object) -> Op {
-        Op {
-            optype: optype,
-            path: path,
-            object: object,
+    pub fn new() -> Op {
+        ::std::default::Default::default()
+    }
+
+    pub fn default_instance() -> &'static Op {
+        static mut instance: ::protobuf::lazy::Lazy<Op> = ::protobuf::lazy::Lazy {
+            lock: ::protobuf::lazy::ONCE_INIT,
+            ptr: 0 as *const Op,
+        };
+        unsafe {
+            instance.get(|| {
+                Op {
+                    optype: ::std::option::Option::None,
+                    path: ::protobuf::SingularField::none(),
+                    object: ::protobuf::SingularPtrField::none(),
+                    unknown_fields: ::protobuf::UnknownFields::new(),
+                    cached_size: ::std::cell::Cell::new(0),
+                }
+            })
         }
     }
 
-    pub fn apply<'a, A>(&self,
-                        adapter: &A,
-                        txn: &mut A::W,
-                        state: &mut State,
-                        block_id: &block::Id,
-                        timestamp: Timestamp)
-                        -> Result<()>
-        where A: Adapter<'a>
-    {
-        match self.optype {
-            Type::Add => self.add(adapter, txn, state, block_id, timestamp),
+    // optional .ithos.Type optype = 1;
+
+    pub fn clear_optype(&mut self) {
+        self.optype = ::std::option::Option::None;
+    }
+
+    pub fn has_optype(&self) -> bool {
+        self.optype.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_optype(&mut self, v: Type) {
+        self.optype = ::std::option::Option::Some(v);
+    }
+
+    pub fn get_optype(&self) -> Type {
+        self.optype.unwrap_or(Type::ADD)
+    }
+
+    // optional string path = 2;
+
+    pub fn clear_path(&mut self) {
+        self.path.clear();
+    }
+
+    pub fn has_path(&self) -> bool {
+        self.path.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_path(&mut self, v: ::std::string::String) {
+        self.path = ::protobuf::SingularField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_path(&mut self) -> &mut ::std::string::String {
+        if self.path.is_none() {
+            self.path.set_default();
+        };
+        self.path.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_path(&mut self) -> ::std::string::String {
+        self.path.take().unwrap_or_else(|| ::std::string::String::new())
+    }
+
+    pub fn get_path(&self) -> &str {
+        match self.path.as_ref() {
+            Some(v) => &v,
+            None => "",
         }
     }
 
-    fn add<'a, A>(&self,
-                  adapter: &A,
-                  txn: &mut A::W,
-                  state: &mut State,
-                  block_id: &block::Id,
-                  timestamp: Timestamp)
-                  -> Result<()>
-        where A: Adapter<'a>
-    {
-        let parent_path = self.path.as_path().parent();
+    // optional .ithos.Object object = 3;
 
-        let (parent_id, entry_id) = match parent_path {
-            Some(path) => {
-                let parent_entry = try!(state.get_entry(adapter, txn, path));
+    pub fn clear_object(&mut self) {
+        self.object.clear();
+    }
 
-                if !parent_entry.class.allows_child(&self.object) {
-                    return Err(Error::nesting_invalid(None));
-                }
+    pub fn has_object(&self) -> bool {
+        self.object.is_some()
+    }
 
-                (parent_entry.id, state.get_next_entry_id())
-            }
-            None => {
-                if self.object.class() != Class::Root {
-                    return Err(Error::nesting_invalid(None));
-                }
+    // Param is passed by value, moved
+    pub fn set_object(&mut self, v: super::object::Object) {
+        self.object = ::protobuf::SingularPtrField::some(v);
+    }
 
-                (entry::Id::root(), entry::Id::root())
-            }
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_object(&mut self) -> &mut super::object::Object {
+        if self.object.is_none() {
+            self.object.set_default();
         };
+        self.object.as_mut().unwrap()
+    }
 
-        let name = try!(self.path.as_path().entry_name().ok_or(Error::path_invalid(None)));
-        let metadata = Metadata::new(*block_id, timestamp);
-        let proto = try!(self.object.to_proto());
+    // Take field
+    pub fn take_object(&mut self) -> super::object::Object {
+        self.object.take().unwrap_or_else(|| super::object::Object::new())
+    }
 
-        let entry = Entry {
-            id: entry_id,
-            class: self.object.class(),
-            data: &proto,
-        };
-
-        // NOTE: The underlying adapter must handle Error::EntryAlreadyExists
-        try!(adapter.add_entry(txn, &entry, &name, parent_id, &metadata));
-
-        let new_entry = StateEntry {
-            id: entry_id,
-            class: self.object.class(),
-        };
-        state.new_entries.insert(self.path.clone(), new_entry);
-
-        Ok(())
+    pub fn get_object(&self) -> &super::object::Object {
+        self.object.as_ref().unwrap_or_else(|| super::object::Object::default_instance())
     }
 }
 
-impl Serialize for Op {
-    fn serialize<O: OutputStream>(&self, out: &mut O) -> io::Result<()> {
-        try!(out.write(1, &self.optype));
-        try!(out.write(2, &self.path.as_path().to_string()));
-        try!(out.write(3, &self.object));
+impl ::protobuf::Message for Op {
+    fn is_initialized(&self) -> bool {
+        true
+    }
 
-        Ok(())
+    fn merge_from(&mut self,
+                  is: &mut ::protobuf::CodedInputStream)
+                  -> ::protobuf::ProtobufResult<()> {
+        while !try!(is.eof()) {
+            let (field_number, wire_type) = try!(is.read_tag_unpack());
+            match field_number {
+                1 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    };
+                    let tmp = try!(is.read_enum());
+                    self.optype = ::std::option::Option::Some(tmp);
+                }
+                2 => {
+                    try!(::protobuf::rt::read_singular_string_into(wire_type, is, &mut self.path));
+                }
+                3 => {
+                    try!(::protobuf::rt::read_singular_message_into(wire_type,
+                                                                    is,
+                                                                    &mut self.object));
+                }
+                _ => {
+                    try!(::protobuf::rt::read_unknown_or_skip_group(field_number,
+                                                                    wire_type,
+                                                                    is,
+                                                                    self.mut_unknown_fields()));
+                }
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        for value in &self.optype {
+            my_size += ::protobuf::rt::enum_size(1, *value);
+        }
+        for value in &self.path {
+            my_size += ::protobuf::rt::string_size(2, &value);
+        }
+        for value in &self.object {
+            let len = value.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self,
+                                  os: &mut ::protobuf::CodedOutputStream)
+                                  -> ::protobuf::ProtobufResult<()> {
+        if let Some(v) = self.optype {
+            try!(os.write_enum(1, v.value()));
+        };
+        if let Some(v) = self.path.as_ref() {
+            try!(os.write_string(2, &v));
+        };
+        if let Some(v) = self.object.as_ref() {
+            try!(os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited));
+            try!(os.write_raw_varint32(v.get_cached_size()));
+            try!(v.write_to_with_cached_sizes(os));
+        };
+        try!(os.write_unknown_fields(self.get_unknown_fields()));
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn type_id(&self) -> ::std::any::TypeId {
+        ::std::any::TypeId::of::<Op>()
+    }
+
+    fn as_any(&self) -> &::std::any::Any {
+        self as &::std::any::Any
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        ::protobuf::MessageStatic::descriptor_static(None::<Self>)
     }
 }
 
+impl ::protobuf::MessageStatic for Op {
+    fn new() -> Op {
+        Op::new()
+    }
+
+    fn descriptor_static(_: ::std::option::Option<Op>)
+                         -> &'static ::protobuf::reflect::MessageDescriptor {
+        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::MessageDescriptor> =
+            ::protobuf::lazy::Lazy {
+                lock: ::protobuf::lazy::ONCE_INIT,
+                ptr: 0 as *const ::protobuf::reflect::MessageDescriptor,
+            };
+        unsafe {
+            descriptor.get(|| {
+                let mut fields = ::std::vec::Vec::new();
+                fields.push(::protobuf::reflect::accessor::make_singular_enum_accessor(
+                    "optype",
+                    Op::has_optype,
+                    Op::get_optype,
+                ));
+                fields.push(::protobuf::reflect::accessor::make_singular_string_accessor(
+                    "path",
+                    Op::has_path,
+                    Op::get_path,
+                ));
+                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor(
+                    "object",
+                    Op::has_object,
+                    Op::get_object,
+                ));
+                ::protobuf::reflect::MessageDescriptor::new::<Op>("Op",
+                                                                  fields,
+                                                                  file_descriptor_proto())
+            })
+        }
+    }
+}
+
+impl ::protobuf::Clear for Op {
+    fn clear(&mut self) {
+        self.clear_optype();
+        self.clear_path();
+        self.clear_object();
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::cmp::PartialEq for Op {
+    fn eq(&self, other: &Op) -> bool {
+        self.optype == other.optype && self.path == other.path && self.object == other.object &&
+        self.unknown_fields == other.unknown_fields
+    }
+}
+
+impl ::std::fmt::Debug for Op {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+#[derive(Clone,PartialEq,Eq,Debug,Hash)]
+pub enum Type {
+    ADD = 0,
+}
+
+impl ::protobuf::ProtobufEnum for Type {
+    fn value(&self) -> i32 {
+        *self as i32
+    }
+
+    fn from_i32(value: i32) -> ::std::option::Option<Type> {
+        match value {
+            0 => ::std::option::Option::Some(Type::ADD),
+            _ => ::std::option::Option::None,
+        }
+    }
+
+    fn values() -> &'static [Self] {
+        static values: &'static [Type] = &[Type::ADD];
+        values
+    }
+
+    fn enum_descriptor_static(_: Option<Type>) -> &'static ::protobuf::reflect::EnumDescriptor {
+        static mut descriptor: ::protobuf::lazy::Lazy<::protobuf::reflect::EnumDescriptor> =
+            ::protobuf::lazy::Lazy {
+                lock: ::protobuf::lazy::ONCE_INIT,
+                ptr: 0 as *const ::protobuf::reflect::EnumDescriptor,
+            };
+        unsafe {
+            descriptor.get(|| {
+                ::protobuf::reflect::EnumDescriptor::new("Type", file_descriptor_proto())
+            })
+        }
+    }
+}
+
+impl ::std::marker::Copy for Type {}
+
+static file_descriptor_proto_data: &'static [u8] =
+    &[0x0a, 0x08, 0x6f, 0x70, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x05, 0x69, 0x74, 0x68,
+      0x6f, 0x73, 0x1a, 0x0c, 0x6f, 0x62, 0x6a, 0x65, 0x63, 0x74, 0x2e, 0x70, 0x72, 0x6f, 0x74,
+      0x6f, 0x22, 0x64, 0x0a, 0x02, 0x4f, 0x70, 0x12, 0x23, 0x0a, 0x06, 0x6f, 0x70, 0x74, 0x79,
+      0x70, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x0b, 0x2e, 0x69, 0x74, 0x68, 0x6f,
+      0x73, 0x2e, 0x54, 0x79, 0x70, 0x65, 0x52, 0x06, 0x6f, 0x70, 0x74, 0x79, 0x70, 0x65, 0x12,
+      0x12, 0x0a, 0x04, 0x70, 0x61, 0x74, 0x68, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04,
+      0x70, 0x61, 0x74, 0x68, 0x12, 0x25, 0x0a, 0x06, 0x6f, 0x62, 0x6a, 0x65, 0x63, 0x74, 0x18,
+      0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0d, 0x2e, 0x69, 0x74, 0x68, 0x6f, 0x73, 0x2e, 0x4f,
+      0x62, 0x6a, 0x65, 0x63, 0x74, 0x52, 0x06, 0x6f, 0x62, 0x6a, 0x65, 0x63, 0x74, 0x2a, 0x0f,
+      0x0a, 0x04, 0x54, 0x79, 0x70, 0x65, 0x12, 0x07, 0x0a, 0x03, 0x41, 0x44, 0x44, 0x10, 0x00,
+      0x4a, 0x89, 0x03, 0x0a, 0x06, 0x12, 0x04, 0x00, 0x00, 0x0f, 0x01, 0x0a, 0x08, 0x0a, 0x01,
+      0x0c, 0x12, 0x03, 0x00, 0x00, 0x12, 0x0a, 0x08, 0x0a, 0x01, 0x02, 0x12, 0x03, 0x02, 0x08,
+      0x0d, 0x0a, 0x09, 0x0a, 0x02, 0x03, 0x00, 0x12, 0x03, 0x04, 0x07, 0x15, 0x0a, 0x0a, 0x0a,
+      0x02, 0x05, 0x00, 0x12, 0x04, 0x06, 0x00, 0x08, 0x01, 0x0a, 0x0a, 0x0a, 0x03, 0x05, 0x00,
+      0x01, 0x12, 0x03, 0x06, 0x05, 0x09, 0x0a, 0x0b, 0x0a, 0x04, 0x05, 0x00, 0x02, 0x00, 0x12,
+      0x03, 0x07, 0x02, 0x0a, 0x0a, 0x0c, 0x0a, 0x05, 0x05, 0x00, 0x02, 0x00, 0x01, 0x12, 0x03,
+      0x07, 0x02, 0x05, 0x0a, 0x0c, 0x0a, 0x05, 0x05, 0x00, 0x02, 0x00, 0x02, 0x12, 0x03, 0x07,
+      0x08, 0x09, 0x0a, 0x41, 0x0a, 0x02, 0x04, 0x00, 0x12, 0x04, 0x0b, 0x00, 0x0f, 0x01, 0x1a,
+      0x35, 0x20, 0x4f, 0x70, 0x73, 0x20, 0x6d, 0x61, 0x6b, 0x65, 0x20, 0x6d, 0x6f, 0x64, 0x69,
+      0x66, 0x69, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x20, 0x74, 0x6f, 0x20, 0x74, 0x68,
+      0x65, 0x20, 0x73, 0x74, 0x61, 0x74, 0x65, 0x20, 0x6f, 0x66, 0x20, 0x74, 0x68, 0x65, 0x20,
+      0x64, 0x61, 0x74, 0x61, 0x62, 0x61, 0x73, 0x65, 0x0a, 0x0a, 0x0a, 0x0a, 0x03, 0x04, 0x00,
+      0x01, 0x12, 0x03, 0x0b, 0x08, 0x0a, 0x0a, 0x0b, 0x0a, 0x04, 0x04, 0x00, 0x02, 0x00, 0x12,
+      0x03, 0x0c, 0x02, 0x14, 0x0a, 0x0d, 0x0a, 0x05, 0x04, 0x00, 0x02, 0x00, 0x04, 0x12, 0x04,
+      0x0c, 0x02, 0x0b, 0x0c, 0x0a, 0x0c, 0x0a, 0x05, 0x04, 0x00, 0x02, 0x00, 0x06, 0x12, 0x03,
+      0x0c, 0x02, 0x06, 0x0a, 0x0c, 0x0a, 0x05, 0x04, 0x00, 0x02, 0x00, 0x01, 0x12, 0x03, 0x0c,
+      0x07, 0x0d, 0x0a, 0x0c, 0x0a, 0x05, 0x04, 0x00, 0x02, 0x00, 0x03, 0x12, 0x03, 0x0c, 0x12,
+      0x13, 0x0a, 0x0b, 0x0a, 0x04, 0x04, 0x00, 0x02, 0x01, 0x12, 0x03, 0x0d, 0x02, 0x14, 0x0a,
+      0x0d, 0x0a, 0x05, 0x04, 0x00, 0x02, 0x01, 0x04, 0x12, 0x04, 0x0d, 0x02, 0x0c, 0x14, 0x0a,
+      0x0c, 0x0a, 0x05, 0x04, 0x00, 0x02, 0x01, 0x05, 0x12, 0x03, 0x0d, 0x02, 0x08, 0x0a, 0x0c,
+      0x0a, 0x05, 0x04, 0x00, 0x02, 0x01, 0x01, 0x12, 0x03, 0x0d, 0x09, 0x0d, 0x0a, 0x0c, 0x0a,
+      0x05, 0x04, 0x00, 0x02, 0x01, 0x03, 0x12, 0x03, 0x0d, 0x12, 0x13, 0x0a, 0x0b, 0x0a, 0x04,
+      0x04, 0x00, 0x02, 0x02, 0x12, 0x03, 0x0e, 0x02, 0x14, 0x0a, 0x0d, 0x0a, 0x05, 0x04, 0x00,
+      0x02, 0x02, 0x04, 0x12, 0x04, 0x0e, 0x02, 0x0d, 0x14, 0x0a, 0x0c, 0x0a, 0x05, 0x04, 0x00,
+      0x02, 0x02, 0x06, 0x12, 0x03, 0x0e, 0x02, 0x08, 0x0a, 0x0c, 0x0a, 0x05, 0x04, 0x00, 0x02,
+      0x02, 0x01, 0x12, 0x03, 0x0e, 0x09, 0x0f, 0x0a, 0x0c, 0x0a, 0x05, 0x04, 0x00, 0x02, 0x02,
+      0x03, 0x12, 0x03, 0x0e, 0x12, 0x13, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33];
+
+static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {
+    lock: ::protobuf::lazy::ONCE_INIT,
+    ptr: 0 as *const ::protobuf::descriptor::FileDescriptorProto,
+};
+
+fn parse_descriptor_proto() -> ::protobuf::descriptor::FileDescriptorProto {
+    ::protobuf::parse_from_bytes(file_descriptor_proto_data).unwrap()
+}
+
+pub fn file_descriptor_proto() -> &'static ::protobuf::descriptor::FileDescriptorProto {
+    unsafe { file_descriptor_proto_lazy.get(|| parse_descriptor_proto()) }
+}
+
+
+// TODO: Hand edited! Figure out a better solution for objecthash support
 impl ObjectHash for Op {
     #[inline]
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
+        // TODO: Don't Panic
         objecthash_struct!(
             hasher,
-            "optype" => self.optype,
-            "path" => self.path,
-            "object" => self.object
+            "optype" => self.optype.unwrap() as u32,
+            "path" => *self.path.get_ref(),
+            "object" => *self.object.get_ref()
         )
-    }
-}
-
-pub struct State {
-    next_entry_id: entry::Id,
-    new_entries: HashMap<PathBuf, StateEntry>,
-}
-
-impl State {
-    pub fn new(next_entry_id: entry::Id) -> State {
-        State {
-            next_entry_id: next_entry_id,
-            new_entries: HashMap::new(),
-        }
-    }
-
-    fn get_next_entry_id(&mut self) -> entry::Id {
-        let id = self.next_entry_id;
-        self.next_entry_id = id.next();
-        id
-    }
-
-    fn get_entry<'a, A>(&self, adapter: &A, txn: &mut A::W, path: &Path) -> Result<StateEntry>
-        where A: Adapter<'a>
-    {
-        match self.new_entries.get(path) {
-            Some(parent_entry) => Ok(*parent_entry),
-            _ => {
-                let id = try!(adapter.find_direntry(txn, path)).id;
-                let class = try!(adapter.find_entry(txn, &id)).class;
-                Ok(StateEntry {
-                    id: id,
-                    class: class,
-                })
-            }
-        }
-    }
-}
-
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
-struct StateEntry {
-    id: entry::Id,
-    class: Class,
-}
-
-#[cfg(test)]
-pub mod tests {
-
-    use adapter::Adapter;
-    use adapter::lmdb::LmdbAdapter;
-    use algorithm::DigestAlgorithm;
-    use block;
-    use error::Error;
-    use object::Object;
-    use object::domain::DomainEntry;
-    use object::root::RootEntry;
-    use path::PathBuf;
-
-    use super::{Op, State, Type};
-    use super::tempdir::TempDir;
-    use timestamp::Timestamp;
-
-    fn test_adapter() -> LmdbAdapter {
-        let dir = TempDir::new("ithos-test").unwrap();
-        LmdbAdapter::create_database(dir.path()).unwrap()
-    }
-
-    fn example_timestamp() -> Timestamp {
-        Timestamp::at(1_231_006_505)
-    }
-
-    #[test]
-    fn nesting_constraint_violation() {
-        let adapter = test_adapter();
-
-        // Test nesting constraints on root entry
-        {
-            let mut txn = adapter.rw_transaction().unwrap();
-
-            let example_block_id = block::Id::zero();
-
-            let op = Op::new(Type::Add,
-                             PathBuf::from("/".to_string()),
-                             Object::Domain(DomainEntry::new(None)));
-
-            let mut state = State::new(adapter.next_free_entry_id(&txn).unwrap());
-
-            let result = op.apply(&adapter,
-                                  &mut txn,
-                                  &mut state,
-                                  &example_block_id,
-                                  example_timestamp());
-
-            assert_eq!(result, Err(Error::nesting_invalid(None)));
-        }
-
-        // Test nesting constraints on a non-root entry
-        {
-            let mut txn = adapter.rw_transaction().unwrap();
-
-            let example_block_id = block::Id::zero();
-
-            let op1 = Op::new(Type::Add,
-                              PathBuf::from("/".to_string()),
-                              Object::Root(RootEntry::new(DigestAlgorithm::Sha256)));
-
-            let op2 = Op::new(Type::Add,
-                              PathBuf::from("/derp".to_string()),
-                              Object::Root(RootEntry::new(DigestAlgorithm::Sha256)));
-
-            let mut state = State::new(adapter.next_free_entry_id(&txn).unwrap());
-
-            let result1 = op1.apply(&adapter,
-                                    &mut txn,
-                                    &mut state,
-                                    &example_block_id,
-                                    example_timestamp());
-
-            assert!(result1.is_ok());
-
-            let result2 = op2.apply(&adapter,
-                                    &mut txn,
-                                    &mut state,
-                                    &example_block_id,
-                                    example_timestamp());
-
-            assert_eq!(result2, Err(Error::nesting_invalid(None)));
-        }
     }
 }

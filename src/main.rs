@@ -5,11 +5,8 @@ extern crate clap;
 use clap::{App, Arg, SubCommand};
 
 #[macro_use]
-extern crate buffoon;
-
-#[macro_use]
 extern crate objecthash;
-
+extern crate protobuf;
 extern crate ring;
 extern crate ring_pwhash as pwhash;
 extern crate rpassword;
@@ -22,8 +19,8 @@ extern crate tempdir;
 mod adapter;
 mod algorithm;
 mod block;
+mod crypto;
 mod direntry;
-mod encryption;
 mod entry;
 mod error;
 mod metadata;
@@ -31,15 +28,17 @@ mod object;
 mod op;
 mod password;
 mod path;
-mod proto;
 mod server;
+mod setup;
 mod signature;
 mod timestamp;
-pub mod witness;
+mod transform;
+mod witness;
 
 use adapter::lmdb::LmdbAdapter;
 use algorithm::CipherSuite;
-use encryption::AES256GCM_KEY_SIZE;
+use crypto::signing::KeyPair;
+use crypto::symmetric::AES256GCM_KEY_SIZE;
 use error::ErrorKind;
 use path::PathBuf;
 use ring::rand;
@@ -100,7 +99,7 @@ fn db_create(database_path: &str, admin_username: &str) {
 
     match Server::<LmdbAdapter>::create_database(std::path::Path::new(database_path),
                                                  &rng,
-                                                 CipherSuite::Ed25519Aes256GcmSha256,
+                                                 CipherSuite::Ed25519_AES256GCM_SHA256,
                                                  admin_username,
                                                  &admin_password) {
         Ok(_) => {
@@ -148,19 +147,13 @@ fn domain_add(database_path: &str, admin_username: &str, domain_name: &str) {
     });
 
     let admin_password = password::prompt(&format!("{}'s password: ", admin_username)).unwrap();
-
-    let salt = match admin_credential.salt {
-        Some(ref s) => s,
-        None => panic!("salt missing!"),
-    };
-
     let mut admin_symmetric_key = [0u8; AES256GCM_KEY_SIZE];
     password::derive(password::PasswordAlgorithm::SCRYPT,
-                     salt,
+                     admin_credential.get_salt(),
                      &admin_password,
                      &mut admin_symmetric_key);
 
-    let admin_keypair = admin_credential.unseal_signature_keypair(&admin_symmetric_key)
+    let admin_keypair = KeyPair::unseal_from_credential(&admin_credential, &admin_symmetric_key)
         .unwrap_or_else(|err| {
             panic!("*** Error: couldn't decrypt admin keypair: {} (wrong password?)",
                    err)

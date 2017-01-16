@@ -6,7 +6,7 @@ import "op.proto";
 import "witness.proto";
 
 message Body {
-  bytes parent     = 1;
+  bytes parent_id  = 1;
   uint64 timestamp = 2;
   repeated Op ops  = 3;
   string comment   = 4;

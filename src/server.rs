@@ -1,19 +1,22 @@
-use adapter::{Adapter, Transaction};
-use algorithm::CipherSuite;
-use block::{Block, Body};
-use encryption::{AES256GCM_KEY_SIZE, AES256GCM_NONCE_SIZE};
+use adapter::Adapter;
+use algorithm::{CipherSuite, SignatureAlgorithm, EncryptionAlgorithm};
+use block::{self, Body};
+use crypto::signing::KeyPair;
+use crypto::symmetric::{AES256GCM_KEY_SIZE, AES256GCM_NONCE_SIZE};
+use entry::Entry;
 use error::{Error, Result};
 use object::Object;
-use object::credential::CredentialEntry;
-use object::domain::DomainEntry;
+use object::credential::Credential;
+use object::domain::Domain;
 use op::{self, Op};
 use password::{self, PasswordAlgorithm};
 use path::{Path, PathBuf};
-
+use protobuf::RepeatedField;
 use ring::rand::SecureRandom;
-use signature::KeyPair;
+use setup;
 use std::{self, str};
 use timestamp::Timestamp;
+use transform::Transform;
 
 #[cfg(test)]
 extern crate tempdir;
@@ -37,7 +40,7 @@ impl<A> Server<A>
                            admin_password: &str)
                            -> Result<()> {
         // We presently only support one ciphersuite
-        assert!(ciphersuite == CipherSuite::Ed25519Aes256GcmSha256);
+        assert!(ciphersuite == CipherSuite::Ed25519_AES256GCM_SHA256);
 
         let admin_keypair_salt = try!(password::random_salt(rng));
 
@@ -49,25 +52,27 @@ impl<A> Server<A>
 
         // NOTE: Fixed nonce. The admin password should be randomly generated and never reused
         let nonce = [0u8; AES256GCM_NONCE_SIZE];
+
+        // TODO: honor ciphersuite algorithms
         let (admin_keypair, admin_keypair_sealed) = try!(KeyPair::generate_and_seal(
-                                       ciphersuite.signature_alg(),
-                                       ciphersuite.encryption_alg(),
+                                       SignatureAlgorithm::Ed25519,
+                                       EncryptionAlgorithm::AES256GCM,
                                        rng,
                                        &admin_symmetric_key,
                                        &nonce));
 
-        let initial_block = Block::create_initial(ciphersuite,
-                                                  admin_username,
-                                                  &admin_keypair,
-                                                  &admin_keypair_sealed,
-                                                  &admin_keypair_salt,
-                                                  DEFAULT_INITIAL_BLOCK_COMMENT);
+        let initial_block = setup::create_log(ciphersuite,
+                                              admin_username,
+                                              &admin_keypair,
+                                              &admin_keypair_sealed,
+                                              &admin_keypair_salt,
+                                              DEFAULT_INITIAL_BLOCK_COMMENT);
 
         let adapter = try!(A::create_database(path));
-        let mut txn = try!(adapter.rw_transaction());
 
-        try!(initial_block.apply(&adapter, &mut txn));
-        try!(txn.commit());
+        let mut transform = try!(Transform::new(&adapter));
+        try!(transform.apply(&initial_block));
+        try!(transform.commit());
 
         Ok(())
     }
@@ -83,36 +88,44 @@ impl<A> Server<A>
                       description: Option<String>,
                       comment: &str)
                       -> Result<()> {
-        let domain_entry = DomainEntry::new(description);
+        let mut domain_entry = Domain::new();
+
+        if let Some(desc) = description {
+            domain_entry.set_description(desc);
+        }
 
         let timestamp = Timestamp::now();
-        let mut ops = Vec::new();
         let mut path = PathBuf::new();
         path.push(&domain_name);
 
-        ops.push(Op::new(op::Type::Add, path, Object::Domain(domain_entry)));
+        let mut domain_entry_object = Object::new();
+        domain_entry_object.set_domain(domain_entry);
 
-        let mut txn = try!(self.adapter.rw_transaction());
-        let parent_id = try!(self.adapter.current_block_id(&txn));
+        let mut op = Op::new();
+        op.set_optype(op::Type::ADD);
+        op.set_path(path.into());
+        op.set_object(domain_entry_object);
 
-        let body = Body {
-            parent_id: parent_id,
-            timestamp: timestamp,
-            ops: ops,
-            comment: comment.to_string(),
-        };
-        let block = Block::new(body, admin_keypair);
+        let mut transform = try!(Transform::new(&self.adapter));
 
-        // TODO: authenticate signature before committing
-        try!(block.apply(&self.adapter, &mut txn));
-        try!(txn.commit());
+        let mut body = Body::new();
+        body.set_parent_id(Vec::from(try!(transform.block_id()).as_ref()));
+        body.set_timestamp(timestamp.to_int());
+        body.set_ops(RepeatedField::from_vec(vec![op]));
+        body.set_comment(comment.to_owned());
+
+        let block = block::sign(body, admin_keypair);
+
+        // TODO: authenticate signature before committing (BIG SECURITY PROBLEM!!!)
+        try!(transform.apply(&block));
+        try!(transform.commit());
 
         Ok(())
     }
 
-    pub fn find_credential(&self, path: &Path) -> Result<CredentialEntry> {
-        match try!(Object::find(&self.adapter, path)) {
-            Object::Credential(credential_entry) => Ok(credential_entry),
+    pub fn find_credential(&self, path: &Path) -> Result<Credential> {
+        match try!(Entry::find(&self.adapter, path)) {
+            Entry::Credential(credential_entry) => Ok(credential_entry),
             _ => Err(Error::bad_type(None)),
         }
     }
@@ -122,13 +135,13 @@ impl<A> Server<A>
 mod tests {
     use adapter::lmdb::LmdbAdapter;
     use algorithm::CipherSuite;
-    use encryption::AES256GCM_KEY_SIZE;
+    use crypto::signing::KeyPair;
+    use crypto::symmetric::AES256GCM_KEY_SIZE;
     use password::{self, PasswordAlgorithm};
     use path::PathBuf;
     use ring::rand;
     use server::Server;
     use server::tempdir::TempDir;
-    use signature;
 
     const ADMIN_USERNAME: &'static str = "manager";
     const ADMIN_PASSWORD: &'static str = "The Magic Words are Squeamish Ossifrage";
@@ -139,14 +152,14 @@ mod tests {
         let dir = TempDir::new("ithos-test").unwrap();
         Server::<LmdbAdapter>::create_database(dir.path(),
                                                &rng,
-                                               CipherSuite::Ed25519Aes256GcmSha256,
+                                               CipherSuite::Ed25519_AES256GCM_SHA256,
                                                ADMIN_USERNAME,
                                                ADMIN_PASSWORD)
             .unwrap();
         Server::<LmdbAdapter>::open_database(dir.path()).unwrap()
     }
 
-    fn admin_keypair(server: &Server<LmdbAdapter>) -> signature::KeyPair {
+    fn admin_keypair(server: &Server<LmdbAdapter>) -> KeyPair {
         let mut keypair_path = PathBuf::new();
         keypair_path.push("global");
         keypair_path.push("users");
@@ -156,18 +169,14 @@ mod tests {
 
         let credential = server.find_credential(keypair_path.as_ref()).unwrap();
 
-        let salt = match credential.salt {
-            Some(ref s) => s,
-            None => panic!("salt missing!"),
-        };
-
         let mut admin_symmetric_key = [0u8; AES256GCM_KEY_SIZE];
+
         password::derive(PasswordAlgorithm::SCRYPT,
-                         salt,
+                         credential.get_salt(),
                          ADMIN_PASSWORD,
                          &mut admin_symmetric_key);
 
-        credential.unseal_signature_keypair(&admin_symmetric_key).unwrap()
+        KeyPair::unseal_from_credential(&credential, &admin_symmetric_key).unwrap()
     }
 
     #[test]

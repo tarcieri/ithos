@@ -13,3 +13,7 @@ enum EncryptionAlgorithm {
 enum SignatureAlgorithm {
     Ed25519 = 0;
 }
+
+enum CipherSuite {
+    Ed25519_AES256GCM_SHA256 = 0;
+}

@@ -10,8 +10,16 @@ pub fn seal(algorithm: EncryptionAlgorithm,
             nonce: &[u8],
             plaintext: &[u8])
             -> Result<Vec<u8>> {
-    // Aes256Gcm is the only encryption algorithm we presently support
-    assert!(algorithm == EncryptionAlgorithm::Aes256Gcm);
+    // AES256GCM is the only encryption algorithm we presently support
+    assert!(algorithm == EncryptionAlgorithm::AES256GCM);
+
+    // Nonce must be the expected length
+    if nonce.len() != AES256GCM_NONCE_SIZE {
+        let msg = format!("nonce must be {} bytes (got {})",
+                          AES256GCM_NONCE_SIZE,
+                          nonce.len());
+        return Err(Error::crypto_failure(Some(&msg)));
+    }
 
     let sealing_key = try!(aead::SealingKey::new(&aead::AES_256_GCM, secret_key)
         .map_err(|_| Error::crypto_failure(None)));
@@ -41,22 +49,23 @@ pub fn unseal(algorithm: EncryptionAlgorithm,
               secret_key: &[u8],
               ciphertext: &[u8])
               -> Result<Vec<u8>> {
-    // Aes256Gcm is the only encryption algorithm we presently support
-    assert!(algorithm == EncryptionAlgorithm::Aes256Gcm);
+    // AES256GCM is the only encryption algorithm we presently support
+    assert!(algorithm == EncryptionAlgorithm::AES256GCM);
 
-    // The sealed keypair MUST be larger than a nonce
-    if ciphertext.len() <= AES256GCM_NONCE_SIZE {
-        return Err(Error::crypto_failure(None));
+    // The ciphertext must start with a valid nonce
+    if ciphertext.len() < AES256GCM_NONCE_SIZE {
+        return Err(Error::crypto_failure(Some("nonce missing from ciphertext")));
     }
 
     let opening_key = try!(aead::OpeningKey::new(&aead::AES_256_GCM, secret_key)
-        .map_err(|_| Error::crypto_failure(None)));
+        .map_err(|_| Error::crypto_failure(Some("encryption key is corrupt"))));
 
+    // Extract nonce from beginning of plaintext
     let nonce = &ciphertext[0..AES256GCM_NONCE_SIZE];
     let mut buffer = Vec::from(&ciphertext[AES256GCM_NONCE_SIZE..]);
 
     let pt_len = try!(aead::open_in_place(&opening_key, nonce, 0, &mut buffer, &b""[..])
-        .map_err(|_| Error::crypto_failure(None)));
+        .map_err(|_| Error::crypto_failure(Some("decryption failed"))));
 
     buffer.truncate(pt_len);
     Ok(buffer)
@@ -65,7 +74,7 @@ pub fn unseal(algorithm: EncryptionAlgorithm,
 #[cfg(test)]
 pub mod tests {
     use algorithm::EncryptionAlgorithm;
-    use encryption::{self, AES256GCM_KEY_SIZE, AES256GCM_NONCE_SIZE};
+    use crypto::symmetric::{self, AES256GCM_KEY_SIZE, AES256GCM_NONCE_SIZE};
 
     // WARNING: Please don't ever use zeroes as an actual encryption key
     const ENCRYPTION_KEY: [u8; AES256GCM_KEY_SIZE] = [0u8; AES256GCM_KEY_SIZE];
@@ -75,14 +84,14 @@ pub mod tests {
 
     #[test]
     fn test_sealing_and_unsealing() {
-        let ciphertext = encryption::seal(EncryptionAlgorithm::Aes256Gcm,
-                                          &ENCRYPTION_KEY,
-                                          &NONCE,
-                                          PLAINTEXT)
+        let ciphertext = symmetric::seal(EncryptionAlgorithm::AES256GCM,
+                                         &ENCRYPTION_KEY,
+                                         &NONCE,
+                                         PLAINTEXT)
             .unwrap();
 
         let plaintext =
-            encryption::unseal(EncryptionAlgorithm::Aes256Gcm, &ENCRYPTION_KEY, &ciphertext)
+            symmetric::unseal(EncryptionAlgorithm::AES256GCM, &ENCRYPTION_KEY, &ciphertext)
                 .unwrap();
 
         assert_eq!(Vec::from(PLAINTEXT), plaintext);

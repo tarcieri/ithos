@@ -2,7 +2,7 @@ pub mod lmdb;
 
 use block::{self, Block};
 use direntry::DirEntry;
-use entry::{self, Entry};
+use entry::{self, SerializedEntry};
 use error::Result;
 use metadata::Metadata;
 use path;
@@ -36,7 +36,7 @@ pub trait Adapter<'a> {
         where T: Transaction<D = Self::D>;
     fn add_entry<'t>(&'t self,
                      txn: &'t mut Self::W,
-                     entry: &Entry,
+                     entry: &SerializedEntry,
                      name: &'t str,
                      parent_id: entry::Id,
                      metadata: &Metadata)
@@ -45,6 +45,6 @@ pub trait Adapter<'a> {
         where T: Transaction<D = Self::D>;
     fn find_metadata<'t, T>(&'t self, txn: &'t T, id: &entry::Id) -> Result<Metadata>
         where T: Transaction<D = Self::D>;
-    fn find_entry<'t, T>(&'t self, txn: &'t T, id: &entry::Id) -> Result<Entry>
+    fn find_entry<'t, T>(&'t self, txn: &'t T, id: &entry::Id) -> Result<SerializedEntry>
         where T: Transaction<D = Self::D>;
 }
