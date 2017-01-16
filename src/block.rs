@@ -27,16 +27,31 @@ use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
 use rustc_serialize::base64::{self, ToBase64};
 use witness::Witness;
 
-#[derive(Clone,Default)]
+// TODO: Hand edited! Move this elsewhere!
+pub fn sign(body: Body, keypair: &KeyPair) -> Block {
+    let mut message = String::from("ithos.block.body.ni:///sha-256;");
+    message.push_str(&objecthash::digest(&body).as_ref().to_base64(base64::URL_SAFE));
+
+    let signature = keypair.sign(&message.as_bytes());
+    let mut witness = Witness::new();
+    witness.set_signatures(::protobuf::RepeatedField::from_vec(vec![signature]));
+
+    let mut block = Block::new();
+    block.set_body(body);
+    block.set_witness(witness);
+    block
+}
+
+#[derive(PartialEq,Clone,Default)]
 pub struct Body {
     // message fields
-    parent_id: ::protobuf::SingularField<::std::vec::Vec<u8>>,
-    timestamp: ::std::option::Option<u64>,
+    pub parent_id: ::std::vec::Vec<u8>,
+    pub timestamp: u64,
     ops: ::protobuf::RepeatedField<super::op::Op>,
-    comment: ::protobuf::SingularField<::std::string::String>,
+    pub comment: ::std::string::String,
     // special fields
     unknown_fields: ::protobuf::UnknownFields,
-    cached_size: ::std::cell::Cell<u32>,
+    cached_size: ::protobuf::CachedSize,
 }
 
 // see codegen.rs for the explanation why impl Sync explicitly
@@ -52,73 +67,64 @@ impl Body {
             lock: ::protobuf::lazy::ONCE_INIT,
             ptr: 0 as *const Body,
         };
-        unsafe {
-            instance.get(|| {
-                Body {
-                    parent_id: ::protobuf::SingularField::none(),
-                    timestamp: ::std::option::Option::None,
-                    ops: ::protobuf::RepeatedField::new(),
-                    comment: ::protobuf::SingularField::none(),
-                    unknown_fields: ::protobuf::UnknownFields::new(),
-                    cached_size: ::std::cell::Cell::new(0),
-                }
-            })
-        }
+        unsafe { instance.get(Body::new) }
     }
 
-    // optional bytes parent_id = 1;
+    // bytes parent_id = 1;
 
     pub fn clear_parent_id(&mut self) {
         self.parent_id.clear();
     }
 
-    pub fn has_parent_id(&self) -> bool {
-        self.parent_id.is_some()
-    }
-
     // Param is passed by value, moved
     pub fn set_parent_id(&mut self, v: ::std::vec::Vec<u8>) {
-        self.parent_id = ::protobuf::SingularField::some(v);
+        self.parent_id = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
     pub fn mut_parent_id(&mut self) -> &mut ::std::vec::Vec<u8> {
-        if self.parent_id.is_none() {
-            self.parent_id.set_default();
-        };
-        self.parent_id.as_mut().unwrap()
+        &mut self.parent_id
     }
 
     // Take field
     pub fn take_parent_id(&mut self) -> ::std::vec::Vec<u8> {
-        self.parent_id.take().unwrap_or_else(|| ::std::vec::Vec::new())
+        ::std::mem::replace(&mut self.parent_id, ::std::vec::Vec::new())
     }
 
     pub fn get_parent_id(&self) -> &[u8] {
-        match self.parent_id.as_ref() {
-            Some(v) => &v,
-            None => &[],
-        }
+        &self.parent_id
     }
 
-    // optional uint64 timestamp = 2;
+    fn get_parent_id_for_reflect(&self) -> &::std::vec::Vec<u8> {
+        &self.parent_id
+    }
+
+    fn mut_parent_id_for_reflect(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.parent_id
+    }
+
+    // uint64 timestamp = 2;
 
     pub fn clear_timestamp(&mut self) {
-        self.timestamp = ::std::option::Option::None;
-    }
-
-    pub fn has_timestamp(&self) -> bool {
-        self.timestamp.is_some()
+        self.timestamp = 0;
     }
 
     // Param is passed by value, moved
     pub fn set_timestamp(&mut self, v: u64) {
-        self.timestamp = ::std::option::Option::Some(v);
+        self.timestamp = v;
     }
 
     pub fn get_timestamp(&self) -> u64 {
-        self.timestamp.unwrap_or(0)
+        self.timestamp
+    }
+
+    fn get_timestamp_for_reflect(&self) -> &u64 {
+        &self.timestamp
+    }
+
+    fn mut_timestamp_for_reflect(&mut self) -> &mut u64 {
+        &mut self.timestamp
     }
 
     // repeated .ithos.Op ops = 3;
@@ -146,40 +152,46 @@ impl Body {
         &self.ops
     }
 
-    // optional string comment = 4;
+    fn get_ops_for_reflect(&self) -> &::protobuf::RepeatedField<super::op::Op> {
+        &self.ops
+    }
+
+    fn mut_ops_for_reflect(&mut self) -> &mut ::protobuf::RepeatedField<super::op::Op> {
+        &mut self.ops
+    }
+
+    // string comment = 4;
 
     pub fn clear_comment(&mut self) {
         self.comment.clear();
     }
 
-    pub fn has_comment(&self) -> bool {
-        self.comment.is_some()
-    }
-
     // Param is passed by value, moved
     pub fn set_comment(&mut self, v: ::std::string::String) {
-        self.comment = ::protobuf::SingularField::some(v);
+        self.comment = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
     pub fn mut_comment(&mut self) -> &mut ::std::string::String {
-        if self.comment.is_none() {
-            self.comment.set_default();
-        };
-        self.comment.as_mut().unwrap()
+        &mut self.comment
     }
 
     // Take field
     pub fn take_comment(&mut self) -> ::std::string::String {
-        self.comment.take().unwrap_or_else(|| ::std::string::String::new())
+        ::std::mem::replace(&mut self.comment, ::std::string::String::new())
     }
 
     pub fn get_comment(&self) -> &str {
-        match self.comment.as_ref() {
-            Some(v) => &v,
-            None => "",
-        }
+        &self.comment
+    }
+
+    fn get_comment_for_reflect(&self) -> &::std::string::String {
+        &self.comment
+    }
+
+    fn mut_comment_for_reflect(&mut self) -> &mut ::std::string::String {
+        &mut self.comment
     }
 }
 
@@ -191,34 +203,34 @@ impl ::protobuf::Message for Body {
     fn merge_from(&mut self,
                   is: &mut ::protobuf::CodedInputStream)
                   -> ::protobuf::ProtobufResult<()> {
-        while !try!(is.eof()) {
-            let (field_number, wire_type) = try!(is.read_tag_unpack());
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    try!(::protobuf::rt::read_singular_bytes_into(wire_type,
-                                                                  is,
-                                                                  &mut self.parent_id));
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type,
+                                                                    is,
+                                                                    &mut self.parent_id)?;
                 }
                 2 => {
                     if wire_type != ::protobuf::wire_format::WireTypeVarint {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     };
-                    let tmp = try!(is.read_uint64());
-                    self.timestamp = ::std::option::Option::Some(tmp);
+                    let tmp = is.read_uint64()?;
+                    self.timestamp = tmp;
                 }
                 3 => {
-                    try!(::protobuf::rt::read_repeated_message_into(wire_type, is, &mut self.ops));
+                    ::protobuf::rt::read_repeated_message_into(wire_type, is, &mut self.ops)?;
                 }
                 4 => {
-                    try!(::protobuf::rt::read_singular_string_into(wire_type,
-                                                                   is,
-                                                                   &mut self.comment));
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type,
+                                                                     is,
+                                                                     &mut self.comment)?;
                 }
                 _ => {
-                    try!(::protobuf::rt::read_unknown_or_skip_group(field_number,
-                                                                    wire_type,
-                                                                    is,
-                                                                    self.mut_unknown_fields()));
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number,
+                                                               wire_type,
+                                                               is,
+                                                               self.mut_unknown_fields())?;
                 }
             };
         }
@@ -229,20 +241,21 @@ impl ::protobuf::Message for Body {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        for value in &self.parent_id {
-            my_size += ::protobuf::rt::bytes_size(1, &value);
-        }
-        for value in &self.timestamp {
-            my_size +=
-                ::protobuf::rt::value_size(2, *value, ::protobuf::wire_format::WireTypeVarint);
-        }
+        if self.parent_id != ::std::vec::Vec::new() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.parent_id);
+        };
+        if self.timestamp != 0 {
+            my_size += ::protobuf::rt::value_size(2,
+                                                  self.timestamp,
+                                                  ::protobuf::wire_format::WireTypeVarint);
+        };
         for value in &self.ops {
             let len = value.compute_size();
             my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
         }
-        for value in &self.comment {
-            my_size += ::protobuf::rt::string_size(4, &value);
-        }
+        if self.comment != ::std::string::String::new() {
+            my_size += ::protobuf::rt::string_size(4, &self.comment);
+        };
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -251,21 +264,21 @@ impl ::protobuf::Message for Body {
     fn write_to_with_cached_sizes(&self,
                                   os: &mut ::protobuf::CodedOutputStream)
                                   -> ::protobuf::ProtobufResult<()> {
-        if let Some(v) = self.parent_id.as_ref() {
-            try!(os.write_bytes(1, &v));
+        if self.parent_id != ::std::vec::Vec::new() {
+            os.write_bytes(1, &self.parent_id)?;
         };
-        if let Some(v) = self.timestamp {
-            try!(os.write_uint64(2, v));
+        if self.timestamp != 0 {
+            os.write_uint64(2, self.timestamp)?;
         };
         for v in &self.ops {
-            try!(os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited));
-            try!(os.write_raw_varint32(v.get_cached_size()));
-            try!(v.write_to_with_cached_sizes(os));
+            os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
         }
-        if let Some(v) = self.comment.as_ref() {
-            try!(os.write_string(4, &v));
+        if self.comment != ::std::string::String::new() {
+            os.write_string(4, &self.comment)?;
         };
-        try!(os.write_unknown_fields(self.get_unknown_fields()));
+        os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
     }
 
@@ -279,10 +292,6 @@ impl ::protobuf::Message for Body {
 
     fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
-    }
-
-    fn type_id(&self) -> ::std::any::TypeId {
-        ::std::any::TypeId::of::<Body>()
     }
 
     fn as_any(&self) -> &::std::any::Any {
@@ -309,28 +318,31 @@ impl ::protobuf::MessageStatic for Body {
         unsafe {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_singular_bytes_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                     "parent_id",
-                    Body::has_parent_id,
-                    Body::get_parent_id,
+                    Body::get_parent_id_for_reflect,
+                    Body::mut_parent_id_for_reflect,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_u64_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
                     "timestamp",
-                    Body::has_timestamp,
-                    Body::get_timestamp,
+                    Body::get_timestamp_for_reflect,
+                    Body::mut_timestamp_for_reflect,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_repeated_message_accessor(
+                fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::op::Op>>(
                     "ops",
-                    Body::get_ops,
+                    Body::get_ops_for_reflect,
+                    Body::mut_ops_for_reflect,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_string_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
                     "comment",
-                    Body::has_comment,
-                    Body::get_comment,
+                    Body::get_comment_for_reflect,
+                    Body::mut_comment_for_reflect,
                 ));
-                ::protobuf::reflect::MessageDescriptor::new::<Body>("Body",
-                                                                    fields,
-                                                                    file_descriptor_proto())
+                ::protobuf::reflect::MessageDescriptor::new::<Body>(
+                    "Body",
+                    fields,
+                    file_descriptor_proto()
+                )
             })
         }
     }
@@ -346,28 +358,26 @@ impl ::protobuf::Clear for Body {
     }
 }
 
-impl ::std::cmp::PartialEq for Body {
-    fn eq(&self, other: &Body) -> bool {
-        self.parent_id == other.parent_id && self.timestamp == other.timestamp &&
-        self.ops == other.ops && self.comment == other.comment &&
-        self.unknown_fields == other.unknown_fields
-    }
-}
-
 impl ::std::fmt::Debug for Body {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
     }
 }
 
-#[derive(Clone,Default)]
+impl ::protobuf::reflect::ProtobufValue for Body {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
 pub struct Block {
     // message fields
     body: ::protobuf::SingularPtrField<Body>,
     witness: ::protobuf::SingularPtrField<super::witness::Witness>,
     // special fields
     unknown_fields: ::protobuf::UnknownFields,
-    cached_size: ::std::cell::Cell<u32>,
+    cached_size: ::protobuf::CachedSize,
 }
 
 // see codegen.rs for the explanation why impl Sync explicitly
@@ -383,19 +393,10 @@ impl Block {
             lock: ::protobuf::lazy::ONCE_INIT,
             ptr: 0 as *const Block,
         };
-        unsafe {
-            instance.get(|| {
-                Block {
-                    body: ::protobuf::SingularPtrField::none(),
-                    witness: ::protobuf::SingularPtrField::none(),
-                    unknown_fields: ::protobuf::UnknownFields::new(),
-                    cached_size: ::std::cell::Cell::new(0),
-                }
-            })
-        }
+        unsafe { instance.get(Block::new) }
     }
 
-    // optional .ithos.Body body = 1;
+    // .ithos.Body body = 1;
 
     pub fn clear_body(&mut self) {
         self.body.clear();
@@ -428,7 +429,15 @@ impl Block {
         self.body.as_ref().unwrap_or_else(|| Body::default_instance())
     }
 
-    // optional .ithos.Witness witness = 2;
+    fn get_body_for_reflect(&self) -> &::protobuf::SingularPtrField<Body> {
+        &self.body
+    }
+
+    fn mut_body_for_reflect(&mut self) -> &mut ::protobuf::SingularPtrField<Body> {
+        &mut self.body
+    }
+
+    // .ithos.Witness witness = 2;
 
     pub fn clear_witness(&mut self) {
         self.witness.clear();
@@ -460,6 +469,15 @@ impl Block {
     pub fn get_witness(&self) -> &super::witness::Witness {
         self.witness.as_ref().unwrap_or_else(|| super::witness::Witness::default_instance())
     }
+
+    fn get_witness_for_reflect(&self) -> &::protobuf::SingularPtrField<super::witness::Witness> {
+        &self.witness
+    }
+
+    fn mut_witness_for_reflect(&mut self)
+                               -> &mut ::protobuf::SingularPtrField<super::witness::Witness> {
+        &mut self.witness
+    }
 }
 
 impl ::protobuf::Message for Block {
@@ -470,22 +488,20 @@ impl ::protobuf::Message for Block {
     fn merge_from(&mut self,
                   is: &mut ::protobuf::CodedInputStream)
                   -> ::protobuf::ProtobufResult<()> {
-        while !try!(is.eof()) {
-            let (field_number, wire_type) = try!(is.read_tag_unpack());
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    try!(::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.body));
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.body)?;
                 }
                 2 => {
-                    try!(::protobuf::rt::read_singular_message_into(wire_type,
-                                                                    is,
-                                                                    &mut self.witness));
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.witness)?;
                 }
                 _ => {
-                    try!(::protobuf::rt::read_unknown_or_skip_group(field_number,
-                                                                    wire_type,
-                                                                    is,
-                                                                    self.mut_unknown_fields()));
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number,
+                                                               wire_type,
+                                                               is,
+                                                               self.mut_unknown_fields())?;
                 }
             };
         }
@@ -496,14 +512,14 @@ impl ::protobuf::Message for Block {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        for value in &self.body {
-            let len = value.compute_size();
+        if let Some(v) = self.body.as_ref() {
+            let len = v.compute_size();
             my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-        }
-        for value in &self.witness {
-            let len = value.compute_size();
+        };
+        if let Some(v) = self.witness.as_ref() {
+            let len = v.compute_size();
             my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-        }
+        };
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -513,16 +529,16 @@ impl ::protobuf::Message for Block {
                                   os: &mut ::protobuf::CodedOutputStream)
                                   -> ::protobuf::ProtobufResult<()> {
         if let Some(v) = self.body.as_ref() {
-            try!(os.write_tag(1, ::protobuf::wire_format::WireTypeLengthDelimited));
-            try!(os.write_raw_varint32(v.get_cached_size()));
-            try!(v.write_to_with_cached_sizes(os));
+            os.write_tag(1, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
         };
         if let Some(v) = self.witness.as_ref() {
-            try!(os.write_tag(2, ::protobuf::wire_format::WireTypeLengthDelimited));
-            try!(os.write_raw_varint32(v.get_cached_size()));
-            try!(v.write_to_with_cached_sizes(os));
+            os.write_tag(2, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
         };
-        try!(os.write_unknown_fields(self.get_unknown_fields()));
+        os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
     }
 
@@ -536,10 +552,6 @@ impl ::protobuf::Message for Block {
 
     fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
-    }
-
-    fn type_id(&self) -> ::std::any::TypeId {
-        ::std::any::TypeId::of::<Block>()
     }
 
     fn as_any(&self) -> &::std::any::Any {
@@ -566,19 +578,21 @@ impl ::protobuf::MessageStatic for Block {
         unsafe {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor(
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Body>>(
                     "body",
-                    Block::has_body,
-                    Block::get_body,
+                    Block::get_body_for_reflect,
+                    Block::mut_body_for_reflect,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor(
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::witness::Witness>>(
                     "witness",
-                    Block::has_witness,
-                    Block::get_witness,
+                    Block::get_witness_for_reflect,
+                    Block::mut_witness_for_reflect,
                 ));
-                ::protobuf::reflect::MessageDescriptor::new::<Block>("Block",
-                                                                     fields,
-                                                                     file_descriptor_proto())
+                ::protobuf::reflect::MessageDescriptor::new::<Block>(
+                    "Block",
+                    fields,
+                    file_descriptor_proto()
+                )
             })
         }
     }
@@ -592,16 +606,15 @@ impl ::protobuf::Clear for Block {
     }
 }
 
-impl ::std::cmp::PartialEq for Block {
-    fn eq(&self, other: &Block) -> bool {
-        self.body == other.body && self.witness == other.witness &&
-        self.unknown_fields == other.unknown_fields
-    }
-}
-
 impl ::std::fmt::Debug for Block {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Block {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
     }
 }
 
@@ -672,32 +685,16 @@ pub fn file_descriptor_proto() -> &'static ::protobuf::descriptor::FileDescripto
     unsafe { file_descriptor_proto_lazy.get(|| parse_descriptor_proto()) }
 }
 
-// TODO: Hand edited! Move this elsewhere!
-pub fn sign(body: Body, keypair: &KeyPair) -> Block {
-    let mut message = String::from("ithos.block.body.ni:///sha-256;");
-    message.push_str(&objecthash::digest(&body).as_ref().to_base64(base64::URL_SAFE));
-
-    let signature = keypair.sign(&message.as_bytes());
-    let mut witness = Witness::new();
-    witness.set_signatures(::protobuf::RepeatedField::from_vec(vec![signature]));
-
-    let mut block = Block::new();
-    block.set_body(body);
-    block.set_witness(witness);
-    block
-}
-
 // TODO: Hand edited! Figure out a better solution for objecthash support
 impl ObjectHash for Body {
     #[inline]
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
-        // TODO: Don't Panic
         objecthash_struct!(
             hasher,
-            "parent_id" => *self.parent_id.get_ref(),
-            "timestamp" => self.timestamp.unwrap() as i64,
+            "parent_id" => *self.parent_id,
+            "timestamp" => self.timestamp as i64,
             "ops" => Vec::from(self.get_ops()),
-            "comment" => *self.comment.get_ref()
+            "comment" => *self.comment
         )
     }
 }
@@ -705,11 +702,10 @@ impl ObjectHash for Body {
 impl ObjectHash for Block {
     #[inline]
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
-        // TODO: Don't Panic
         objecthash_struct!(
             hasher,
-            "body" => *self.body.get_ref(),
-            "witness" => *self.witness.get_ref()
+            "body" => *self.get_body(),
+            "witness" => *self.get_witness()
         )
     }
 }

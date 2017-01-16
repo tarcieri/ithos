@@ -17,22 +17,21 @@
 #![allow(unused_imports)]
 #![allow(unused_results)]
 
-
 // TODO: Hand edited! Figure out a better solution for objecthash support
 
 use objecthash::{self, ObjectHash, ObjectHasher};
 use protobuf::Message as Message_imported_for_functions;
 use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
 
-#[derive(Clone,Default)]
+#[derive(PartialEq,Clone,Default)]
 pub struct Signature {
     // message fields
-    algorithm: ::std::option::Option<super::algorithm::SignatureAlgorithm>,
-    public_key: ::protobuf::SingularField<::std::vec::Vec<u8>>,
-    value: ::protobuf::SingularField<::std::vec::Vec<u8>>,
+    pub algorithm: super::algorithm::SignatureAlgorithm,
+    pub public_key: ::std::vec::Vec<u8>,
+    pub value: ::std::vec::Vec<u8>,
     // special fields
     unknown_fields: ::protobuf::UnknownFields,
-    cached_size: ::std::cell::Cell<u32>,
+    cached_size: ::protobuf::CachedSize,
 }
 
 // see codegen.rs for the explanation why impl Sync explicitly
@@ -48,108 +47,98 @@ impl Signature {
             lock: ::protobuf::lazy::ONCE_INIT,
             ptr: 0 as *const Signature,
         };
-        unsafe {
-            instance.get(|| {
-                Signature {
-                    algorithm: ::std::option::Option::None,
-                    public_key: ::protobuf::SingularField::none(),
-                    value: ::protobuf::SingularField::none(),
-                    unknown_fields: ::protobuf::UnknownFields::new(),
-                    cached_size: ::std::cell::Cell::new(0),
-                }
-            })
-        }
+        unsafe { instance.get(Signature::new) }
     }
 
-    // optional .ithos.SignatureAlgorithm algorithm = 1;
+    // .ithos.SignatureAlgorithm algorithm = 1;
 
     pub fn clear_algorithm(&mut self) {
-        self.algorithm = ::std::option::Option::None;
-    }
-
-    pub fn has_algorithm(&self) -> bool {
-        self.algorithm.is_some()
+        self.algorithm = super::algorithm::SignatureAlgorithm::Ed25519;
     }
 
     // Param is passed by value, moved
     pub fn set_algorithm(&mut self, v: super::algorithm::SignatureAlgorithm) {
-        self.algorithm = ::std::option::Option::Some(v);
+        self.algorithm = v;
     }
 
     pub fn get_algorithm(&self) -> super::algorithm::SignatureAlgorithm {
-        self.algorithm.unwrap_or(super::algorithm::SignatureAlgorithm::Ed25519)
+        self.algorithm
     }
 
-    // optional bytes public_key = 2;
+    fn get_algorithm_for_reflect(&self) -> &super::algorithm::SignatureAlgorithm {
+        &self.algorithm
+    }
+
+    fn mut_algorithm_for_reflect(&mut self) -> &mut super::algorithm::SignatureAlgorithm {
+        &mut self.algorithm
+    }
+
+    // bytes public_key = 2;
 
     pub fn clear_public_key(&mut self) {
         self.public_key.clear();
     }
 
-    pub fn has_public_key(&self) -> bool {
-        self.public_key.is_some()
-    }
-
     // Param is passed by value, moved
     pub fn set_public_key(&mut self, v: ::std::vec::Vec<u8>) {
-        self.public_key = ::protobuf::SingularField::some(v);
+        self.public_key = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
     pub fn mut_public_key(&mut self) -> &mut ::std::vec::Vec<u8> {
-        if self.public_key.is_none() {
-            self.public_key.set_default();
-        };
-        self.public_key.as_mut().unwrap()
+        &mut self.public_key
     }
 
     // Take field
     pub fn take_public_key(&mut self) -> ::std::vec::Vec<u8> {
-        self.public_key.take().unwrap_or_else(|| ::std::vec::Vec::new())
+        ::std::mem::replace(&mut self.public_key, ::std::vec::Vec::new())
     }
 
     pub fn get_public_key(&self) -> &[u8] {
-        match self.public_key.as_ref() {
-            Some(v) => &v,
-            None => &[],
-        }
+        &self.public_key
     }
 
-    // optional bytes value = 3;
+    fn get_public_key_for_reflect(&self) -> &::std::vec::Vec<u8> {
+        &self.public_key
+    }
+
+    fn mut_public_key_for_reflect(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.public_key
+    }
+
+    // bytes value = 3;
 
     pub fn clear_value(&mut self) {
         self.value.clear();
     }
 
-    pub fn has_value(&self) -> bool {
-        self.value.is_some()
-    }
-
     // Param is passed by value, moved
     pub fn set_value(&mut self, v: ::std::vec::Vec<u8>) {
-        self.value = ::protobuf::SingularField::some(v);
+        self.value = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
     pub fn mut_value(&mut self) -> &mut ::std::vec::Vec<u8> {
-        if self.value.is_none() {
-            self.value.set_default();
-        };
-        self.value.as_mut().unwrap()
+        &mut self.value
     }
 
     // Take field
     pub fn take_value(&mut self) -> ::std::vec::Vec<u8> {
-        self.value.take().unwrap_or_else(|| ::std::vec::Vec::new())
+        ::std::mem::replace(&mut self.value, ::std::vec::Vec::new())
     }
 
     pub fn get_value(&self) -> &[u8] {
-        match self.value.as_ref() {
-            Some(v) => &v,
-            None => &[],
-        }
+        &self.value
+    }
+
+    fn get_value_for_reflect(&self) -> &::std::vec::Vec<u8> {
+        &self.value
+    }
+
+    fn mut_value_for_reflect(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.value
     }
 }
 
@@ -161,29 +150,31 @@ impl ::protobuf::Message for Signature {
     fn merge_from(&mut self,
                   is: &mut ::protobuf::CodedInputStream)
                   -> ::protobuf::ProtobufResult<()> {
-        while !try!(is.eof()) {
-            let (field_number, wire_type) = try!(is.read_tag_unpack());
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
                     if wire_type != ::protobuf::wire_format::WireTypeVarint {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     };
-                    let tmp = try!(is.read_enum());
-                    self.algorithm = ::std::option::Option::Some(tmp);
+                    let tmp = is.read_enum()?;
+                    self.algorithm = tmp;
                 }
                 2 => {
-                    try!(::protobuf::rt::read_singular_bytes_into(wire_type,
-                                                                  is,
-                                                                  &mut self.public_key));
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type,
+                                                                    is,
+                                                                    &mut self.public_key)?;
                 }
                 3 => {
-                    try!(::protobuf::rt::read_singular_bytes_into(wire_type, is, &mut self.value));
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type,
+                                                                    is,
+                                                                    &mut self.value)?;
                 }
                 _ => {
-                    try!(::protobuf::rt::read_unknown_or_skip_group(field_number,
-                                                                    wire_type,
-                                                                    is,
-                                                                    self.mut_unknown_fields()));
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number,
+                                                               wire_type,
+                                                               is,
+                                                               self.mut_unknown_fields())?;
                 }
             };
         }
@@ -194,15 +185,15 @@ impl ::protobuf::Message for Signature {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        for value in &self.algorithm {
-            my_size += ::protobuf::rt::enum_size(1, *value);
-        }
-        for value in &self.public_key {
-            my_size += ::protobuf::rt::bytes_size(2, &value);
-        }
-        for value in &self.value {
-            my_size += ::protobuf::rt::bytes_size(3, &value);
-        }
+        if self.algorithm != super::algorithm::SignatureAlgorithm::Ed25519 {
+            my_size += ::protobuf::rt::enum_size(1, self.algorithm);
+        };
+        if self.public_key != ::std::vec::Vec::new() {
+            my_size += ::protobuf::rt::bytes_size(2, &self.public_key);
+        };
+        if self.value != ::std::vec::Vec::new() {
+            my_size += ::protobuf::rt::bytes_size(3, &self.value);
+        };
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -211,16 +202,16 @@ impl ::protobuf::Message for Signature {
     fn write_to_with_cached_sizes(&self,
                                   os: &mut ::protobuf::CodedOutputStream)
                                   -> ::protobuf::ProtobufResult<()> {
-        if let Some(v) = self.algorithm {
-            try!(os.write_enum(1, v.value()));
+        if self.algorithm != super::algorithm::SignatureAlgorithm::Ed25519 {
+            os.write_enum(1, self.algorithm.value())?;
         };
-        if let Some(v) = self.public_key.as_ref() {
-            try!(os.write_bytes(2, &v));
+        if self.public_key != ::std::vec::Vec::new() {
+            os.write_bytes(2, &self.public_key)?;
         };
-        if let Some(v) = self.value.as_ref() {
-            try!(os.write_bytes(3, &v));
+        if self.value != ::std::vec::Vec::new() {
+            os.write_bytes(3, &self.value)?;
         };
-        try!(os.write_unknown_fields(self.get_unknown_fields()));
+        os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
     }
 
@@ -234,10 +225,6 @@ impl ::protobuf::Message for Signature {
 
     fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
-    }
-
-    fn type_id(&self) -> ::std::any::TypeId {
-        ::std::any::TypeId::of::<Signature>()
     }
 
     fn as_any(&self) -> &::std::any::Any {
@@ -264,24 +251,26 @@ impl ::protobuf::MessageStatic for Signature {
         unsafe {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_singular_enum_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeEnum<super::algorithm::SignatureAlgorithm>>(
                     "algorithm",
-                    Signature::has_algorithm,
-                    Signature::get_algorithm,
+                    Signature::get_algorithm_for_reflect,
+                    Signature::mut_algorithm_for_reflect,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_bytes_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                     "public_key",
-                    Signature::has_public_key,
-                    Signature::get_public_key,
+                    Signature::get_public_key_for_reflect,
+                    Signature::mut_public_key_for_reflect,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_bytes_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                     "value",
-                    Signature::has_value,
-                    Signature::get_value,
+                    Signature::get_value_for_reflect,
+                    Signature::mut_value_for_reflect,
                 ));
-                ::protobuf::reflect::MessageDescriptor::new::<Signature>("Signature",
-                                                                         fields,
-                                                                         file_descriptor_proto())
+                ::protobuf::reflect::MessageDescriptor::new::<Signature>(
+                    "Signature",
+                    fields,
+                    file_descriptor_proto()
+                )
             })
         }
     }
@@ -296,16 +285,15 @@ impl ::protobuf::Clear for Signature {
     }
 }
 
-impl ::std::cmp::PartialEq for Signature {
-    fn eq(&self, other: &Signature) -> bool {
-        self.algorithm == other.algorithm && self.public_key == other.public_key &&
-        self.value == other.value && self.unknown_fields == other.unknown_fields
-    }
-}
-
 impl ::std::fmt::Debug for Signature {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Signature {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
     }
 }
 
@@ -361,12 +349,11 @@ pub fn file_descriptor_proto() -> &'static ::protobuf::descriptor::FileDescripto
 impl ObjectHash for Signature {
     #[inline]
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
-        // TODO: Don't Panic!
         objecthash_struct!(
             hasher,
-            "algorithm" => self.algorithm.unwrap() as u32,
-            "public_key" => *self.public_key.get_ref(),
-            "value" => *self.value.get_ref()
+            "algorithm" => self.algorithm as u32,
+            "public_key" => *self.public_key,
+            "value" => *self.value
         )
     }
 }

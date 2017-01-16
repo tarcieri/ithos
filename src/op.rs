@@ -21,15 +21,15 @@ use objecthash::{self, ObjectHash, ObjectHasher};
 use protobuf::Message as Message_imported_for_functions;
 use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
 
-#[derive(Clone,Default)]
+#[derive(PartialEq,Clone,Default)]
 pub struct Op {
     // message fields
-    optype: ::std::option::Option<Type>,
-    path: ::protobuf::SingularField<::std::string::String>,
+    pub optype: Type,
+    pub path: ::std::string::String,
     object: ::protobuf::SingularPtrField<super::object::Object>,
     // special fields
     unknown_fields: ::protobuf::UnknownFields,
-    cached_size: ::std::cell::Cell<u32>,
+    cached_size: ::protobuf::CachedSize,
 }
 
 // see codegen.rs for the explanation why impl Sync explicitly
@@ -45,75 +45,67 @@ impl Op {
             lock: ::protobuf::lazy::ONCE_INIT,
             ptr: 0 as *const Op,
         };
-        unsafe {
-            instance.get(|| {
-                Op {
-                    optype: ::std::option::Option::None,
-                    path: ::protobuf::SingularField::none(),
-                    object: ::protobuf::SingularPtrField::none(),
-                    unknown_fields: ::protobuf::UnknownFields::new(),
-                    cached_size: ::std::cell::Cell::new(0),
-                }
-            })
-        }
+        unsafe { instance.get(Op::new) }
     }
 
-    // optional .ithos.Type optype = 1;
+    // .ithos.Type optype = 1;
 
     pub fn clear_optype(&mut self) {
-        self.optype = ::std::option::Option::None;
-    }
-
-    pub fn has_optype(&self) -> bool {
-        self.optype.is_some()
+        self.optype = Type::ADD;
     }
 
     // Param is passed by value, moved
     pub fn set_optype(&mut self, v: Type) {
-        self.optype = ::std::option::Option::Some(v);
+        self.optype = v;
     }
 
     pub fn get_optype(&self) -> Type {
-        self.optype.unwrap_or(Type::ADD)
+        self.optype
     }
 
-    // optional string path = 2;
+    fn get_optype_for_reflect(&self) -> &Type {
+        &self.optype
+    }
+
+    fn mut_optype_for_reflect(&mut self) -> &mut Type {
+        &mut self.optype
+    }
+
+    // string path = 2;
 
     pub fn clear_path(&mut self) {
         self.path.clear();
     }
 
-    pub fn has_path(&self) -> bool {
-        self.path.is_some()
-    }
-
     // Param is passed by value, moved
     pub fn set_path(&mut self, v: ::std::string::String) {
-        self.path = ::protobuf::SingularField::some(v);
+        self.path = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
     pub fn mut_path(&mut self) -> &mut ::std::string::String {
-        if self.path.is_none() {
-            self.path.set_default();
-        };
-        self.path.as_mut().unwrap()
+        &mut self.path
     }
 
     // Take field
     pub fn take_path(&mut self) -> ::std::string::String {
-        self.path.take().unwrap_or_else(|| ::std::string::String::new())
+        ::std::mem::replace(&mut self.path, ::std::string::String::new())
     }
 
     pub fn get_path(&self) -> &str {
-        match self.path.as_ref() {
-            Some(v) => &v,
-            None => "",
-        }
+        &self.path
     }
 
-    // optional .ithos.Object object = 3;
+    fn get_path_for_reflect(&self) -> &::std::string::String {
+        &self.path
+    }
+
+    fn mut_path_for_reflect(&mut self) -> &mut ::std::string::String {
+        &mut self.path
+    }
+
+    // .ithos.Object object = 3;
 
     pub fn clear_object(&mut self) {
         self.object.clear();
@@ -145,6 +137,15 @@ impl Op {
     pub fn get_object(&self) -> &super::object::Object {
         self.object.as_ref().unwrap_or_else(|| super::object::Object::default_instance())
     }
+
+    fn get_object_for_reflect(&self) -> &::protobuf::SingularPtrField<super::object::Object> {
+        &self.object
+    }
+
+    fn mut_object_for_reflect(&mut self)
+                              -> &mut ::protobuf::SingularPtrField<super::object::Object> {
+        &mut self.object
+    }
 }
 
 impl ::protobuf::Message for Op {
@@ -155,29 +156,29 @@ impl ::protobuf::Message for Op {
     fn merge_from(&mut self,
                   is: &mut ::protobuf::CodedInputStream)
                   -> ::protobuf::ProtobufResult<()> {
-        while !try!(is.eof()) {
-            let (field_number, wire_type) = try!(is.read_tag_unpack());
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
                     if wire_type != ::protobuf::wire_format::WireTypeVarint {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     };
-                    let tmp = try!(is.read_enum());
-                    self.optype = ::std::option::Option::Some(tmp);
+                    let tmp = is.read_enum()?;
+                    self.optype = tmp;
                 }
                 2 => {
-                    try!(::protobuf::rt::read_singular_string_into(wire_type, is, &mut self.path));
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type,
+                                                                     is,
+                                                                     &mut self.path)?;
                 }
                 3 => {
-                    try!(::protobuf::rt::read_singular_message_into(wire_type,
-                                                                    is,
-                                                                    &mut self.object));
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.object)?;
                 }
                 _ => {
-                    try!(::protobuf::rt::read_unknown_or_skip_group(field_number,
-                                                                    wire_type,
-                                                                    is,
-                                                                    self.mut_unknown_fields()));
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number,
+                                                               wire_type,
+                                                               is,
+                                                               self.mut_unknown_fields())?;
                 }
             };
         }
@@ -188,16 +189,16 @@ impl ::protobuf::Message for Op {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        for value in &self.optype {
-            my_size += ::protobuf::rt::enum_size(1, *value);
-        }
-        for value in &self.path {
-            my_size += ::protobuf::rt::string_size(2, &value);
-        }
-        for value in &self.object {
-            let len = value.compute_size();
+        if self.optype != Type::ADD {
+            my_size += ::protobuf::rt::enum_size(1, self.optype);
+        };
+        if self.path != ::std::string::String::new() {
+            my_size += ::protobuf::rt::string_size(2, &self.path);
+        };
+        if let Some(v) = self.object.as_ref() {
+            let len = v.compute_size();
             my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-        }
+        };
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -206,18 +207,18 @@ impl ::protobuf::Message for Op {
     fn write_to_with_cached_sizes(&self,
                                   os: &mut ::protobuf::CodedOutputStream)
                                   -> ::protobuf::ProtobufResult<()> {
-        if let Some(v) = self.optype {
-            try!(os.write_enum(1, v.value()));
+        if self.optype != Type::ADD {
+            os.write_enum(1, self.optype.value())?;
         };
-        if let Some(v) = self.path.as_ref() {
-            try!(os.write_string(2, &v));
+        if self.path != ::std::string::String::new() {
+            os.write_string(2, &self.path)?;
         };
         if let Some(v) = self.object.as_ref() {
-            try!(os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited));
-            try!(os.write_raw_varint32(v.get_cached_size()));
-            try!(v.write_to_with_cached_sizes(os));
+            os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
         };
-        try!(os.write_unknown_fields(self.get_unknown_fields()));
+        os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
     }
 
@@ -231,10 +232,6 @@ impl ::protobuf::Message for Op {
 
     fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
-    }
-
-    fn type_id(&self) -> ::std::any::TypeId {
-        ::std::any::TypeId::of::<Op>()
     }
 
     fn as_any(&self) -> &::std::any::Any {
@@ -261,24 +258,26 @@ impl ::protobuf::MessageStatic for Op {
         unsafe {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_singular_enum_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeEnum<Type>>(
                     "optype",
-                    Op::has_optype,
-                    Op::get_optype,
+                    Op::get_optype_for_reflect,
+                    Op::mut_optype_for_reflect,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_string_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
                     "path",
-                    Op::has_path,
-                    Op::get_path,
+                    Op::get_path_for_reflect,
+                    Op::mut_path_for_reflect,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor(
+                fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::object::Object>>(
                     "object",
-                    Op::has_object,
-                    Op::get_object,
+                    Op::get_object_for_reflect,
+                    Op::mut_object_for_reflect,
                 ));
-                ::protobuf::reflect::MessageDescriptor::new::<Op>("Op",
-                                                                  fields,
-                                                                  file_descriptor_proto())
+                ::protobuf::reflect::MessageDescriptor::new::<Op>(
+                    "Op",
+                    fields,
+                    file_descriptor_proto()
+                )
             })
         }
     }
@@ -293,16 +292,15 @@ impl ::protobuf::Clear for Op {
     }
 }
 
-impl ::std::cmp::PartialEq for Op {
-    fn eq(&self, other: &Op) -> bool {
-        self.optype == other.optype && self.path == other.path && self.object == other.object &&
-        self.unknown_fields == other.unknown_fields
-    }
-}
-
 impl ::std::fmt::Debug for Op {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Op {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
     }
 }
 
@@ -343,6 +341,18 @@ impl ::protobuf::ProtobufEnum for Type {
 }
 
 impl ::std::marker::Copy for Type {}
+
+impl ::std::default::Default for Type {
+    fn default() -> Self {
+        Type::ADD
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Type {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Enum(self.descriptor())
+    }
+}
 
 static file_descriptor_proto_data: &'static [u8] =
     &[0x0a, 0x08, 0x6f, 0x70, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x05, 0x69, 0x74, 0x68,
@@ -396,17 +406,15 @@ pub fn file_descriptor_proto() -> &'static ::protobuf::descriptor::FileDescripto
     unsafe { file_descriptor_proto_lazy.get(|| parse_descriptor_proto()) }
 }
 
-
 // TODO: Hand edited! Figure out a better solution for objecthash support
 impl ObjectHash for Op {
     #[inline]
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
-        // TODO: Don't Panic
         objecthash_struct!(
             hasher,
-            "optype" => self.optype.unwrap() as u32,
-            "path" => *self.path.get_ref(),
-            "object" => *self.object.get_ref()
+            "optype" => self.optype as u32,
+            "path" => *self.path,
+            "object" => *self.get_object()
         )
     }
 }

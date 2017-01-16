@@ -20,17 +20,17 @@
 use protobuf::Message as Message_imported_for_functions;
 use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
 
-#[derive(Clone,Default)]
+#[derive(PartialEq,Clone,Default)]
 pub struct Metadata {
     // message fields
-    created_id: ::protobuf::SingularField<::std::vec::Vec<u8>>,
-    updated_id: ::protobuf::SingularField<::std::vec::Vec<u8>>,
-    created_at: ::std::option::Option<u64>,
-    updated_at: ::std::option::Option<u64>,
-    version: ::std::option::Option<u64>,
+    pub created_id: ::std::vec::Vec<u8>,
+    pub updated_id: ::std::vec::Vec<u8>,
+    pub created_at: u64,
+    pub updated_at: u64,
+    pub version: u64,
     // special fields
     unknown_fields: ::protobuf::UnknownFields,
-    cached_size: ::std::cell::Cell<u32>,
+    cached_size: ::protobuf::CachedSize,
 }
 
 // see codegen.rs for the explanation why impl Sync explicitly
@@ -46,148 +46,144 @@ impl Metadata {
             lock: ::protobuf::lazy::ONCE_INIT,
             ptr: 0 as *const Metadata,
         };
-        unsafe {
-            instance.get(|| {
-                Metadata {
-                    created_id: ::protobuf::SingularField::none(),
-                    updated_id: ::protobuf::SingularField::none(),
-                    created_at: ::std::option::Option::None,
-                    updated_at: ::std::option::Option::None,
-                    version: ::std::option::Option::None,
-                    unknown_fields: ::protobuf::UnknownFields::new(),
-                    cached_size: ::std::cell::Cell::new(0),
-                }
-            })
-        }
+        unsafe { instance.get(Metadata::new) }
     }
 
-    // optional bytes created_id = 1;
+    // bytes created_id = 1;
 
     pub fn clear_created_id(&mut self) {
         self.created_id.clear();
     }
 
-    pub fn has_created_id(&self) -> bool {
-        self.created_id.is_some()
-    }
-
     // Param is passed by value, moved
     pub fn set_created_id(&mut self, v: ::std::vec::Vec<u8>) {
-        self.created_id = ::protobuf::SingularField::some(v);
+        self.created_id = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
     pub fn mut_created_id(&mut self) -> &mut ::std::vec::Vec<u8> {
-        if self.created_id.is_none() {
-            self.created_id.set_default();
-        };
-        self.created_id.as_mut().unwrap()
+        &mut self.created_id
     }
 
     // Take field
     pub fn take_created_id(&mut self) -> ::std::vec::Vec<u8> {
-        self.created_id.take().unwrap_or_else(|| ::std::vec::Vec::new())
+        ::std::mem::replace(&mut self.created_id, ::std::vec::Vec::new())
     }
 
     pub fn get_created_id(&self) -> &[u8] {
-        match self.created_id.as_ref() {
-            Some(v) => &v,
-            None => &[],
-        }
+        &self.created_id
     }
 
-    // optional bytes updated_id = 2;
+    fn get_created_id_for_reflect(&self) -> &::std::vec::Vec<u8> {
+        &self.created_id
+    }
+
+    fn mut_created_id_for_reflect(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.created_id
+    }
+
+    // bytes updated_id = 2;
 
     pub fn clear_updated_id(&mut self) {
         self.updated_id.clear();
     }
 
-    pub fn has_updated_id(&self) -> bool {
-        self.updated_id.is_some()
-    }
-
     // Param is passed by value, moved
     pub fn set_updated_id(&mut self, v: ::std::vec::Vec<u8>) {
-        self.updated_id = ::protobuf::SingularField::some(v);
+        self.updated_id = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
     pub fn mut_updated_id(&mut self) -> &mut ::std::vec::Vec<u8> {
-        if self.updated_id.is_none() {
-            self.updated_id.set_default();
-        };
-        self.updated_id.as_mut().unwrap()
+        &mut self.updated_id
     }
 
     // Take field
     pub fn take_updated_id(&mut self) -> ::std::vec::Vec<u8> {
-        self.updated_id.take().unwrap_or_else(|| ::std::vec::Vec::new())
+        ::std::mem::replace(&mut self.updated_id, ::std::vec::Vec::new())
     }
 
     pub fn get_updated_id(&self) -> &[u8] {
-        match self.updated_id.as_ref() {
-            Some(v) => &v,
-            None => &[],
-        }
+        &self.updated_id
     }
 
-    // optional uint64 created_at = 3;
+    fn get_updated_id_for_reflect(&self) -> &::std::vec::Vec<u8> {
+        &self.updated_id
+    }
+
+    fn mut_updated_id_for_reflect(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.updated_id
+    }
+
+    // uint64 created_at = 3;
 
     pub fn clear_created_at(&mut self) {
-        self.created_at = ::std::option::Option::None;
-    }
-
-    pub fn has_created_at(&self) -> bool {
-        self.created_at.is_some()
+        self.created_at = 0;
     }
 
     // Param is passed by value, moved
     pub fn set_created_at(&mut self, v: u64) {
-        self.created_at = ::std::option::Option::Some(v);
+        self.created_at = v;
     }
 
     pub fn get_created_at(&self) -> u64 {
-        self.created_at.unwrap_or(0)
+        self.created_at
     }
 
-    // optional uint64 updated_at = 4;
+    fn get_created_at_for_reflect(&self) -> &u64 {
+        &self.created_at
+    }
+
+    fn mut_created_at_for_reflect(&mut self) -> &mut u64 {
+        &mut self.created_at
+    }
+
+    // uint64 updated_at = 4;
 
     pub fn clear_updated_at(&mut self) {
-        self.updated_at = ::std::option::Option::None;
-    }
-
-    pub fn has_updated_at(&self) -> bool {
-        self.updated_at.is_some()
+        self.updated_at = 0;
     }
 
     // Param is passed by value, moved
     pub fn set_updated_at(&mut self, v: u64) {
-        self.updated_at = ::std::option::Option::Some(v);
+        self.updated_at = v;
     }
 
     pub fn get_updated_at(&self) -> u64 {
-        self.updated_at.unwrap_or(0)
+        self.updated_at
     }
 
-    // optional uint64 version = 5;
+    fn get_updated_at_for_reflect(&self) -> &u64 {
+        &self.updated_at
+    }
+
+    fn mut_updated_at_for_reflect(&mut self) -> &mut u64 {
+        &mut self.updated_at
+    }
+
+    // uint64 version = 5;
 
     pub fn clear_version(&mut self) {
-        self.version = ::std::option::Option::None;
-    }
-
-    pub fn has_version(&self) -> bool {
-        self.version.is_some()
+        self.version = 0;
     }
 
     // Param is passed by value, moved
     pub fn set_version(&mut self, v: u64) {
-        self.version = ::std::option::Option::Some(v);
+        self.version = v;
     }
 
     pub fn get_version(&self) -> u64 {
-        self.version.unwrap_or(0)
+        self.version
+    }
+
+    fn get_version_for_reflect(&self) -> &u64 {
+        &self.version
+    }
+
+    fn mut_version_for_reflect(&mut self) -> &mut u64 {
+        &mut self.version
     }
 }
 
@@ -199,45 +195,45 @@ impl ::protobuf::Message for Metadata {
     fn merge_from(&mut self,
                   is: &mut ::protobuf::CodedInputStream)
                   -> ::protobuf::ProtobufResult<()> {
-        while !try!(is.eof()) {
-            let (field_number, wire_type) = try!(is.read_tag_unpack());
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    try!(::protobuf::rt::read_singular_bytes_into(wire_type,
-                                                                  is,
-                                                                  &mut self.created_id));
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type,
+                                                                    is,
+                                                                    &mut self.created_id)?;
                 }
                 2 => {
-                    try!(::protobuf::rt::read_singular_bytes_into(wire_type,
-                                                                  is,
-                                                                  &mut self.updated_id));
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type,
+                                                                    is,
+                                                                    &mut self.updated_id)?;
                 }
                 3 => {
                     if wire_type != ::protobuf::wire_format::WireTypeVarint {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     };
-                    let tmp = try!(is.read_uint64());
-                    self.created_at = ::std::option::Option::Some(tmp);
+                    let tmp = is.read_uint64()?;
+                    self.created_at = tmp;
                 }
                 4 => {
                     if wire_type != ::protobuf::wire_format::WireTypeVarint {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     };
-                    let tmp = try!(is.read_uint64());
-                    self.updated_at = ::std::option::Option::Some(tmp);
+                    let tmp = is.read_uint64()?;
+                    self.updated_at = tmp;
                 }
                 5 => {
                     if wire_type != ::protobuf::wire_format::WireTypeVarint {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     };
-                    let tmp = try!(is.read_uint64());
-                    self.version = ::std::option::Option::Some(tmp);
+                    let tmp = is.read_uint64()?;
+                    self.version = tmp;
                 }
                 _ => {
-                    try!(::protobuf::rt::read_unknown_or_skip_group(field_number,
-                                                                    wire_type,
-                                                                    is,
-                                                                    self.mut_unknown_fields()));
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number,
+                                                               wire_type,
+                                                               is,
+                                                               self.mut_unknown_fields())?;
                 }
             };
         }
@@ -248,24 +244,27 @@ impl ::protobuf::Message for Metadata {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        for value in &self.created_id {
-            my_size += ::protobuf::rt::bytes_size(1, &value);
-        }
-        for value in &self.updated_id {
-            my_size += ::protobuf::rt::bytes_size(2, &value);
-        }
-        for value in &self.created_at {
-            my_size +=
-                ::protobuf::rt::value_size(3, *value, ::protobuf::wire_format::WireTypeVarint);
-        }
-        for value in &self.updated_at {
-            my_size +=
-                ::protobuf::rt::value_size(4, *value, ::protobuf::wire_format::WireTypeVarint);
-        }
-        for value in &self.version {
-            my_size +=
-                ::protobuf::rt::value_size(5, *value, ::protobuf::wire_format::WireTypeVarint);
-        }
+        if self.created_id != ::std::vec::Vec::new() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.created_id);
+        };
+        if self.updated_id != ::std::vec::Vec::new() {
+            my_size += ::protobuf::rt::bytes_size(2, &self.updated_id);
+        };
+        if self.created_at != 0 {
+            my_size += ::protobuf::rt::value_size(3,
+                                                  self.created_at,
+                                                  ::protobuf::wire_format::WireTypeVarint);
+        };
+        if self.updated_at != 0 {
+            my_size += ::protobuf::rt::value_size(4,
+                                                  self.updated_at,
+                                                  ::protobuf::wire_format::WireTypeVarint);
+        };
+        if self.version != 0 {
+            my_size += ::protobuf::rt::value_size(5,
+                                                  self.version,
+                                                  ::protobuf::wire_format::WireTypeVarint);
+        };
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -274,22 +273,22 @@ impl ::protobuf::Message for Metadata {
     fn write_to_with_cached_sizes(&self,
                                   os: &mut ::protobuf::CodedOutputStream)
                                   -> ::protobuf::ProtobufResult<()> {
-        if let Some(v) = self.created_id.as_ref() {
-            try!(os.write_bytes(1, &v));
+        if self.created_id != ::std::vec::Vec::new() {
+            os.write_bytes(1, &self.created_id)?;
         };
-        if let Some(v) = self.updated_id.as_ref() {
-            try!(os.write_bytes(2, &v));
+        if self.updated_id != ::std::vec::Vec::new() {
+            os.write_bytes(2, &self.updated_id)?;
         };
-        if let Some(v) = self.created_at {
-            try!(os.write_uint64(3, v));
+        if self.created_at != 0 {
+            os.write_uint64(3, self.created_at)?;
         };
-        if let Some(v) = self.updated_at {
-            try!(os.write_uint64(4, v));
+        if self.updated_at != 0 {
+            os.write_uint64(4, self.updated_at)?;
         };
-        if let Some(v) = self.version {
-            try!(os.write_uint64(5, v));
+        if self.version != 0 {
+            os.write_uint64(5, self.version)?;
         };
-        try!(os.write_unknown_fields(self.get_unknown_fields()));
+        os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
     }
 
@@ -303,10 +302,6 @@ impl ::protobuf::Message for Metadata {
 
     fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
-    }
-
-    fn type_id(&self) -> ::std::any::TypeId {
-        ::std::any::TypeId::of::<Metadata>()
     }
 
     fn as_any(&self) -> &::std::any::Any {
@@ -333,34 +328,36 @@ impl ::protobuf::MessageStatic for Metadata {
         unsafe {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_singular_bytes_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                     "created_id",
-                    Metadata::has_created_id,
-                    Metadata::get_created_id,
+                    Metadata::get_created_id_for_reflect,
+                    Metadata::mut_created_id_for_reflect,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_bytes_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                     "updated_id",
-                    Metadata::has_updated_id,
-                    Metadata::get_updated_id,
+                    Metadata::get_updated_id_for_reflect,
+                    Metadata::mut_updated_id_for_reflect,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_u64_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
                     "created_at",
-                    Metadata::has_created_at,
-                    Metadata::get_created_at,
+                    Metadata::get_created_at_for_reflect,
+                    Metadata::mut_created_at_for_reflect,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_u64_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
                     "updated_at",
-                    Metadata::has_updated_at,
-                    Metadata::get_updated_at,
+                    Metadata::get_updated_at_for_reflect,
+                    Metadata::mut_updated_at_for_reflect,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_u64_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
                     "version",
-                    Metadata::has_version,
-                    Metadata::get_version,
+                    Metadata::get_version_for_reflect,
+                    Metadata::mut_version_for_reflect,
                 ));
-                ::protobuf::reflect::MessageDescriptor::new::<Metadata>("Metadata",
-                                                                        fields,
-                                                                        file_descriptor_proto())
+                ::protobuf::reflect::MessageDescriptor::new::<Metadata>(
+                    "Metadata",
+                    fields,
+                    file_descriptor_proto()
+                )
             })
         }
     }
@@ -377,17 +374,15 @@ impl ::protobuf::Clear for Metadata {
     }
 }
 
-impl ::std::cmp::PartialEq for Metadata {
-    fn eq(&self, other: &Metadata) -> bool {
-        self.created_id == other.created_id && self.updated_id == other.updated_id &&
-        self.created_at == other.created_at && self.updated_at == other.updated_at &&
-        self.version == other.version && self.unknown_fields == other.unknown_fields
-    }
-}
-
 impl ::std::fmt::Debug for Metadata {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Metadata {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
     }
 }
 

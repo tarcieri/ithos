@@ -23,13 +23,13 @@ use objecthash::{self, ObjectHash, ObjectHasher};
 use protobuf::Message as Message_imported_for_functions;
 use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
 
-#[derive(Clone,Default)]
+#[derive(PartialEq,Clone,Default)]
 pub struct Witness {
     // message fields
     signatures: ::protobuf::RepeatedField<super::signature::Signature>,
     // special fields
     unknown_fields: ::protobuf::UnknownFields,
-    cached_size: ::std::cell::Cell<u32>,
+    cached_size: ::protobuf::CachedSize,
 }
 
 // see codegen.rs for the explanation why impl Sync explicitly
@@ -45,15 +45,7 @@ impl Witness {
             lock: ::protobuf::lazy::ONCE_INIT,
             ptr: 0 as *const Witness,
         };
-        unsafe {
-            instance.get(|| {
-                Witness {
-                    signatures: ::protobuf::RepeatedField::new(),
-                    unknown_fields: ::protobuf::UnknownFields::new(),
-                    cached_size: ::std::cell::Cell::new(0),
-                }
-            })
-        }
+        unsafe { instance.get(Witness::new) }
     }
 
     // repeated .ithos.Signature signatures = 1;
@@ -81,6 +73,17 @@ impl Witness {
     pub fn get_signatures(&self) -> &[super::signature::Signature] {
         &self.signatures
     }
+
+    fn get_signatures_for_reflect(&self)
+                                  -> &::protobuf::RepeatedField<super::signature::Signature> {
+        &self.signatures
+    }
+
+    fn mut_signatures_for_reflect
+        (&mut self)
+         -> &mut ::protobuf::RepeatedField<super::signature::Signature> {
+        &mut self.signatures
+    }
 }
 
 impl ::protobuf::Message for Witness {
@@ -91,19 +94,19 @@ impl ::protobuf::Message for Witness {
     fn merge_from(&mut self,
                   is: &mut ::protobuf::CodedInputStream)
                   -> ::protobuf::ProtobufResult<()> {
-        while !try!(is.eof()) {
-            let (field_number, wire_type) = try!(is.read_tag_unpack());
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    try!(::protobuf::rt::read_repeated_message_into(wire_type,
-                                                                    is,
-                                                                    &mut self.signatures));
+                    ::protobuf::rt::read_repeated_message_into(wire_type,
+                                                               is,
+                                                               &mut self.signatures)?;
                 }
                 _ => {
-                    try!(::protobuf::rt::read_unknown_or_skip_group(field_number,
-                                                                    wire_type,
-                                                                    is,
-                                                                    self.mut_unknown_fields()));
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number,
+                                                               wire_type,
+                                                               is,
+                                                               self.mut_unknown_fields())?;
                 }
             };
         }
@@ -127,11 +130,11 @@ impl ::protobuf::Message for Witness {
                                   os: &mut ::protobuf::CodedOutputStream)
                                   -> ::protobuf::ProtobufResult<()> {
         for v in &self.signatures {
-            try!(os.write_tag(1, ::protobuf::wire_format::WireTypeLengthDelimited));
-            try!(os.write_raw_varint32(v.get_cached_size()));
-            try!(v.write_to_with_cached_sizes(os));
+            os.write_tag(1, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
         }
-        try!(os.write_unknown_fields(self.get_unknown_fields()));
+        os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
     }
 
@@ -145,10 +148,6 @@ impl ::protobuf::Message for Witness {
 
     fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
-    }
-
-    fn type_id(&self) -> ::std::any::TypeId {
-        ::std::any::TypeId::of::<Witness>()
     }
 
     fn as_any(&self) -> &::std::any::Any {
@@ -175,13 +174,16 @@ impl ::protobuf::MessageStatic for Witness {
         unsafe {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_repeated_message_accessor(
+                fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<super::signature::Signature>>(
                     "signatures",
-                    Witness::get_signatures,
+                    Witness::get_signatures_for_reflect,
+                    Witness::mut_signatures_for_reflect,
                 ));
-                ::protobuf::reflect::MessageDescriptor::new::<Witness>("Witness",
-                                                                       fields,
-                                                                       file_descriptor_proto())
+                ::protobuf::reflect::MessageDescriptor::new::<Witness>(
+                    "Witness",
+                    fields,
+                    file_descriptor_proto()
+                )
             })
         }
     }
@@ -194,15 +196,15 @@ impl ::protobuf::Clear for Witness {
     }
 }
 
-impl ::std::cmp::PartialEq for Witness {
-    fn eq(&self, other: &Witness) -> bool {
-        self.signatures == other.signatures && self.unknown_fields == other.unknown_fields
-    }
-}
-
 impl ::std::fmt::Debug for Witness {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Witness {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
     }
 }
 

@@ -17,17 +17,19 @@
 #![allow(unused_imports)]
 #![allow(unused_results)]
 
+// TODO: Hand edited! Figure out a better solution for objecthash support
+
 use objecthash::{self, ObjectHash, ObjectHasher};
 use protobuf::Message as Message_imported_for_functions;
 use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
 
-#[derive(Clone,Default)]
+#[derive(PartialEq,Clone,Default)]
 pub struct System {
     // message fields
-    username: ::protobuf::SingularField<::std::string::String>,
+    pub username: ::std::string::String,
     // special fields
     unknown_fields: ::protobuf::UnknownFields,
-    cached_size: ::std::cell::Cell<u32>,
+    cached_size: ::protobuf::CachedSize,
 }
 
 // see codegen.rs for the explanation why impl Sync explicitly
@@ -43,51 +45,41 @@ impl System {
             lock: ::protobuf::lazy::ONCE_INIT,
             ptr: 0 as *const System,
         };
-        unsafe {
-            instance.get(|| {
-                System {
-                    username: ::protobuf::SingularField::none(),
-                    unknown_fields: ::protobuf::UnknownFields::new(),
-                    cached_size: ::std::cell::Cell::new(0),
-                }
-            })
-        }
+        unsafe { instance.get(System::new) }
     }
 
-    // optional string username = 1;
+    // string username = 1;
 
     pub fn clear_username(&mut self) {
         self.username.clear();
     }
 
-    pub fn has_username(&self) -> bool {
-        self.username.is_some()
-    }
-
     // Param is passed by value, moved
     pub fn set_username(&mut self, v: ::std::string::String) {
-        self.username = ::protobuf::SingularField::some(v);
+        self.username = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
     pub fn mut_username(&mut self) -> &mut ::std::string::String {
-        if self.username.is_none() {
-            self.username.set_default();
-        };
-        self.username.as_mut().unwrap()
+        &mut self.username
     }
 
     // Take field
     pub fn take_username(&mut self) -> ::std::string::String {
-        self.username.take().unwrap_or_else(|| ::std::string::String::new())
+        ::std::mem::replace(&mut self.username, ::std::string::String::new())
     }
 
     pub fn get_username(&self) -> &str {
-        match self.username.as_ref() {
-            Some(v) => &v,
-            None => "",
-        }
+        &self.username
+    }
+
+    fn get_username_for_reflect(&self) -> &::std::string::String {
+        &self.username
+    }
+
+    fn mut_username_for_reflect(&mut self) -> &mut ::std::string::String {
+        &mut self.username
     }
 }
 
@@ -99,19 +91,19 @@ impl ::protobuf::Message for System {
     fn merge_from(&mut self,
                   is: &mut ::protobuf::CodedInputStream)
                   -> ::protobuf::ProtobufResult<()> {
-        while !try!(is.eof()) {
-            let (field_number, wire_type) = try!(is.read_tag_unpack());
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    try!(::protobuf::rt::read_singular_string_into(wire_type,
-                                                                   is,
-                                                                   &mut self.username));
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type,
+                                                                     is,
+                                                                     &mut self.username)?;
                 }
                 _ => {
-                    try!(::protobuf::rt::read_unknown_or_skip_group(field_number,
-                                                                    wire_type,
-                                                                    is,
-                                                                    self.mut_unknown_fields()));
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number,
+                                                               wire_type,
+                                                               is,
+                                                               self.mut_unknown_fields())?;
                 }
             };
         }
@@ -122,9 +114,9 @@ impl ::protobuf::Message for System {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        for value in &self.username {
-            my_size += ::protobuf::rt::string_size(1, &value);
-        }
+        if self.username != ::std::string::String::new() {
+            my_size += ::protobuf::rt::string_size(1, &self.username);
+        };
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -133,10 +125,10 @@ impl ::protobuf::Message for System {
     fn write_to_with_cached_sizes(&self,
                                   os: &mut ::protobuf::CodedOutputStream)
                                   -> ::protobuf::ProtobufResult<()> {
-        if let Some(v) = self.username.as_ref() {
-            try!(os.write_string(1, &v));
+        if self.username != ::std::string::String::new() {
+            os.write_string(1, &self.username)?;
         };
-        try!(os.write_unknown_fields(self.get_unknown_fields()));
+        os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
     }
 
@@ -150,10 +142,6 @@ impl ::protobuf::Message for System {
 
     fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
-    }
-
-    fn type_id(&self) -> ::std::any::TypeId {
-        ::std::any::TypeId::of::<System>()
     }
 
     fn as_any(&self) -> &::std::any::Any {
@@ -180,14 +168,16 @@ impl ::protobuf::MessageStatic for System {
         unsafe {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_singular_string_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
                     "username",
-                    System::has_username,
-                    System::get_username,
+                    System::get_username_for_reflect,
+                    System::mut_username_for_reflect,
                 ));
-                ::protobuf::reflect::MessageDescriptor::new::<System>("System",
-                                                                      fields,
-                                                                      file_descriptor_proto())
+                ::protobuf::reflect::MessageDescriptor::new::<System>(
+                    "System",
+                    fields,
+                    file_descriptor_proto()
+                )
             })
         }
     }
@@ -200,15 +190,15 @@ impl ::protobuf::Clear for System {
     }
 }
 
-impl ::std::cmp::PartialEq for System {
-    fn eq(&self, other: &System) -> bool {
-        self.username == other.username && self.unknown_fields == other.unknown_fields
-    }
-}
-
 impl ::std::fmt::Debug for System {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for System {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
     }
 }
 
@@ -247,6 +237,6 @@ pub fn file_descriptor_proto() -> &'static ::protobuf::descriptor::FileDescripto
 impl ObjectHash for System {
     #[inline]
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
-        objecthash_struct!(hasher, "username" => *self.username.get_ref());
+        objecthash_struct!(hasher, "username" => *self.username);
     }
 }
