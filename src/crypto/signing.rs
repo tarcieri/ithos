@@ -51,15 +51,15 @@ impl<'a> KeyPair {
                                   symmetric_key_bytes: &[u8])
                                   -> Result<KeyPair> {
         // Ed25519 is the only signature algorithm we presently support
-        if credential.get_credential_type() != credential::Type::SIGNATURE_KEY_PAIR {
+        if credential.credential_type != credential::Type::SIGNATURE_KEY_PAIR {
             return Err(Error::bad_type(Some("not a signature key")));
         }
 
         KeyPair::unseal(SignatureAlgorithm::Ed25519,
                         EncryptionAlgorithm::AES256GCM,
                         symmetric_key_bytes,
-                        credential.get_encrypted_value(),
-                        credential.get_public_key())
+                        &credential.encrypted_value,
+                        &credential.public_key)
     }
 
     pub fn unseal(signature_alg: SignatureAlgorithm,
