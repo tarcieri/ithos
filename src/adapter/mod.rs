@@ -1,9 +1,10 @@
 pub mod lmdb;
 
-use block::{self, Block};
+use block::Block;
 use direntry::DirEntry;
-use entry::{self, SerializedEntry};
+use entry::SerializedEntry;
 use error::Result;
+use id::{BlockId, EntryId};
 use metadata::Metadata;
 use path;
 use std::marker::Sized;
@@ -29,22 +30,22 @@ pub trait Adapter<'a> {
     fn ro_transaction(&'a self) -> Result<Self::R>;
     fn rw_transaction(&'a self) -> Result<Self::W>;
 
-    fn next_free_entry_id(&self, txn: &Self::W) -> Result<entry::Id>;
+    fn next_free_entry_id(&self, txn: &Self::W) -> Result<EntryId>;
 
     fn add_block<'t>(&'t self, txn: &'t mut Self::W, block: &Block) -> Result<()>;
-    fn current_block_id<'t, T>(&'t self, txn: &'t T) -> Result<block::Id>
+    fn current_block_id<'t, T>(&'t self, txn: &'t T) -> Result<BlockId>
         where T: Transaction<D = Self::D>;
     fn add_entry<'t>(&'t self,
                      txn: &'t mut Self::W,
                      entry: &SerializedEntry,
                      name: &'t str,
-                     parent_id: entry::Id,
+                     parent_id: EntryId,
                      metadata: &Metadata)
                      -> Result<DirEntry>;
     fn find_direntry<'t, T>(&'t self, txn: &'t T, path: &path::Path) -> Result<DirEntry>
         where T: Transaction<D = Self::D>;
-    fn find_metadata<'t, T>(&'t self, txn: &'t T, id: &entry::Id) -> Result<Metadata>
+    fn find_metadata<'t, T>(&'t self, txn: &'t T, id: &EntryId) -> Result<Metadata>
         where T: Transaction<D = Self::D>;
-    fn find_entry<'t, T>(&'t self, txn: &'t T, id: &entry::Id) -> Result<SerializedEntry>
+    fn find_entry<'t, T>(&'t self, txn: &'t T, id: &EntryId) -> Result<SerializedEntry>
         where T: Transaction<D = Self::D>;
 }

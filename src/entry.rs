@@ -1,5 +1,6 @@
 use adapter::Adapter;
 use error::{Error, Result};
+use id::EntryId;
 use object::Object;
 use object::credential::Credential;
 use object::domain::Domain;
@@ -9,39 +10,6 @@ use object::system::System;
 use path::Path;
 use protobuf::{self, Message};
 use std::mem;
-
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub struct Id(u64);
-
-// Ids are 64-bit integers in host-native byte order
-// LMDB has special optimizations for host-native integers as keys
-impl Id {
-    pub fn root() -> Id {
-        Id(0)
-    }
-
-    pub fn from_bytes(bytes: &[u8]) -> Result<Id> {
-        if bytes.len() != 8 {
-            return Err(Error::parse(None));
-        }
-
-        let mut id = [0u8; 8];
-        id.copy_from_slice(&bytes[0..8]);
-
-        Ok(Id(unsafe { mem::transmute(id) }))
-    }
-
-    pub fn next(self) -> Id {
-        Id(self.0 + 1)
-    }
-}
-
-impl AsRef<[u8; 8]> for Id {
-    #[inline]
-    fn as_ref(&self) -> &[u8; 8] {
-        unsafe { mem::transmute(&self.0) }
-    }
-}
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum Class {
@@ -191,13 +159,13 @@ impl Entry {
 }
 
 pub struct SerializedEntry<'a> {
-    pub id: Id,
+    pub id: EntryId,
     pub class: Class,
     pub data: &'a [u8],
 }
 
 impl<'a> SerializedEntry<'a> {
-    pub fn from_bytes(id: Id, bytes: &[u8]) -> Result<SerializedEntry> {
+    pub fn from_bytes(id: EntryId, bytes: &[u8]) -> Result<SerializedEntry> {
         if bytes.len() < 4 {
             return Err(Error::parse(None));
         }

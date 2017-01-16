@@ -23,6 +23,7 @@ mod crypto;
 mod direntry;
 mod entry;
 mod error;
+mod id;
 mod metadata;
 mod object;
 mod op;
