@@ -17,18 +17,20 @@
 #![allow(unused_imports)]
 #![allow(unused_results)]
 
+// TODO: Hand edited! Figure out a better solution for objecthash support
+
 use algorithm;
 use objecthash::{self, ObjectHash, ObjectHasher};
 use protobuf::Message as Message_imported_for_functions;
 use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
 
-#[derive(Clone,Default)]
+#[derive(PartialEq,Clone,Default)]
 pub struct Root {
     // message fields
-    digest_alg: ::std::option::Option<algorithm::DigestAlgorithm>,
+    pub digest_alg: algorithm::DigestAlgorithm,
     // special fields
     unknown_fields: ::protobuf::UnknownFields,
-    cached_size: ::std::cell::Cell<u32>,
+    cached_size: ::protobuf::CachedSize,
 }
 
 // see codegen.rs for the explanation why impl Sync explicitly
@@ -44,34 +46,30 @@ impl Root {
             lock: ::protobuf::lazy::ONCE_INIT,
             ptr: 0 as *const Root,
         };
-        unsafe {
-            instance.get(|| {
-                Root {
-                    digest_alg: ::std::option::Option::None,
-                    unknown_fields: ::protobuf::UnknownFields::new(),
-                    cached_size: ::std::cell::Cell::new(0),
-                }
-            })
-        }
+        unsafe { instance.get(Root::new) }
     }
 
-    // optional .ithos.DigestAlgorithm digest_alg = 1;
+    // .ithos.DigestAlgorithm digest_alg = 1;
 
     pub fn clear_digest_alg(&mut self) {
-        self.digest_alg = ::std::option::Option::None;
-    }
-
-    pub fn has_digest_alg(&self) -> bool {
-        self.digest_alg.is_some()
+        self.digest_alg = algorithm::DigestAlgorithm::SHA256;
     }
 
     // Param is passed by value, moved
     pub fn set_digest_alg(&mut self, v: algorithm::DigestAlgorithm) {
-        self.digest_alg = ::std::option::Option::Some(v);
+        self.digest_alg = v;
     }
 
     pub fn get_digest_alg(&self) -> algorithm::DigestAlgorithm {
-        self.digest_alg.unwrap_or(algorithm::DigestAlgorithm::SHA256)
+        self.digest_alg
+    }
+
+    fn get_digest_alg_for_reflect(&self) -> &algorithm::DigestAlgorithm {
+        &self.digest_alg
+    }
+
+    fn mut_digest_alg_for_reflect(&mut self) -> &mut algorithm::DigestAlgorithm {
+        &mut self.digest_alg
     }
 }
 
@@ -83,21 +81,21 @@ impl ::protobuf::Message for Root {
     fn merge_from(&mut self,
                   is: &mut ::protobuf::CodedInputStream)
                   -> ::protobuf::ProtobufResult<()> {
-        while !try!(is.eof()) {
-            let (field_number, wire_type) = try!(is.read_tag_unpack());
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
                     if wire_type != ::protobuf::wire_format::WireTypeVarint {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     };
-                    let tmp = try!(is.read_enum());
-                    self.digest_alg = ::std::option::Option::Some(tmp);
+                    let tmp = is.read_enum()?;
+                    self.digest_alg = tmp;
                 }
                 _ => {
-                    try!(::protobuf::rt::read_unknown_or_skip_group(field_number,
-                                                                    wire_type,
-                                                                    is,
-                                                                    self.mut_unknown_fields()));
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number,
+                                                               wire_type,
+                                                               is,
+                                                               self.mut_unknown_fields())?;
                 }
             };
         }
@@ -108,9 +106,9 @@ impl ::protobuf::Message for Root {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        for value in &self.digest_alg {
-            my_size += ::protobuf::rt::enum_size(1, *value);
-        }
+        if self.digest_alg != algorithm::DigestAlgorithm::SHA256 {
+            my_size += ::protobuf::rt::enum_size(1, self.digest_alg);
+        };
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -119,10 +117,10 @@ impl ::protobuf::Message for Root {
     fn write_to_with_cached_sizes(&self,
                                   os: &mut ::protobuf::CodedOutputStream)
                                   -> ::protobuf::ProtobufResult<()> {
-        if let Some(v) = self.digest_alg {
-            try!(os.write_enum(1, v.value()));
+        if self.digest_alg != algorithm::DigestAlgorithm::SHA256 {
+            os.write_enum(1, self.digest_alg.value())?;
         };
-        try!(os.write_unknown_fields(self.get_unknown_fields()));
+        os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
     }
 
@@ -136,10 +134,6 @@ impl ::protobuf::Message for Root {
 
     fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
-    }
-
-    fn type_id(&self) -> ::std::any::TypeId {
-        ::std::any::TypeId::of::<Root>()
     }
 
     fn as_any(&self) -> &::std::any::Any {
@@ -166,14 +160,16 @@ impl ::protobuf::MessageStatic for Root {
         unsafe {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_singular_enum_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeEnum<algorithm::DigestAlgorithm>>(
                     "digest_alg",
-                    Root::has_digest_alg,
-                    Root::get_digest_alg,
+                    Root::get_digest_alg_for_reflect,
+                    Root::mut_digest_alg_for_reflect,
                 ));
-                ::protobuf::reflect::MessageDescriptor::new::<Root>("Root",
-                                                                    fields,
-                                                                    file_descriptor_proto())
+                ::protobuf::reflect::MessageDescriptor::new::<Root>(
+                    "Root",
+                    fields,
+                    file_descriptor_proto()
+                )
             })
         }
     }
@@ -186,15 +182,15 @@ impl ::protobuf::Clear for Root {
     }
 }
 
-impl ::std::cmp::PartialEq for Root {
-    fn eq(&self, other: &Root) -> bool {
-        self.digest_alg == other.digest_alg && self.unknown_fields == other.unknown_fields
-    }
-}
-
 impl ::std::fmt::Debug for Root {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Root {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
     }
 }
 
@@ -239,6 +235,6 @@ pub fn file_descriptor_proto() -> &'static ::protobuf::descriptor::FileDescripto
 impl ObjectHash for Root {
     #[inline]
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
-        objecthash_struct!(hasher, "digest_alg" => self.digest_alg.unwrap() as i32)
+        objecthash_struct!(hasher, "digest_alg" => self.digest_alg as u32)
     }
 }

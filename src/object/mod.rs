@@ -30,13 +30,13 @@ use objecthash::{self, ObjectHash, ObjectHasher};
 use protobuf::Message as Message_imported_for_functions;
 use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
 
-#[derive(Clone,Default)]
+#[derive(PartialEq,Clone,Default)]
 pub struct Object {
     // message oneof groups
     value: ::std::option::Option<Object_oneof_value>,
     // special fields
     unknown_fields: ::protobuf::UnknownFields,
-    cached_size: ::std::cell::Cell<u32>,
+    cached_size: ::protobuf::CachedSize,
 }
 
 // see codegen.rs for the explanation why impl Sync explicitly
@@ -44,11 +44,11 @@ unsafe impl ::std::marker::Sync for Object {}
 
 #[derive(Clone,PartialEq)]
 pub enum Object_oneof_value {
-    root(self::root::Root),
-    domain(self::domain::Domain),
-    org_unit(self::org_unit::OrgUnit),
-    system(self::system::System),
-    credential(self::credential::Credential),
+    root(super::object::root::Root),
+    domain(super::object::domain::Domain),
+    org_unit(super::object::org_unit::OrgUnit),
+    system(super::object::system::System),
+    credential(super::object::credential::Credential),
 }
 
 impl Object {
@@ -61,18 +61,10 @@ impl Object {
             lock: ::protobuf::lazy::ONCE_INIT,
             ptr: 0 as *const Object,
         };
-        unsafe {
-            instance.get(|| {
-                Object {
-                    value: ::std::option::Option::None,
-                    unknown_fields: ::protobuf::UnknownFields::new(),
-                    cached_size: ::std::cell::Cell::new(0),
-                }
-            })
-        }
+        unsafe { instance.get(Object::new) }
     }
 
-    // optional .ithos.object.Root root = 1;
+    // .ithos.object.Root root = 1;
 
     pub fn clear_root(&mut self) {
         self.value = ::std::option::Option::None;
@@ -86,17 +78,16 @@ impl Object {
     }
 
     // Param is passed by value, moved
-    pub fn set_root(&mut self, v: self::root::Root) {
+    pub fn set_root(&mut self, v: super::object::root::Root) {
         self.value = ::std::option::Option::Some(Object_oneof_value::root(v))
     }
 
     // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_root(&mut self) -> &mut self::root::Root {
+    pub fn mut_root(&mut self) -> &mut super::object::root::Root {
         if let ::std::option::Option::Some(Object_oneof_value::root(_)) = self.value {
         } else {
             self.value =
-                ::std::option::Option::Some(Object_oneof_value::root(self::root::Root::new()));
+                ::std::option::Option::Some(Object_oneof_value::root(super::object::root::Root::new()));
         }
         match self.value {
             ::std::option::Option::Some(Object_oneof_value::root(ref mut v)) => v,
@@ -105,25 +96,25 @@ impl Object {
     }
 
     // Take field
-    pub fn take_root(&mut self) -> self::root::Root {
+    pub fn take_root(&mut self) -> super::object::root::Root {
         if self.has_root() {
             match self.value.take() {
                 ::std::option::Option::Some(Object_oneof_value::root(v)) => v,
                 _ => panic!(),
             }
         } else {
-            self::root::Root::new()
+            super::object::root::Root::new()
         }
     }
 
-    pub fn get_root(&self) -> &self::root::Root {
+    pub fn get_root(&self) -> &super::object::root::Root {
         match self.value {
             ::std::option::Option::Some(Object_oneof_value::root(ref v)) => v,
-            _ => self::root::Root::default_instance(),
+            _ => super::object::root::Root::default_instance(),
         }
     }
 
-    // optional .ithos.object.Domain domain = 2;
+    // .ithos.object.Domain domain = 2;
 
     pub fn clear_domain(&mut self) {
         self.value = ::std::option::Option::None;
@@ -137,16 +128,15 @@ impl Object {
     }
 
     // Param is passed by value, moved
-    pub fn set_domain(&mut self, v: self::domain::Domain) {
+    pub fn set_domain(&mut self, v: super::object::domain::Domain) {
         self.value = ::std::option::Option::Some(Object_oneof_value::domain(v))
     }
 
     // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_domain(&mut self) -> &mut self::domain::Domain {
+    pub fn mut_domain(&mut self) -> &mut super::object::domain::Domain {
         if let ::std::option::Option::Some(Object_oneof_value::domain(_)) = self.value {
         } else {
-            self.value = ::std::option::Option::Some(Object_oneof_value::domain(self::domain::Domain::new()));
+            self.value = ::std::option::Option::Some(Object_oneof_value::domain(super::object::domain::Domain::new()));
         }
         match self.value {
             ::std::option::Option::Some(Object_oneof_value::domain(ref mut v)) => v,
@@ -155,25 +145,25 @@ impl Object {
     }
 
     // Take field
-    pub fn take_domain(&mut self) -> self::domain::Domain {
+    pub fn take_domain(&mut self) -> super::object::domain::Domain {
         if self.has_domain() {
             match self.value.take() {
                 ::std::option::Option::Some(Object_oneof_value::domain(v)) => v,
                 _ => panic!(),
             }
         } else {
-            self::domain::Domain::new()
+            super::object::domain::Domain::new()
         }
     }
 
-    pub fn get_domain(&self) -> &self::domain::Domain {
+    pub fn get_domain(&self) -> &super::object::domain::Domain {
         match self.value {
             ::std::option::Option::Some(Object_oneof_value::domain(ref v)) => v,
-            _ => self::domain::Domain::default_instance(),
+            _ => super::object::domain::Domain::default_instance(),
         }
     }
 
-    // optional .ithos.object.OrgUnit org_unit = 3;
+    // .ithos.object.OrgUnit org_unit = 3;
 
     pub fn clear_org_unit(&mut self) {
         self.value = ::std::option::Option::None;
@@ -187,16 +177,15 @@ impl Object {
     }
 
     // Param is passed by value, moved
-    pub fn set_org_unit(&mut self, v: self::org_unit::OrgUnit) {
+    pub fn set_org_unit(&mut self, v: super::object::org_unit::OrgUnit) {
         self.value = ::std::option::Option::Some(Object_oneof_value::org_unit(v))
     }
 
     // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_org_unit(&mut self) -> &mut self::org_unit::OrgUnit {
+    pub fn mut_org_unit(&mut self) -> &mut super::object::org_unit::OrgUnit {
         if let ::std::option::Option::Some(Object_oneof_value::org_unit(_)) = self.value {
         } else {
-            self.value = ::std::option::Option::Some(Object_oneof_value::org_unit(self::org_unit::OrgUnit::new()));
+            self.value = ::std::option::Option::Some(Object_oneof_value::org_unit(super::object::org_unit::OrgUnit::new()));
         }
         match self.value {
             ::std::option::Option::Some(Object_oneof_value::org_unit(ref mut v)) => v,
@@ -205,25 +194,25 @@ impl Object {
     }
 
     // Take field
-    pub fn take_org_unit(&mut self) -> self::org_unit::OrgUnit {
+    pub fn take_org_unit(&mut self) -> super::object::org_unit::OrgUnit {
         if self.has_org_unit() {
             match self.value.take() {
                 ::std::option::Option::Some(Object_oneof_value::org_unit(v)) => v,
                 _ => panic!(),
             }
         } else {
-            self::org_unit::OrgUnit::new()
+            super::object::org_unit::OrgUnit::new()
         }
     }
 
-    pub fn get_org_unit(&self) -> &self::org_unit::OrgUnit {
+    pub fn get_org_unit(&self) -> &super::object::org_unit::OrgUnit {
         match self.value {
             ::std::option::Option::Some(Object_oneof_value::org_unit(ref v)) => v,
-            _ => self::org_unit::OrgUnit::default_instance(),
+            _ => super::object::org_unit::OrgUnit::default_instance(),
         }
     }
 
-    // optional .ithos.object.System system = 4;
+    // .ithos.object.System system = 4;
 
     pub fn clear_system(&mut self) {
         self.value = ::std::option::Option::None;
@@ -237,16 +226,15 @@ impl Object {
     }
 
     // Param is passed by value, moved
-    pub fn set_system(&mut self, v: self::system::System) {
+    pub fn set_system(&mut self, v: super::object::system::System) {
         self.value = ::std::option::Option::Some(Object_oneof_value::system(v))
     }
 
     // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_system(&mut self) -> &mut self::system::System {
+    pub fn mut_system(&mut self) -> &mut super::object::system::System {
         if let ::std::option::Option::Some(Object_oneof_value::system(_)) = self.value {
         } else {
-            self.value = ::std::option::Option::Some(Object_oneof_value::system(self::system::System::new()));
+            self.value = ::std::option::Option::Some(Object_oneof_value::system(super::object::system::System::new()));
         }
         match self.value {
             ::std::option::Option::Some(Object_oneof_value::system(ref mut v)) => v,
@@ -255,25 +243,25 @@ impl Object {
     }
 
     // Take field
-    pub fn take_system(&mut self) -> self::system::System {
+    pub fn take_system(&mut self) -> super::object::system::System {
         if self.has_system() {
             match self.value.take() {
                 ::std::option::Option::Some(Object_oneof_value::system(v)) => v,
                 _ => panic!(),
             }
         } else {
-            self::system::System::new()
+            super::object::system::System::new()
         }
     }
 
-    pub fn get_system(&self) -> &self::system::System {
+    pub fn get_system(&self) -> &super::object::system::System {
         match self.value {
             ::std::option::Option::Some(Object_oneof_value::system(ref v)) => v,
-            _ => self::system::System::default_instance(),
+            _ => super::object::system::System::default_instance(),
         }
     }
 
-    // optional .ithos.object.Credential credential = 5;
+    // .ithos.object.Credential credential = 5;
 
     pub fn clear_credential(&mut self) {
         self.value = ::std::option::Option::None;
@@ -287,16 +275,15 @@ impl Object {
     }
 
     // Param is passed by value, moved
-    pub fn set_credential(&mut self, v: self::credential::Credential) {
+    pub fn set_credential(&mut self, v: super::object::credential::Credential) {
         self.value = ::std::option::Option::Some(Object_oneof_value::credential(v))
     }
 
     // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_credential(&mut self) -> &mut self::credential::Credential {
+    pub fn mut_credential(&mut self) -> &mut super::object::credential::Credential {
         if let ::std::option::Option::Some(Object_oneof_value::credential(_)) = self.value {
         } else {
-            self.value = ::std::option::Option::Some(Object_oneof_value::credential(self::credential::Credential::new()));
+            self.value = ::std::option::Option::Some(Object_oneof_value::credential(super::object::credential::Credential::new()));
         }
         match self.value {
             ::std::option::Option::Some(Object_oneof_value::credential(ref mut v)) => v,
@@ -305,21 +292,21 @@ impl Object {
     }
 
     // Take field
-    pub fn take_credential(&mut self) -> self::credential::Credential {
+    pub fn take_credential(&mut self) -> super::object::credential::Credential {
         if self.has_credential() {
             match self.value.take() {
                 ::std::option::Option::Some(Object_oneof_value::credential(v)) => v,
                 _ => panic!(),
             }
         } else {
-            self::credential::Credential::new()
+            super::object::credential::Credential::new()
         }
     }
 
-    pub fn get_credential(&self) -> &self::credential::Credential {
+    pub fn get_credential(&self) -> &super::object::credential::Credential {
         match self.value {
             ::std::option::Option::Some(Object_oneof_value::credential(ref v)) => v,
-            _ => self::credential::Credential::default_instance(),
+            _ => super::object::credential::Credential::default_instance(),
         }
     }
 }
@@ -332,44 +319,47 @@ impl ::protobuf::Message for Object {
     fn merge_from(&mut self,
                   is: &mut ::protobuf::CodedInputStream)
                   -> ::protobuf::ProtobufResult<()> {
-        while !try!(is.eof()) {
-            let (field_number, wire_type) = try!(is.read_tag_unpack());
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
                     if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     };
-                    self.value = ::std::option::Option::Some(Object_oneof_value::root(try!(is.read_message())));
+                    self.value =
+                        ::std::option::Option::Some(Object_oneof_value::root(is.read_message()?));
                 }
                 2 => {
                     if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     };
-                    self.value = ::std::option::Option::Some(Object_oneof_value::domain(try!(is.read_message())));
+                    self.value =
+                        ::std::option::Option::Some(Object_oneof_value::domain(is.read_message()?));
                 }
                 3 => {
                     if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     };
-                    self.value = ::std::option::Option::Some(Object_oneof_value::org_unit(try!(is.read_message())));
+                    self.value = ::std::option::Option::Some(Object_oneof_value::org_unit(is.read_message()?));
                 }
                 4 => {
                     if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     };
-                    self.value = ::std::option::Option::Some(Object_oneof_value::system(try!(is.read_message())));
+                    self.value =
+                        ::std::option::Option::Some(Object_oneof_value::system(is.read_message()?));
                 }
                 5 => {
                     if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     };
-                    self.value = ::std::option::Option::Some(Object_oneof_value::credential(try!(is.read_message())));
+                    self.value = ::std::option::Option::Some(Object_oneof_value::credential(is.read_message()?));
                 }
                 _ => {
-                    try!(::protobuf::rt::read_unknown_or_skip_group(field_number,
-                                                                    wire_type,
-                                                                    is,
-                                                                    self.mut_unknown_fields()));
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number,
+                                                               wire_type,
+                                                               is,
+                                                               self.mut_unknown_fields())?;
                 }
             };
         }
@@ -415,33 +405,33 @@ impl ::protobuf::Message for Object {
         if let ::std::option::Option::Some(ref v) = self.value {
             match v {
                 &Object_oneof_value::root(ref v) => {
-                    try!(os.write_tag(1, ::protobuf::wire_format::WireTypeLengthDelimited));
-                    try!(os.write_raw_varint32(v.get_cached_size()));
-                    try!(v.write_to_with_cached_sizes(os));
+                    os.write_tag(1, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+                    os.write_raw_varint32(v.get_cached_size())?;
+                    v.write_to_with_cached_sizes(os)?;
                 }
                 &Object_oneof_value::domain(ref v) => {
-                    try!(os.write_tag(2, ::protobuf::wire_format::WireTypeLengthDelimited));
-                    try!(os.write_raw_varint32(v.get_cached_size()));
-                    try!(v.write_to_with_cached_sizes(os));
+                    os.write_tag(2, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+                    os.write_raw_varint32(v.get_cached_size())?;
+                    v.write_to_with_cached_sizes(os)?;
                 }
                 &Object_oneof_value::org_unit(ref v) => {
-                    try!(os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited));
-                    try!(os.write_raw_varint32(v.get_cached_size()));
-                    try!(v.write_to_with_cached_sizes(os));
+                    os.write_tag(3, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+                    os.write_raw_varint32(v.get_cached_size())?;
+                    v.write_to_with_cached_sizes(os)?;
                 }
                 &Object_oneof_value::system(ref v) => {
-                    try!(os.write_tag(4, ::protobuf::wire_format::WireTypeLengthDelimited));
-                    try!(os.write_raw_varint32(v.get_cached_size()));
-                    try!(v.write_to_with_cached_sizes(os));
+                    os.write_tag(4, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+                    os.write_raw_varint32(v.get_cached_size())?;
+                    v.write_to_with_cached_sizes(os)?;
                 }
                 &Object_oneof_value::credential(ref v) => {
-                    try!(os.write_tag(5, ::protobuf::wire_format::WireTypeLengthDelimited));
-                    try!(os.write_raw_varint32(v.get_cached_size()));
-                    try!(v.write_to_with_cached_sizes(os));
+                    os.write_tag(5, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+                    os.write_raw_varint32(v.get_cached_size())?;
+                    v.write_to_with_cached_sizes(os)?;
                 }
             };
         };
-        try!(os.write_unknown_fields(self.get_unknown_fields()));
+        os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
     }
 
@@ -455,10 +445,6 @@ impl ::protobuf::Message for Object {
 
     fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
-    }
-
-    fn type_id(&self) -> ::std::any::TypeId {
-        ::std::any::TypeId::of::<Object>()
     }
 
     fn as_any(&self) -> &::std::any::Any {
@@ -485,34 +471,36 @@ impl ::protobuf::MessageStatic for Object {
         unsafe {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor(
+                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, super::object::root::Root>(
                     "root",
                     Object::has_root,
                     Object::get_root,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor(
+                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, super::object::domain::Domain>(
                     "domain",
                     Object::has_domain,
                     Object::get_domain,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor(
+                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, super::object::org_unit::OrgUnit>(
                     "org_unit",
                     Object::has_org_unit,
                     Object::get_org_unit,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor(
+                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, super::object::system::System>(
                     "system",
                     Object::has_system,
                     Object::get_system,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor(
+                fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, super::object::credential::Credential>(
                     "credential",
                     Object::has_credential,
                     Object::get_credential,
                 ));
-                ::protobuf::reflect::MessageDescriptor::new::<Object>("Object",
-                                                                      fields,
-                                                                      file_descriptor_proto())
+                ::protobuf::reflect::MessageDescriptor::new::<Object>(
+                    "Object",
+                    fields,
+                    file_descriptor_proto()
+                )
             })
         }
     }
@@ -529,15 +517,15 @@ impl ::protobuf::Clear for Object {
     }
 }
 
-impl ::std::cmp::PartialEq for Object {
-    fn eq(&self, other: &Object) -> bool {
-        self.value == other.value && self.unknown_fields == other.unknown_fields
-    }
-}
-
 impl ::std::fmt::Debug for Object {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Object {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
     }
 }
 
@@ -613,7 +601,17 @@ pub fn file_descriptor_proto() -> &'static ::protobuf::descriptor::FileDescripto
 
 // TODO: Hand edited! Figure out a better solution for objecthash support
 impl ObjectHash for Object {
-    fn objecthash<H: ObjectHasher>(&self, _hasher: &mut H) {
-        // TODO: Actually implement ObjectHash for Object!
+    fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
+        if self.has_root() {
+            objecthash_struct!(hasher, "root" => *self.get_root());
+        } else if self.has_domain() {
+            objecthash_struct!(hasher, "domain" => *self.get_domain());
+        } else if self.has_org_unit() {
+            objecthash_struct!(hasher, "org_unit" => *self.get_org_unit());
+        } else if self.has_system() {
+            objecthash_struct!(hasher, "system" => *self.get_system());
+        } else if self.has_credential() {
+            objecthash_struct!(hasher, "credential" => *self.get_credential());
+        }
     }
 }

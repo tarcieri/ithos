@@ -17,17 +17,19 @@
 #![allow(unused_imports)]
 #![allow(unused_results)]
 
+// TODO: Hand edited! Figure out a better solution for objecthash support
+
 use objecthash::{self, ObjectHash, ObjectHasher};
 use protobuf::Message as Message_imported_for_functions;
 use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
 
-#[derive(Clone,Default)]
+#[derive(PartialEq,Clone,Default)]
 pub struct Domain {
     // message fields
-    description: ::protobuf::SingularField<::std::string::String>,
+    pub description: ::std::string::String,
     // special fields
     unknown_fields: ::protobuf::UnknownFields,
-    cached_size: ::std::cell::Cell<u32>,
+    cached_size: ::protobuf::CachedSize,
 }
 
 // see codegen.rs for the explanation why impl Sync explicitly
@@ -43,51 +45,41 @@ impl Domain {
             lock: ::protobuf::lazy::ONCE_INIT,
             ptr: 0 as *const Domain,
         };
-        unsafe {
-            instance.get(|| {
-                Domain {
-                    description: ::protobuf::SingularField::none(),
-                    unknown_fields: ::protobuf::UnknownFields::new(),
-                    cached_size: ::std::cell::Cell::new(0),
-                }
-            })
-        }
+        unsafe { instance.get(Domain::new) }
     }
 
-    // optional string description = 1;
+    // string description = 1;
 
     pub fn clear_description(&mut self) {
         self.description.clear();
     }
 
-    pub fn has_description(&self) -> bool {
-        self.description.is_some()
-    }
-
     // Param is passed by value, moved
     pub fn set_description(&mut self, v: ::std::string::String) {
-        self.description = ::protobuf::SingularField::some(v);
+        self.description = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
     pub fn mut_description(&mut self) -> &mut ::std::string::String {
-        if self.description.is_none() {
-            self.description.set_default();
-        };
-        self.description.as_mut().unwrap()
+        &mut self.description
     }
 
     // Take field
     pub fn take_description(&mut self) -> ::std::string::String {
-        self.description.take().unwrap_or_else(|| ::std::string::String::new())
+        ::std::mem::replace(&mut self.description, ::std::string::String::new())
     }
 
     pub fn get_description(&self) -> &str {
-        match self.description.as_ref() {
-            Some(v) => &v,
-            None => "",
-        }
+        &self.description
+    }
+
+    fn get_description_for_reflect(&self) -> &::std::string::String {
+        &self.description
+    }
+
+    fn mut_description_for_reflect(&mut self) -> &mut ::std::string::String {
+        &mut self.description
     }
 }
 
@@ -99,19 +91,19 @@ impl ::protobuf::Message for Domain {
     fn merge_from(&mut self,
                   is: &mut ::protobuf::CodedInputStream)
                   -> ::protobuf::ProtobufResult<()> {
-        while !try!(is.eof()) {
-            let (field_number, wire_type) = try!(is.read_tag_unpack());
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    try!(::protobuf::rt::read_singular_string_into(wire_type,
-                                                                   is,
-                                                                   &mut self.description));
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type,
+                                                                     is,
+                                                                     &mut self.description)?;
                 }
                 _ => {
-                    try!(::protobuf::rt::read_unknown_or_skip_group(field_number,
-                                                                    wire_type,
-                                                                    is,
-                                                                    self.mut_unknown_fields()));
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number,
+                                                               wire_type,
+                                                               is,
+                                                               self.mut_unknown_fields())?;
                 }
             };
         }
@@ -122,9 +114,9 @@ impl ::protobuf::Message for Domain {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        for value in &self.description {
-            my_size += ::protobuf::rt::string_size(1, &value);
-        }
+        if self.description != ::std::string::String::new() {
+            my_size += ::protobuf::rt::string_size(1, &self.description);
+        };
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -133,10 +125,10 @@ impl ::protobuf::Message for Domain {
     fn write_to_with_cached_sizes(&self,
                                   os: &mut ::protobuf::CodedOutputStream)
                                   -> ::protobuf::ProtobufResult<()> {
-        if let Some(v) = self.description.as_ref() {
-            try!(os.write_string(1, &v));
+        if self.description != ::std::string::String::new() {
+            os.write_string(1, &self.description)?;
         };
-        try!(os.write_unknown_fields(self.get_unknown_fields()));
+        os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
     }
 
@@ -150,10 +142,6 @@ impl ::protobuf::Message for Domain {
 
     fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
-    }
-
-    fn type_id(&self) -> ::std::any::TypeId {
-        ::std::any::TypeId::of::<Domain>()
     }
 
     fn as_any(&self) -> &::std::any::Any {
@@ -180,14 +168,16 @@ impl ::protobuf::MessageStatic for Domain {
         unsafe {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_singular_string_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
                     "description",
-                    Domain::has_description,
-                    Domain::get_description,
+                    Domain::get_description_for_reflect,
+                    Domain::mut_description_for_reflect,
                 ));
-                ::protobuf::reflect::MessageDescriptor::new::<Domain>("Domain",
-                                                                      fields,
-                                                                      file_descriptor_proto())
+                ::protobuf::reflect::MessageDescriptor::new::<Domain>(
+                    "Domain",
+                    fields,
+                    file_descriptor_proto()
+                )
             })
         }
     }
@@ -200,15 +190,15 @@ impl ::protobuf::Clear for Domain {
     }
 }
 
-impl ::std::cmp::PartialEq for Domain {
-    fn eq(&self, other: &Domain) -> bool {
-        self.description == other.description && self.unknown_fields == other.unknown_fields
-    }
-}
-
 impl ::std::fmt::Debug for Domain {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Domain {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
     }
 }
 
@@ -249,8 +239,6 @@ pub fn file_descriptor_proto() -> &'static ::protobuf::descriptor::FileDescripto
 impl ObjectHash for Domain {
     #[inline]
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
-        if self.description.is_some() {
-            objecthash_struct!(hasher, "description" => *self.description.get_ref())
-        }
+        objecthash_struct!(hasher, "description" => *self.description)
     }
 }

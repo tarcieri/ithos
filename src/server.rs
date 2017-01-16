@@ -172,7 +172,7 @@ mod tests {
         let mut admin_symmetric_key = [0u8; AES256GCM_KEY_SIZE];
 
         password::derive(PasswordAlgorithm::SCRYPT,
-                         credential.get_salt(),
+                         &credential.salt,
                          ADMIN_PASSWORD,
                          &mut admin_symmetric_key);
 

@@ -150,7 +150,7 @@ fn domain_add(database_path: &str, admin_username: &str, domain_name: &str) {
     let admin_password = password::prompt(&format!("{}'s password: ", admin_username)).unwrap();
     let mut admin_symmetric_key = [0u8; AES256GCM_KEY_SIZE];
     password::derive(password::PasswordAlgorithm::SCRYPT,
-                     admin_credential.get_salt(),
+                     &admin_credential.salt,
                      &admin_password,
                      &mut admin_symmetric_key);
 

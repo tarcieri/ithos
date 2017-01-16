@@ -21,7 +21,7 @@ rpassword       = ">= 0.3"
 time            = ">= 0.1.35"
 
 [dependencies.objecthash]
-version = ">= 0.3"
+git = "https://github.com/cryptosphere/objecthash-rs.git"
 features = ["octet-strings"]
 
 [dev-dependencies]

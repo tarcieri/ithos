@@ -114,16 +114,16 @@ impl<'a> Adapter<'a> for LmdbAdapter {
 
     fn add_block<'t>(&'t self, txn: &'t mut RwTransaction, block: &Block) -> Result<()> {
         let block_id = BlockId::of(block);
-        let parent_id = block.get_body().get_parent_id();
+        let parent_id = &block.get_body().parent_id;
 
         // Ensure the block we're adding is the next in the chain
-        if parent_id == BlockId::zero().as_ref() {
+        if *parent_id == BlockId::zero().as_ref() {
             if txn.get(self.state, LOG_ID_KEY) != Err(Error::not_found(None)) {
                 return Err(Error::entry_already_exists(Some("initial block already set")));
             }
 
             try!(txn.put(self.state, LOG_ID_KEY, block_id.as_ref()));
-        } else if parent_id != try!(self.current_block_id(txn)).as_ref() {
+        } else if *parent_id != try!(self.current_block_id(txn)).as_ref() {
             return Err(Error::ordering(Some("new block's parent does not match current ID")));
         }
 
@@ -426,7 +426,7 @@ mod tests {
                 assert_eq!(direntry.name, "master.example.com");
 
                 let metadata = adapter.find_metadata(&txn, &direntry.id).unwrap();
-                assert_eq!(metadata.get_created_at(), example_timestamp().to_int());
+                assert_eq!(metadata.created_at, example_timestamp().to_int());
 
                 let entry = adapter.find_entry(&txn, &direntry.id).unwrap();
                 assert_eq!(entry.data, &example_data[..]);

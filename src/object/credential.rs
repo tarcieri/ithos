@@ -17,31 +17,29 @@
 #![allow(unused_imports)]
 #![allow(unused_results)]
 
-// TODO: Hand edits! Don't do this!
+// TODO: Hand edited! Figure out a better solution for objecthash support
 
 use algorithm;
 use objecthash::{self, ObjectHash, ObjectHasher};
-
-// Back to your regularly scheduled proto
 use protobuf::Message as Message_imported_for_functions;
 use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
 
-#[derive(Clone,Default)]
+#[derive(PartialEq,Clone,Default)]
 pub struct Credential {
     // message fields
-    keyid: ::protobuf::SingularField<::std::vec::Vec<u8>>,
-    credential_type: ::std::option::Option<Type>,
-    credential_alg: ::protobuf::SingularField<::std::string::String>,
-    sealing_alg: ::std::option::Option<algorithm::EncryptionAlgorithm>,
-    encrypted_value: ::protobuf::SingularField<::std::vec::Vec<u8>>,
-    salt: ::protobuf::SingularField<::std::vec::Vec<u8>>,
-    public_key: ::protobuf::SingularField<::std::vec::Vec<u8>>,
-    not_before: ::std::option::Option<u64>,
-    not_after: ::std::option::Option<u64>,
-    description: ::protobuf::SingularField<::std::string::String>,
+    pub keyid: ::std::vec::Vec<u8>,
+    pub credential_type: Type,
+    pub credential_alg: ::std::string::String,
+    pub sealing_alg: algorithm::EncryptionAlgorithm,
+    pub encrypted_value: ::std::vec::Vec<u8>,
+    pub salt: ::std::vec::Vec<u8>,
+    pub public_key: ::std::vec::Vec<u8>,
+    pub not_before: u64,
+    pub not_after: u64,
+    pub description: ::std::string::String,
     // special fields
     unknown_fields: ::protobuf::UnknownFields,
-    cached_size: ::std::cell::Cell<u32>,
+    cached_size: ::protobuf::CachedSize,
 }
 
 // see codegen.rs for the explanation why impl Sync explicitly
@@ -57,316 +55,303 @@ impl Credential {
             lock: ::protobuf::lazy::ONCE_INIT,
             ptr: 0 as *const Credential,
         };
-        unsafe {
-            instance.get(|| {
-                Credential {
-                    keyid: ::protobuf::SingularField::none(),
-                    credential_type: ::std::option::Option::None,
-                    credential_alg: ::protobuf::SingularField::none(),
-                    sealing_alg: ::std::option::Option::None,
-                    encrypted_value: ::protobuf::SingularField::none(),
-                    salt: ::protobuf::SingularField::none(),
-                    public_key: ::protobuf::SingularField::none(),
-                    not_before: ::std::option::Option::None,
-                    not_after: ::std::option::Option::None,
-                    description: ::protobuf::SingularField::none(),
-                    unknown_fields: ::protobuf::UnknownFields::new(),
-                    cached_size: ::std::cell::Cell::new(0),
-                }
-            })
-        }
+        unsafe { instance.get(Credential::new) }
     }
 
-    // optional bytes keyid = 1;
+    // bytes keyid = 1;
 
     pub fn clear_keyid(&mut self) {
         self.keyid.clear();
     }
 
-    pub fn has_keyid(&self) -> bool {
-        self.keyid.is_some()
-    }
-
     // Param is passed by value, moved
     pub fn set_keyid(&mut self, v: ::std::vec::Vec<u8>) {
-        self.keyid = ::protobuf::SingularField::some(v);
+        self.keyid = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
     pub fn mut_keyid(&mut self) -> &mut ::std::vec::Vec<u8> {
-        if self.keyid.is_none() {
-            self.keyid.set_default();
-        };
-        self.keyid.as_mut().unwrap()
+        &mut self.keyid
     }
 
     // Take field
     pub fn take_keyid(&mut self) -> ::std::vec::Vec<u8> {
-        self.keyid.take().unwrap_or_else(|| ::std::vec::Vec::new())
+        ::std::mem::replace(&mut self.keyid, ::std::vec::Vec::new())
     }
 
     pub fn get_keyid(&self) -> &[u8] {
-        match self.keyid.as_ref() {
-            Some(v) => &v,
-            None => &[],
-        }
+        &self.keyid
     }
 
-    // optional .ithos.object.Type credential_type = 2;
+    fn get_keyid_for_reflect(&self) -> &::std::vec::Vec<u8> {
+        &self.keyid
+    }
+
+    fn mut_keyid_for_reflect(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.keyid
+    }
+
+    // .ithos.object.Type credential_type = 2;
 
     pub fn clear_credential_type(&mut self) {
-        self.credential_type = ::std::option::Option::None;
-    }
-
-    pub fn has_credential_type(&self) -> bool {
-        self.credential_type.is_some()
+        self.credential_type = Type::SIGNATURE_KEY_PAIR;
     }
 
     // Param is passed by value, moved
     pub fn set_credential_type(&mut self, v: Type) {
-        self.credential_type = ::std::option::Option::Some(v);
+        self.credential_type = v;
     }
 
     pub fn get_credential_type(&self) -> Type {
-        self.credential_type.unwrap_or(Type::SIGNATURE_KEY_PAIR)
+        self.credential_type
     }
 
-    // optional string credential_alg = 3;
+    fn get_credential_type_for_reflect(&self) -> &Type {
+        &self.credential_type
+    }
+
+    fn mut_credential_type_for_reflect(&mut self) -> &mut Type {
+        &mut self.credential_type
+    }
+
+    // string credential_alg = 3;
 
     pub fn clear_credential_alg(&mut self) {
         self.credential_alg.clear();
     }
 
-    pub fn has_credential_alg(&self) -> bool {
-        self.credential_alg.is_some()
-    }
-
     // Param is passed by value, moved
     pub fn set_credential_alg(&mut self, v: ::std::string::String) {
-        self.credential_alg = ::protobuf::SingularField::some(v);
+        self.credential_alg = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
     pub fn mut_credential_alg(&mut self) -> &mut ::std::string::String {
-        if self.credential_alg.is_none() {
-            self.credential_alg.set_default();
-        };
-        self.credential_alg.as_mut().unwrap()
+        &mut self.credential_alg
     }
 
     // Take field
     pub fn take_credential_alg(&mut self) -> ::std::string::String {
-        self.credential_alg.take().unwrap_or_else(|| ::std::string::String::new())
+        ::std::mem::replace(&mut self.credential_alg, ::std::string::String::new())
     }
 
     pub fn get_credential_alg(&self) -> &str {
-        match self.credential_alg.as_ref() {
-            Some(v) => &v,
-            None => "",
-        }
+        &self.credential_alg
     }
 
-    // optional .ithos.EncryptionAlgorithm sealing_alg = 4;
+    fn get_credential_alg_for_reflect(&self) -> &::std::string::String {
+        &self.credential_alg
+    }
+
+    fn mut_credential_alg_for_reflect(&mut self) -> &mut ::std::string::String {
+        &mut self.credential_alg
+    }
+
+    // .ithos.EncryptionAlgorithm sealing_alg = 4;
 
     pub fn clear_sealing_alg(&mut self) {
-        self.sealing_alg = ::std::option::Option::None;
-    }
-
-    pub fn has_sealing_alg(&self) -> bool {
-        self.sealing_alg.is_some()
+        self.sealing_alg = algorithm::EncryptionAlgorithm::AES256GCM;
     }
 
     // Param is passed by value, moved
     pub fn set_sealing_alg(&mut self, v: algorithm::EncryptionAlgorithm) {
-        self.sealing_alg = ::std::option::Option::Some(v);
+        self.sealing_alg = v;
     }
 
     pub fn get_sealing_alg(&self) -> algorithm::EncryptionAlgorithm {
-        self.sealing_alg.unwrap_or(algorithm::EncryptionAlgorithm::AES256GCM)
+        self.sealing_alg
     }
 
-    // optional bytes encrypted_value = 5;
+    fn get_sealing_alg_for_reflect(&self) -> &algorithm::EncryptionAlgorithm {
+        &self.sealing_alg
+    }
+
+    fn mut_sealing_alg_for_reflect(&mut self) -> &mut algorithm::EncryptionAlgorithm {
+        &mut self.sealing_alg
+    }
+
+    // bytes encrypted_value = 5;
 
     pub fn clear_encrypted_value(&mut self) {
         self.encrypted_value.clear();
     }
 
-    pub fn has_encrypted_value(&self) -> bool {
-        self.encrypted_value.is_some()
-    }
-
     // Param is passed by value, moved
     pub fn set_encrypted_value(&mut self, v: ::std::vec::Vec<u8>) {
-        self.encrypted_value = ::protobuf::SingularField::some(v);
+        self.encrypted_value = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
     pub fn mut_encrypted_value(&mut self) -> &mut ::std::vec::Vec<u8> {
-        if self.encrypted_value.is_none() {
-            self.encrypted_value.set_default();
-        };
-        self.encrypted_value.as_mut().unwrap()
+        &mut self.encrypted_value
     }
 
     // Take field
     pub fn take_encrypted_value(&mut self) -> ::std::vec::Vec<u8> {
-        self.encrypted_value.take().unwrap_or_else(|| ::std::vec::Vec::new())
+        ::std::mem::replace(&mut self.encrypted_value, ::std::vec::Vec::new())
     }
 
     pub fn get_encrypted_value(&self) -> &[u8] {
-        match self.encrypted_value.as_ref() {
-            Some(v) => &v,
-            None => &[],
-        }
+        &self.encrypted_value
     }
 
-    // optional bytes salt = 6;
+    fn get_encrypted_value_for_reflect(&self) -> &::std::vec::Vec<u8> {
+        &self.encrypted_value
+    }
+
+    fn mut_encrypted_value_for_reflect(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.encrypted_value
+    }
+
+    // bytes salt = 6;
 
     pub fn clear_salt(&mut self) {
         self.salt.clear();
     }
 
-    pub fn has_salt(&self) -> bool {
-        self.salt.is_some()
-    }
-
     // Param is passed by value, moved
     pub fn set_salt(&mut self, v: ::std::vec::Vec<u8>) {
-        self.salt = ::protobuf::SingularField::some(v);
+        self.salt = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
     pub fn mut_salt(&mut self) -> &mut ::std::vec::Vec<u8> {
-        if self.salt.is_none() {
-            self.salt.set_default();
-        };
-        self.salt.as_mut().unwrap()
+        &mut self.salt
     }
 
     // Take field
     pub fn take_salt(&mut self) -> ::std::vec::Vec<u8> {
-        self.salt.take().unwrap_or_else(|| ::std::vec::Vec::new())
+        ::std::mem::replace(&mut self.salt, ::std::vec::Vec::new())
     }
 
     pub fn get_salt(&self) -> &[u8] {
-        match self.salt.as_ref() {
-            Some(v) => &v,
-            None => &[],
-        }
+        &self.salt
     }
 
-    // optional bytes public_key = 7;
+    fn get_salt_for_reflect(&self) -> &::std::vec::Vec<u8> {
+        &self.salt
+    }
+
+    fn mut_salt_for_reflect(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.salt
+    }
+
+    // bytes public_key = 7;
 
     pub fn clear_public_key(&mut self) {
         self.public_key.clear();
     }
 
-    pub fn has_public_key(&self) -> bool {
-        self.public_key.is_some()
-    }
-
     // Param is passed by value, moved
     pub fn set_public_key(&mut self, v: ::std::vec::Vec<u8>) {
-        self.public_key = ::protobuf::SingularField::some(v);
+        self.public_key = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
     pub fn mut_public_key(&mut self) -> &mut ::std::vec::Vec<u8> {
-        if self.public_key.is_none() {
-            self.public_key.set_default();
-        };
-        self.public_key.as_mut().unwrap()
+        &mut self.public_key
     }
 
     // Take field
     pub fn take_public_key(&mut self) -> ::std::vec::Vec<u8> {
-        self.public_key.take().unwrap_or_else(|| ::std::vec::Vec::new())
+        ::std::mem::replace(&mut self.public_key, ::std::vec::Vec::new())
     }
 
     pub fn get_public_key(&self) -> &[u8] {
-        match self.public_key.as_ref() {
-            Some(v) => &v,
-            None => &[],
-        }
+        &self.public_key
     }
 
-    // optional uint64 not_before = 8;
+    fn get_public_key_for_reflect(&self) -> &::std::vec::Vec<u8> {
+        &self.public_key
+    }
+
+    fn mut_public_key_for_reflect(&mut self) -> &mut ::std::vec::Vec<u8> {
+        &mut self.public_key
+    }
+
+    // uint64 not_before = 8;
 
     pub fn clear_not_before(&mut self) {
-        self.not_before = ::std::option::Option::None;
-    }
-
-    pub fn has_not_before(&self) -> bool {
-        self.not_before.is_some()
+        self.not_before = 0;
     }
 
     // Param is passed by value, moved
     pub fn set_not_before(&mut self, v: u64) {
-        self.not_before = ::std::option::Option::Some(v);
+        self.not_before = v;
     }
 
     pub fn get_not_before(&self) -> u64 {
-        self.not_before.unwrap_or(0)
+        self.not_before
     }
 
-    // optional uint64 not_after = 9;
+    fn get_not_before_for_reflect(&self) -> &u64 {
+        &self.not_before
+    }
+
+    fn mut_not_before_for_reflect(&mut self) -> &mut u64 {
+        &mut self.not_before
+    }
+
+    // uint64 not_after = 9;
 
     pub fn clear_not_after(&mut self) {
-        self.not_after = ::std::option::Option::None;
-    }
-
-    pub fn has_not_after(&self) -> bool {
-        self.not_after.is_some()
+        self.not_after = 0;
     }
 
     // Param is passed by value, moved
     pub fn set_not_after(&mut self, v: u64) {
-        self.not_after = ::std::option::Option::Some(v);
+        self.not_after = v;
     }
 
     pub fn get_not_after(&self) -> u64 {
-        self.not_after.unwrap_or(0)
+        self.not_after
     }
 
-    // optional string description = 10;
+    fn get_not_after_for_reflect(&self) -> &u64 {
+        &self.not_after
+    }
+
+    fn mut_not_after_for_reflect(&mut self) -> &mut u64 {
+        &mut self.not_after
+    }
+
+    // string description = 10;
 
     pub fn clear_description(&mut self) {
         self.description.clear();
     }
 
-    pub fn has_description(&self) -> bool {
-        self.description.is_some()
-    }
-
     // Param is passed by value, moved
     pub fn set_description(&mut self, v: ::std::string::String) {
-        self.description = ::protobuf::SingularField::some(v);
+        self.description = v;
     }
 
     // Mutable pointer to the field.
     // If field is not initialized, it is initialized with default value first.
     pub fn mut_description(&mut self) -> &mut ::std::string::String {
-        if self.description.is_none() {
-            self.description.set_default();
-        };
-        self.description.as_mut().unwrap()
+        &mut self.description
     }
 
     // Take field
     pub fn take_description(&mut self) -> ::std::string::String {
-        self.description.take().unwrap_or_else(|| ::std::string::String::new())
+        ::std::mem::replace(&mut self.description, ::std::string::String::new())
     }
 
     pub fn get_description(&self) -> &str {
-        match self.description.as_ref() {
-            Some(v) => &v,
-            None => "",
-        }
+        &self.description
+    }
+
+    fn get_description_for_reflect(&self) -> &::std::string::String {
+        &self.description
+    }
+
+    fn mut_description_for_reflect(&mut self) -> &mut ::std::string::String {
+        &mut self.description
     }
 }
 
@@ -378,68 +363,70 @@ impl ::protobuf::Message for Credential {
     fn merge_from(&mut self,
                   is: &mut ::protobuf::CodedInputStream)
                   -> ::protobuf::ProtobufResult<()> {
-        while !try!(is.eof()) {
-            let (field_number, wire_type) = try!(is.read_tag_unpack());
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    try!(::protobuf::rt::read_singular_bytes_into(wire_type, is, &mut self.keyid));
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type,
+                                                                    is,
+                                                                    &mut self.keyid)?;
                 }
                 2 => {
                     if wire_type != ::protobuf::wire_format::WireTypeVarint {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     };
-                    let tmp = try!(is.read_enum());
-                    self.credential_type = ::std::option::Option::Some(tmp);
+                    let tmp = is.read_enum()?;
+                    self.credential_type = tmp;
                 }
                 3 => {
-                    try!(::protobuf::rt::read_singular_string_into(wire_type,
-                                                                   is,
-                                                                   &mut self.credential_alg));
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type,
+                                                                     is,
+                                                                     &mut self.credential_alg)?;
                 }
                 4 => {
                     if wire_type != ::protobuf::wire_format::WireTypeVarint {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     };
-                    let tmp = try!(is.read_enum());
-                    self.sealing_alg = ::std::option::Option::Some(tmp);
+                    let tmp = is.read_enum()?;
+                    self.sealing_alg = tmp;
                 }
                 5 => {
-                    try!(::protobuf::rt::read_singular_bytes_into(wire_type,
-                                                                  is,
-                                                                  &mut self.encrypted_value));
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type,
+                                                                    is,
+                                                                    &mut self.encrypted_value)?;
                 }
                 6 => {
-                    try!(::protobuf::rt::read_singular_bytes_into(wire_type, is, &mut self.salt));
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.salt)?;
                 }
                 7 => {
-                    try!(::protobuf::rt::read_singular_bytes_into(wire_type,
-                                                                  is,
-                                                                  &mut self.public_key));
+                    ::protobuf::rt::read_singular_proto3_bytes_into(wire_type,
+                                                                    is,
+                                                                    &mut self.public_key)?;
                 }
                 8 => {
                     if wire_type != ::protobuf::wire_format::WireTypeVarint {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     };
-                    let tmp = try!(is.read_uint64());
-                    self.not_before = ::std::option::Option::Some(tmp);
+                    let tmp = is.read_uint64()?;
+                    self.not_before = tmp;
                 }
                 9 => {
                     if wire_type != ::protobuf::wire_format::WireTypeVarint {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     };
-                    let tmp = try!(is.read_uint64());
-                    self.not_after = ::std::option::Option::Some(tmp);
+                    let tmp = is.read_uint64()?;
+                    self.not_after = tmp;
                 }
                 10 => {
-                    try!(::protobuf::rt::read_singular_string_into(wire_type,
-                                                                   is,
-                                                                   &mut self.description));
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type,
+                                                                     is,
+                                                                     &mut self.description)?;
                 }
                 _ => {
-                    try!(::protobuf::rt::read_unknown_or_skip_group(field_number,
-                                                                    wire_type,
-                                                                    is,
-                                                                    self.mut_unknown_fields()));
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number,
+                                                               wire_type,
+                                                               is,
+                                                               self.mut_unknown_fields())?;
                 }
             };
         }
@@ -450,38 +437,40 @@ impl ::protobuf::Message for Credential {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        for value in &self.keyid {
-            my_size += ::protobuf::rt::bytes_size(1, &value);
-        }
-        for value in &self.credential_type {
-            my_size += ::protobuf::rt::enum_size(2, *value);
-        }
-        for value in &self.credential_alg {
-            my_size += ::protobuf::rt::string_size(3, &value);
-        }
-        for value in &self.sealing_alg {
-            my_size += ::protobuf::rt::enum_size(4, *value);
-        }
-        for value in &self.encrypted_value {
-            my_size += ::protobuf::rt::bytes_size(5, &value);
-        }
-        for value in &self.salt {
-            my_size += ::protobuf::rt::bytes_size(6, &value);
-        }
-        for value in &self.public_key {
-            my_size += ::protobuf::rt::bytes_size(7, &value);
-        }
-        for value in &self.not_before {
-            my_size +=
-                ::protobuf::rt::value_size(8, *value, ::protobuf::wire_format::WireTypeVarint);
-        }
-        for value in &self.not_after {
-            my_size +=
-                ::protobuf::rt::value_size(9, *value, ::protobuf::wire_format::WireTypeVarint);
-        }
-        for value in &self.description {
-            my_size += ::protobuf::rt::string_size(10, &value);
-        }
+        if self.keyid != ::std::vec::Vec::new() {
+            my_size += ::protobuf::rt::bytes_size(1, &self.keyid);
+        };
+        if self.credential_type != Type::SIGNATURE_KEY_PAIR {
+            my_size += ::protobuf::rt::enum_size(2, self.credential_type);
+        };
+        if self.credential_alg != ::std::string::String::new() {
+            my_size += ::protobuf::rt::string_size(3, &self.credential_alg);
+        };
+        if self.sealing_alg != algorithm::EncryptionAlgorithm::AES256GCM {
+            my_size += ::protobuf::rt::enum_size(4, self.sealing_alg);
+        };
+        if self.encrypted_value != ::std::vec::Vec::new() {
+            my_size += ::protobuf::rt::bytes_size(5, &self.encrypted_value);
+        };
+        if self.salt != ::std::vec::Vec::new() {
+            my_size += ::protobuf::rt::bytes_size(6, &self.salt);
+        };
+        if self.public_key != ::std::vec::Vec::new() {
+            my_size += ::protobuf::rt::bytes_size(7, &self.public_key);
+        };
+        if self.not_before != 0 {
+            my_size += ::protobuf::rt::value_size(8,
+                                                  self.not_before,
+                                                  ::protobuf::wire_format::WireTypeVarint);
+        };
+        if self.not_after != 0 {
+            my_size += ::protobuf::rt::value_size(9,
+                                                  self.not_after,
+                                                  ::protobuf::wire_format::WireTypeVarint);
+        };
+        if self.description != ::std::string::String::new() {
+            my_size += ::protobuf::rt::string_size(10, &self.description);
+        };
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -490,37 +479,37 @@ impl ::protobuf::Message for Credential {
     fn write_to_with_cached_sizes(&self,
                                   os: &mut ::protobuf::CodedOutputStream)
                                   -> ::protobuf::ProtobufResult<()> {
-        if let Some(v) = self.keyid.as_ref() {
-            try!(os.write_bytes(1, &v));
+        if self.keyid != ::std::vec::Vec::new() {
+            os.write_bytes(1, &self.keyid)?;
         };
-        if let Some(v) = self.credential_type {
-            try!(os.write_enum(2, v.value()));
+        if self.credential_type != Type::SIGNATURE_KEY_PAIR {
+            os.write_enum(2, self.credential_type.value())?;
         };
-        if let Some(v) = self.credential_alg.as_ref() {
-            try!(os.write_string(3, &v));
+        if self.credential_alg != ::std::string::String::new() {
+            os.write_string(3, &self.credential_alg)?;
         };
-        if let Some(v) = self.sealing_alg {
-            try!(os.write_enum(4, v.value()));
+        if self.sealing_alg != algorithm::EncryptionAlgorithm::AES256GCM {
+            os.write_enum(4, self.sealing_alg.value())?;
         };
-        if let Some(v) = self.encrypted_value.as_ref() {
-            try!(os.write_bytes(5, &v));
+        if self.encrypted_value != ::std::vec::Vec::new() {
+            os.write_bytes(5, &self.encrypted_value)?;
         };
-        if let Some(v) = self.salt.as_ref() {
-            try!(os.write_bytes(6, &v));
+        if self.salt != ::std::vec::Vec::new() {
+            os.write_bytes(6, &self.salt)?;
         };
-        if let Some(v) = self.public_key.as_ref() {
-            try!(os.write_bytes(7, &v));
+        if self.public_key != ::std::vec::Vec::new() {
+            os.write_bytes(7, &self.public_key)?;
         };
-        if let Some(v) = self.not_before {
-            try!(os.write_uint64(8, v));
+        if self.not_before != 0 {
+            os.write_uint64(8, self.not_before)?;
         };
-        if let Some(v) = self.not_after {
-            try!(os.write_uint64(9, v));
+        if self.not_after != 0 {
+            os.write_uint64(9, self.not_after)?;
         };
-        if let Some(v) = self.description.as_ref() {
-            try!(os.write_string(10, &v));
+        if self.description != ::std::string::String::new() {
+            os.write_string(10, &self.description)?;
         };
-        try!(os.write_unknown_fields(self.get_unknown_fields()));
+        os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
     }
 
@@ -534,10 +523,6 @@ impl ::protobuf::Message for Credential {
 
     fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
         &mut self.unknown_fields
-    }
-
-    fn type_id(&self) -> ::std::any::TypeId {
-        ::std::any::TypeId::of::<Credential>()
     }
 
     fn as_any(&self) -> &::std::any::Any {
@@ -564,59 +549,61 @@ impl ::protobuf::MessageStatic for Credential {
         unsafe {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_singular_bytes_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                     "keyid",
-                    Credential::has_keyid,
-                    Credential::get_keyid,
+                    Credential::get_keyid_for_reflect,
+                    Credential::mut_keyid_for_reflect,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_enum_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeEnum<Type>>(
                     "credential_type",
-                    Credential::has_credential_type,
-                    Credential::get_credential_type,
+                    Credential::get_credential_type_for_reflect,
+                    Credential::mut_credential_type_for_reflect,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_string_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
                     "credential_alg",
-                    Credential::has_credential_alg,
-                    Credential::get_credential_alg,
+                    Credential::get_credential_alg_for_reflect,
+                    Credential::mut_credential_alg_for_reflect,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_enum_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeEnum<algorithm::EncryptionAlgorithm>>(
                     "sealing_alg",
-                    Credential::has_sealing_alg,
-                    Credential::get_sealing_alg,
+                    Credential::get_sealing_alg_for_reflect,
+                    Credential::mut_sealing_alg_for_reflect,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_bytes_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                     "encrypted_value",
-                    Credential::has_encrypted_value,
-                    Credential::get_encrypted_value,
+                    Credential::get_encrypted_value_for_reflect,
+                    Credential::mut_encrypted_value_for_reflect,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_bytes_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                     "salt",
-                    Credential::has_salt,
-                    Credential::get_salt,
+                    Credential::get_salt_for_reflect,
+                    Credential::mut_salt_for_reflect,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_bytes_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                     "public_key",
-                    Credential::has_public_key,
-                    Credential::get_public_key,
+                    Credential::get_public_key_for_reflect,
+                    Credential::mut_public_key_for_reflect,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_u64_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
                     "not_before",
-                    Credential::has_not_before,
-                    Credential::get_not_before,
+                    Credential::get_not_before_for_reflect,
+                    Credential::mut_not_before_for_reflect,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_u64_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint64>(
                     "not_after",
-                    Credential::has_not_after,
-                    Credential::get_not_after,
+                    Credential::get_not_after_for_reflect,
+                    Credential::mut_not_after_for_reflect,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_singular_string_accessor(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
                     "description",
-                    Credential::has_description,
-                    Credential::get_description,
+                    Credential::get_description_for_reflect,
+                    Credential::mut_description_for_reflect,
                 ));
-                ::protobuf::reflect::MessageDescriptor::new::<Credential>("Credential",
-                                                                          fields,
-                                                                          file_descriptor_proto())
+                ::protobuf::reflect::MessageDescriptor::new::<Credential>(
+                    "Credential",
+                    fields,
+                    file_descriptor_proto()
+                )
             })
         }
     }
@@ -638,21 +625,15 @@ impl ::protobuf::Clear for Credential {
     }
 }
 
-impl ::std::cmp::PartialEq for Credential {
-    fn eq(&self, other: &Credential) -> bool {
-        self.keyid == other.keyid && self.credential_type == other.credential_type &&
-        self.credential_alg == other.credential_alg &&
-        self.sealing_alg == other.sealing_alg &&
-        self.encrypted_value == other.encrypted_value && self.salt == other.salt &&
-        self.public_key == other.public_key && self.not_before == other.not_before &&
-        self.not_after == other.not_after &&
-        self.description == other.description && self.unknown_fields == other.unknown_fields
-    }
-}
-
 impl ::std::fmt::Debug for Credential {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Credential {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Message(self)
     }
 }
 
@@ -693,6 +674,18 @@ impl ::protobuf::ProtobufEnum for Type {
 }
 
 impl ::std::marker::Copy for Type {}
+
+impl ::std::default::Default for Type {
+    fn default() -> Self {
+        Type::SIGNATURE_KEY_PAIR
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Type {
+    fn as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef {
+        ::protobuf::reflect::ProtobufValueRef::Enum(self.descriptor())
+    }
+}
 
 static file_descriptor_proto_data: &'static [u8] =
     &[0x0a, 0x17, 0x6f, 0x62, 0x6a, 0x65, 0x63, 0x74, 0x2f, 0x63, 0x72, 0x65, 0x64, 0x65, 0x6e,
@@ -805,26 +798,18 @@ pub fn file_descriptor_proto() -> &'static ::protobuf::descriptor::FileDescripto
 impl ObjectHash for Credential {
     #[inline]
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
-        let mut digests: Vec<Vec<u8>> = Vec::new();
-
-        // digests.push(objecthash_struct_member!("keyid", *self.keyid.get_ref()));
-        // digests.push(objecthash_struct_member!("credential_type", self.credential_type.unwrap() as u32));
-        // digests.push(objecthash_struct_member!("credential_alg", *self.credential_alg.get_ref()));
-        digests.push(objecthash_struct_member!("sealing_alg", self.sealing_alg.unwrap() as u32));
-        digests.push(objecthash_struct_member!("encrypted_value", *self.encrypted_value.get_ref()));
-        digests.push(objecthash_struct_member!("salt", *self.salt.get_ref()));
-        digests.push(objecthash_struct_member!("public_key", *self.public_key.get_ref()));
-        digests.push(objecthash_struct_member!("not_before", self.not_before.unwrap() as i64));
-        digests.push(objecthash_struct_member!("not_after", self.not_after.unwrap() as i64));
-        digests.push(objecthash_struct_member!("description", *self.description.get_ref()));
-
-        digests.sort();
-
-        hasher.update(objecthash::types::DICT_TAG);
-
-        for value in &digests {
-            hasher.update(value);
-        }
-
+        objecthash_struct!(
+            hasher,
+            "keyid" => *self.keyid,
+            "credential_type" => self.credential_type as u32,
+            "credential_alg" => *self.credential_alg,
+            "sealing_alg" => self.sealing_alg as u32,
+            "encrypted_value" => *self.encrypted_value,
+            "salt" => *self.salt,
+            "public_key" => *self.public_key,
+            "not_before" => self.not_before as i64,
+            "not_after" => self.not_after as i64,
+            "description" => *self.description
+        );
     }
 }
