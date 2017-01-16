@@ -27,50 +27,6 @@ use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
 use rustc_serialize::base64::{self, ToBase64};
 use witness::Witness;
 
-// TODO: HAND EDITS START HERE! REFACTOR THIS CODE!!!
-const DIGEST_SIZE: usize = 32;
-
-// Block IDs are presently SHA-256 only
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub struct Id([u8; DIGEST_SIZE]);
-
-impl Id {
-    // Parent ID of the initial block (256-bits of zero)
-    pub fn zero() -> Id {
-        Id([0u8; DIGEST_SIZE])
-    }
-
-    pub fn from_bytes(bytes: &[u8]) -> Result<Id> {
-        if bytes.len() != DIGEST_SIZE {
-            return Err(Error::parse(None));
-        }
-
-        let mut id = [0u8; DIGEST_SIZE];
-        id.copy_from_slice(&bytes[0..DIGEST_SIZE]);
-
-        Ok(Id(id))
-    }
-
-    pub fn of(block: &Block) -> Id {
-        Id::from_bytes(objecthash::digest(block).as_ref()).unwrap()
-    }
-}
-
-impl AsRef<[u8]> for Id {
-    #[inline]
-    fn as_ref(&self) -> &[u8] {
-        &self.0
-    }
-}
-
-impl ObjectHash for Id {
-    fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
-        self.0.objecthash(hasher);
-    }
-}
-
-// TODO: HAND EDITS END HERE!!!
-
 #[derive(Clone,Default)]
 pub struct Body {
     // message fields

@@ -1,6 +1,7 @@
 use algorithm::{CipherSuite, EncryptionAlgorithm, DigestAlgorithm};
 use block::{self, Block, Body};
 use crypto::signing::KeyPair;
+use id::BlockId;
 use object::Object;
 use object::credential::{self, Credential};
 use object::domain::Domain;
@@ -135,7 +136,7 @@ pub fn create_log(ciphersuite: CipherSuite,
     ops.push(admin_signing_credential_op);
 
     let mut body = Body::new();
-    body.set_parent_id(Vec::from(block::Id::zero().as_ref()));
+    body.set_parent_id(Vec::from(BlockId::zero().as_ref()));
     body.set_timestamp(timestamp.to_int());
     body.set_ops(RepeatedField::from_vec(ops));
     body.set_comment(comment.to_owned());

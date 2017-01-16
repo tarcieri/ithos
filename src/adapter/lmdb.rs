@@ -2,10 +2,11 @@ extern crate lmdb;
 extern crate lmdb_sys;
 
 use adapter::{Adapter, Transaction};
-use block::{self, Block};
+use block::Block;
 use direntry::DirEntry;
-use entry::{self, SerializedEntry};
+use entry::SerializedEntry;
 use error::{Error, ErrorKind, Result};
+use id::{BlockId, EntryId};
 use metadata::Metadata;
 use path::Path;
 use protobuf::{self, Message};
@@ -100,23 +101,23 @@ impl<'a> Adapter<'a> for LmdbAdapter {
         }
     }
 
-    fn next_free_entry_id(&self, txn: &RwTransaction) -> Result<entry::Id> {
+    fn next_free_entry_id(&self, txn: &RwTransaction) -> Result<EntryId> {
         let cursor = try!(txn.0.open_ro_cursor(self.entries));
 
         let last_id = match cursor.get(None, None, lmdb_sys::MDB_LAST) {
-            Ok((id, _)) => entry::Id::from_bytes(id.unwrap()).unwrap(),
-            Err(_) => entry::Id::root(),
+            Ok((id, _)) => EntryId::from_bytes(id.unwrap()).unwrap(),
+            Err(_) => EntryId::root(),
         };
 
         Ok(last_id.next())
     }
 
     fn add_block<'t>(&'t self, txn: &'t mut RwTransaction, block: &Block) -> Result<()> {
-        let block_id = block::Id::of(block);
+        let block_id = BlockId::of(block);
         let parent_id = block.get_body().get_parent_id();
 
         // Ensure the block we're adding is the next in the chain
-        if parent_id == block::Id::zero().as_ref() {
+        if parent_id == BlockId::zero().as_ref() {
             if txn.get(self.state, LOG_ID_KEY) != Err(Error::not_found(None)) {
                 return Err(Error::entry_already_exists(Some("initial block already set")));
             }
@@ -142,17 +143,17 @@ impl<'a> Adapter<'a> for LmdbAdapter {
         Ok(())
     }
 
-    fn current_block_id<'t, T>(&'t self, txn: &'t T) -> Result<block::Id>
+    fn current_block_id<'t, T>(&'t self, txn: &'t T) -> Result<BlockId>
         where T: Transaction<D = Database>
     {
-        block::Id::from_bytes(try!(txn.get(self.state, LATEST_BLOCK_ID_KEY)))
+        BlockId::from_bytes(try!(txn.get(self.state, LATEST_BLOCK_ID_KEY)))
     }
 
     fn add_entry<'t>(&'t self,
                      txn: &'t mut RwTransaction,
                      entry: &SerializedEntry,
                      name: &'t str,
-                     parent_id: entry::Id,
+                     parent_id: EntryId,
                      metadata: &Metadata)
                      -> Result<DirEntry> {
         if txn.get(self.entries, entry.id.as_ref()) != Err(Error::not_found(None)) {
@@ -170,7 +171,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
             name: name,
         };
 
-        if entry.id != entry::Id::root() {
+        if entry.id != EntryId::root() {
             try!(txn.put(self.directories, parent_id.as_ref(), &direntry.to_bytes()));
         }
 
@@ -203,14 +204,14 @@ impl<'a> Adapter<'a> for LmdbAdapter {
         })
     }
 
-    fn find_metadata<'t, T>(&'t self, txn: &'t T, id: &entry::Id) -> Result<Metadata>
+    fn find_metadata<'t, T>(&'t self, txn: &'t T, id: &EntryId) -> Result<Metadata>
         where T: Transaction<D = Database>
     {
         let proto = try!(txn.get(self.metadata, id.as_ref()));
         Ok(try!(protobuf::parse_from_bytes::<Metadata>(proto)))
     }
 
-    fn find_entry<'t, T>(&'t self, txn: &'t T, id: &entry::Id) -> Result<SerializedEntry>
+    fn find_entry<'t, T>(&'t self, txn: &'t T, id: &EntryId) -> Result<SerializedEntry>
         where T: Transaction<D = Database>
     {
         let bytes = try!(txn.get(self.entries, id.as_ref()));
@@ -219,7 +220,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
 }
 
 impl LmdbAdapter {
-    fn find_child<'a, T>(&'a self, txn: &'a T, parent_id: entry::Id, name: &str) -> Result<DirEntry>
+    fn find_child<'a, T>(&'a self, txn: &'a T, parent_id: EntryId, name: &str) -> Result<DirEntry>
         where T: Transaction<D = Database>
     {
         let direntry_bytes = try!(txn.find(self.directories, parent_id.as_ref(), |direntry_bytes| {
@@ -312,10 +313,11 @@ mod tests {
     use adapter::{Adapter, Transaction};
     use adapter::lmdb::LmdbAdapter;
     use algorithm::CipherSuite;
-    use block::{self, Block};
+    use block::Block;
     use crypto::signing::KeyPair;
-    use entry::{Class, Id, SerializedEntry};
+    use entry::{Class, SerializedEntry};
     use error::Error;
+    use id::{BlockId, EntryId};
     use metadata::Metadata;
     use path::Path;
     use ring::rand;
@@ -347,7 +349,7 @@ mod tests {
     fn example_metadata() -> Metadata {
         let mut metadata = Metadata::new();
 
-        let block_id = block::Id::zero();
+        let block_id = BlockId::zero();
 
         metadata.set_created_id(Vec::from(block_id.as_ref()));
         metadata.set_updated_id(Vec::from(block_id.as_ref()));
@@ -357,7 +359,7 @@ mod tests {
         metadata
     }
 
-    fn example_entry(id: Id, data: &[u8]) -> SerializedEntry {
+    fn example_entry(id: EntryId, data: &[u8]) -> SerializedEntry {
         SerializedEntry {
             id: id,
             class: Class::Root,
@@ -391,7 +393,7 @@ mod tests {
             adapter.add_entry(&mut txn,
                            &example_entry(domain_id, b"example domain entry"),
                            "example.com",
-                           Id::root(),
+                           EntryId::root(),
                            &example_metadata())
                 .unwrap();
 
@@ -444,14 +446,14 @@ mod tests {
         adapter.add_entry(&mut txn,
                        &example_entry(domain_id, b"domain"),
                        "example.com",
-                       Id::root(),
+                       EntryId::root(),
                        &example_metadata())
             .unwrap();
 
         let result = adapter.add_entry(&mut txn,
                                        &example_entry(domain_id, b"domain"),
                                        "another.com",
-                                       Id::root(),
+                                       EntryId::root(),
                                        &example_metadata());
 
         assert_eq!(result, Err(Error::entry_already_exists(None)));
@@ -467,14 +469,14 @@ mod tests {
         adapter.add_entry(&mut txn,
                        &example_entry(domain_id, b"domain"),
                        "example.com",
-                       Id::root(),
+                       EntryId::root(),
                        &example_metadata())
             .unwrap();
 
         let result = adapter.add_entry(&mut txn,
                                        &example_entry(domain_id.next(), b"domain"),
                                        "example.com",
-                                       Id::root(),
+                                       EntryId::root(),
                                        &example_metadata());
 
         assert_eq!(result, Err(Error::entry_already_exists(None)));

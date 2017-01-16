@@ -1,29 +1,29 @@
-use entry::Id;
 use error::{Error, Result};
+use id::EntryId;
 use std::str;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct DirEntry<'a> {
-    pub id: Id,
-    pub parent_id: Id,
+    pub id: EntryId,
+    pub parent_id: EntryId,
     pub name: &'a str,
 }
 
 impl<'a> DirEntry<'a> {
     pub fn root() -> DirEntry<'a> {
         DirEntry {
-            id: Id::root(),
-            parent_id: Id::root(),
+            id: EntryId::root(),
+            parent_id: EntryId::root(),
             name: "/",
         }
     }
 
-    pub fn new(parent_id: Id, bytes: &[u8]) -> Result<DirEntry> {
+    pub fn new(parent_id: EntryId, bytes: &[u8]) -> Result<DirEntry> {
         if bytes.len() < 8 {
             return Err(Error::parse(None));
         }
 
-        let id = try!(Id::from_bytes(&bytes[0..8]));
+        let id = try!(EntryId::from_bytes(&bytes[0..8]));
         let name = try!(str::from_utf8(&bytes[8..]).map_err(|_| Error::parse(None)));
 
         Ok(DirEntry {

@@ -1,7 +1,8 @@
 use adapter::{Adapter, Transaction};
-use block::{self, Block};
-use entry::{self, Class, Entry, SerializedEntry};
+use block::Block;
+use entry::{Class, Entry, SerializedEntry};
 use error::{Error, Result};
+use id::{BlockId, EntryId};
 use metadata::Metadata;
 use op::{self, Op};
 use path::{Path, PathBuf};
@@ -13,14 +14,14 @@ extern crate tempdir;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 struct TransformEntry {
-    id: entry::Id,
+    id: EntryId,
     class: Class,
 }
 
 pub struct Transform<'a, A: Adapter<'a> + 'a> {
     adapter: &'a A,
     txn: A::W,
-    next_entry_id: entry::Id,
+    next_entry_id: EntryId,
     new_entries: HashMap<PathBuf, TransformEntry>,
 }
 
@@ -37,7 +38,7 @@ impl<'a, A: Adapter<'a> + 'a> Transform<'a, A> {
         })
     }
 
-    pub fn block_id(&mut self) -> Result<block::Id> {
+    pub fn block_id(&mut self) -> Result<BlockId> {
         self.adapter.current_block_id(&self.txn)
     }
 
@@ -45,7 +46,7 @@ impl<'a, A: Adapter<'a> + 'a> Transform<'a, A> {
         // NOTE: This only stores the block in the database. It does not process it
         try!(self.adapter.add_block(&mut self.txn, block));
 
-        let block_id = block::Id::of(block);
+        let block_id = BlockId::of(block);
         let ops = &block.get_body().get_ops();
 
         // Process the operations in the block and apply them to the database
@@ -67,7 +68,7 @@ impl<'a, A: Adapter<'a> + 'a> Transform<'a, A> {
         self.txn.commit()
     }
 
-    fn add(&mut self, op: &Op, block_id: &block::Id, timestamp: Timestamp) -> Result<()> {
+    fn add(&mut self, op: &Op, block_id: &BlockId, timestamp: Timestamp) -> Result<()> {
         let child_path = try!(Path::new(op.get_path()).ok_or(Error::path_invalid(None)));
         let parent_path = child_path.parent();
         let child_class = try!(Class::from_object(op.get_object()).ok_or(Error::bad_type(None)));
@@ -90,7 +91,7 @@ impl<'a, A: Adapter<'a> + 'a> Transform<'a, A> {
                     return Err(Error::nesting_invalid(None));
                 }
 
-                (entry::Id::root(), entry::Id::root())
+                (EntryId::root(), EntryId::root())
             }
         };
 
@@ -148,6 +149,7 @@ pub mod tests {
     use block::{self, Block, Body};
     use crypto::signing::KeyPair;
     use error::Error;
+    use id::BlockId;
     use object::Object;
     use object::domain::Domain;
     use object::root::Root;
@@ -165,7 +167,7 @@ pub mod tests {
         LmdbAdapter::create_database(dir.path()).unwrap()
     }
 
-    fn example_block(parent_id: block::Id, ops: Vec<Op>) -> Block {
+    fn example_block(parent_id: BlockId, ops: Vec<Op>) -> Block {
         let mut body = Body::new();
         body.set_parent_id(Vec::from(parent_id.as_ref()));
         body.set_timestamp(Timestamp::at(1_231_006_505).to_int());
@@ -189,7 +191,7 @@ pub mod tests {
         op.set_path("/".to_string());
         op.set_object(domain_object);
 
-        let block = example_block(block::Id::zero(), vec![op]);
+        let block = example_block(BlockId::zero(), vec![op]);
         let result = transform.apply(&block);
 
         assert_eq!(result, Err(Error::nesting_invalid(None)));
@@ -213,7 +215,7 @@ pub mod tests {
         op1.set_path("/".to_string());
         op1.set_object(root1_object);
 
-        let block1 = example_block(block::Id::zero(), vec![op1]);
+        let block1 = example_block(BlockId::zero(), vec![op1]);
         assert!(transform.apply(&block1).is_ok());
 
         let mut root2_object = Object::new();
@@ -224,7 +226,7 @@ pub mod tests {
         op2.set_path("/derp".to_string());
         op2.set_object(root2_object);
 
-        let block2 = example_block(block::Id::of(&block1), vec![op2]);
+        let block2 = example_block(BlockId::of(&block1), vec![op2]);
         assert_eq!(transform.apply(&block2), Err(Error::nesting_invalid(None)));
     }
 }
