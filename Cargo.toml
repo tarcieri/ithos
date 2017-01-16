@@ -4,35 +4,25 @@ description = "Modern directory services and credential management"
 homepage    = "https://github.com/cryptosphere/ithos"
 repository  = "https://github.com/cryptosphere/ithos"
 readme      = "README.md"
-keywords    = ["directory", "identity", "access", "credentials"]
+keywords    = ["directory", "identity", "access", "secrets", "ldap"]
 license     = "Apache-2.0"
 version     = "0.0.0"
 authors     = ["Tony Arcieri <bascule@gmail.com>"]
 
 [dependencies]
-clap            = "2"
+clap            = "^2.20"
 lmdb            = ">= 0.5.0"
 lmdb-sys        = ">= 0.5.0"
-serde           = ">= 0.8"
-serde_json      = ">= 0.8"
+protobuf        = "^1.0"
 rustc-serialize = ">= 0.3.19"
+ring            = ">= 0.2.3"
+ring-pwhash     = ">= 0.1.0"
+rpassword       = ">= 0.3"
 time            = ">= 0.1.35"
-
-[dependencies.buffoon]
-git = "https://github.com/carllerche/buffoon.git"
 
 [dependencies.objecthash]
 version = ">= 0.3"
 features = ["octet-strings"]
 
-[dependencies.ring]
-version = ">= 0.2.3"
-
-[dependencies.ring-pwhash]
-version = ">= 0.1.0"
-
-[dependencies.rpassword]
-version = ">= 0.3"
-
 [dev-dependencies]
-tempdir = "0.3"
+tempdir = ">= 0.3"

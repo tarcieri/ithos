@@ -17,7 +17,7 @@ pub enum PasswordAlgorithm {
 
 // TODO: factor these into the PasswordAlgorithm enum
 #[cfg(not(test))]
-#[inline(always)]
+#[inline]
 fn params() -> ScryptParams {
     ScryptParams::new(16, 8, 1)
 }
