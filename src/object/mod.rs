@@ -603,15 +603,15 @@ pub fn file_descriptor_proto() -> &'static ::protobuf::descriptor::FileDescripto
 impl ObjectHash for Object {
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
         if self.has_root() {
-            objecthash_struct!(hasher, "root" => *self.get_root());
+            objecthash_struct!(hasher, "root" => self.get_root());
         } else if self.has_domain() {
-            objecthash_struct!(hasher, "domain" => *self.get_domain());
+            objecthash_struct!(hasher, "domain" => self.get_domain());
         } else if self.has_org_unit() {
-            objecthash_struct!(hasher, "org_unit" => *self.get_org_unit());
+            objecthash_struct!(hasher, "org_unit" => self.get_org_unit());
         } else if self.has_system() {
-            objecthash_struct!(hasher, "system" => *self.get_system());
+            objecthash_struct!(hasher, "system" => self.get_system());
         } else if self.has_credential() {
-            objecthash_struct!(hasher, "credential" => *self.get_credential());
+            objecthash_struct!(hasher, "credential" => self.get_credential());
         }
     }
 }

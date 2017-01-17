@@ -351,9 +351,9 @@ impl ObjectHash for Signature {
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
         objecthash_struct!(
             hasher,
-            "algorithm" => self.algorithm as u32,
-            "public_key" => *self.public_key,
-            "value" => *self.value
+            "algorithm" => &(self.algorithm as u32),
+            "public_key" => &self.public_key,
+            "value" => &self.value
         )
     }
 }

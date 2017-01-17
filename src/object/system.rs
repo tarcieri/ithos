@@ -237,6 +237,6 @@ pub fn file_descriptor_proto() -> &'static ::protobuf::descriptor::FileDescripto
 impl ObjectHash for System {
     #[inline]
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
-        objecthash_struct!(hasher, "username" => *self.username);
+        objecthash_struct!(hasher, "username" => &self.username);
     }
 }

@@ -235,6 +235,6 @@ pub fn file_descriptor_proto() -> &'static ::protobuf::descriptor::FileDescripto
 impl ObjectHash for Root {
     #[inline]
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
-        objecthash_struct!(hasher, "digest_alg" => self.digest_alg as u32)
+        objecthash_struct!(hasher, "digest_alg" => &(self.digest_alg as u32))
     }
 }

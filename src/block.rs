@@ -691,10 +691,10 @@ impl ObjectHash for Body {
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
         objecthash_struct!(
             hasher,
-            "parent_id" => *self.parent_id,
-            "timestamp" => self.timestamp as i64,
-            "ops" => Vec::from(self.get_ops()),
-            "comment" => *self.comment
+            "parent_id" => &self.parent_id,
+            "timestamp" => &(self.timestamp as i64),
+            "ops" => &Vec::from(self.get_ops()),
+            "comment" => &self.comment
         )
     }
 }
@@ -704,8 +704,8 @@ impl ObjectHash for Block {
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
         objecthash_struct!(
             hasher,
-            "body" => *self.get_body(),
-            "witness" => *self.get_witness()
+            "body" => self.get_body(),
+            "witness" => self.get_witness()
         )
     }
 }

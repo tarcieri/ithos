@@ -248,6 +248,6 @@ pub fn file_descriptor_proto() -> &'static ::protobuf::descriptor::FileDescripto
 impl ObjectHash for Witness {
     #[inline]
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
-        objecthash_struct!(hasher, "signatures" => Vec::from(self.get_signatures()))
+        objecthash_struct!(hasher, "signatures" => &Vec::from(self.get_signatures()))
     }
 }
