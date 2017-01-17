@@ -146,7 +146,7 @@ pub mod tests {
     use adapter::Adapter;
     use adapter::lmdb::LmdbAdapter;
     use algorithm::DigestAlgorithm;
-    use block::{self, Block, Body};
+    use block::{Block, Body};
     use crypto::signing::KeyPair;
     use error::Error;
     use id::BlockId;
@@ -175,7 +175,7 @@ pub mod tests {
         body.set_comment(COMMENT.to_owned());
 
         let rng = rand::SystemRandom::new();
-        block::sign(body, &KeyPair::generate(&rng))
+        KeyPair::generate(&rng).sign_block(body)
     }
 
     #[test]

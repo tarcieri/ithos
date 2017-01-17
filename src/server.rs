@@ -1,6 +1,6 @@
 use adapter::Adapter;
 use algorithm::{CipherSuite, SignatureAlgorithm, EncryptionAlgorithm};
-use block::{self, Body};
+use block::Body;
 use crypto::signing::KeyPair;
 use crypto::symmetric::{AES256GCM_KEY_SIZE, AES256GCM_NONCE_SIZE};
 use entry::Entry;
@@ -114,7 +114,7 @@ impl<A> Server<A>
         body.set_ops(RepeatedField::from_vec(vec![op]));
         body.set_comment(comment.to_owned());
 
-        let block = block::sign(body, admin_keypair);
+        let block = admin_keypair.sign_block(body);
 
         // TODO: authenticate signature before committing (BIG SECURITY PROBLEM!!!)
         try!(transform.apply(&block));

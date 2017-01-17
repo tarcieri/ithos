@@ -1,10 +1,15 @@
 use algorithm::{EncryptionAlgorithm, SignatureAlgorithm};
+use block::{Block, Body};
 use crypto;
 use error::{Error, Result};
 use object::credential::{self, Credential};
+use objecthash;
+use protobuf::RepeatedField;
 use ring::rand::SecureRandom;
 use ring::signature as signature_impl;
+use rustc_serialize::base64::{self, ToBase64};
 use signature::Signature;
+use witness::Witness;
 
 pub struct KeyPair {
     pub algorithm: SignatureAlgorithm,
@@ -87,7 +92,24 @@ impl<'a> KeyPair {
         self.keypair.public_key_bytes()
     }
 
-    pub fn sign(&self, msg: &[u8]) -> Signature {
+    /// Sign the body of a block, returning a complete block with signature/witness data
+    pub fn sign_block(&self, body: Body) -> Block {
+        let mut message = String::from("ithos.block.body.ni:///sha-256;");
+        message.push_str(&objecthash::digest(&body).as_ref().to_base64(base64::URL_SAFE));
+
+        let signature = self.sign_raw_bytes(&message.as_bytes());
+        let mut witness = Witness::new();
+        witness.set_signatures(RepeatedField::from_vec(vec![signature]));
+
+        let mut block = Block::new();
+        block.set_body(body);
+        block.set_witness(witness);
+        block
+    }
+
+    /// Compute a signature on a raw byte vector
+    /// We avoid exposing this directly for domain separation reasons
+    fn sign_raw_bytes(&self, msg: &[u8]) -> Signature {
         let mut proto = Signature::new();
 
         proto.set_algorithm(self.algorithm);

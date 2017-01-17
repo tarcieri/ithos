@@ -1,5 +1,5 @@
 use algorithm::{CipherSuite, EncryptionAlgorithm, DigestAlgorithm};
-use block::{self, Block, Body};
+use block::{Block, Body};
 use crypto::signing::KeyPair;
 use id::BlockId;
 use object::Object;
@@ -141,7 +141,7 @@ pub fn create_log(ciphersuite: CipherSuite,
     body.set_ops(RepeatedField::from_vec(ops));
     body.set_comment(comment.to_owned());
 
-    block::sign(body, admin_keypair)
+    admin_keypair.sign_block(body)
 }
 
 #[cfg(test)]

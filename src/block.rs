@@ -19,28 +19,9 @@
 
 // TODO: Hand edited! Figure out a better solution for objecthash support
 
-use crypto::signing::KeyPair;
-use error::{Error, Result};
 use objecthash::{self, ObjectHash, ObjectHasher};
 use protobuf::Message as Message_imported_for_functions;
 use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
-use rustc_serialize::base64::{self, ToBase64};
-use witness::Witness;
-
-// TODO: Hand edited! Move this elsewhere!
-pub fn sign(body: Body, keypair: &KeyPair) -> Block {
-    let mut message = String::from("ithos.block.body.ni:///sha-256;");
-    message.push_str(&objecthash::digest(&body).as_ref().to_base64(base64::URL_SAFE));
-
-    let signature = keypair.sign(&message.as_bytes());
-    let mut witness = Witness::new();
-    witness.set_signatures(::protobuf::RepeatedField::from_vec(vec![signature]));
-
-    let mut block = Block::new();
-    block.set_body(body);
-    block.set_witness(witness);
-    block
-}
 
 #[derive(PartialEq,Clone,Default)]
 pub struct Body {
