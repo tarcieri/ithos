@@ -412,9 +412,9 @@ impl ObjectHash for Op {
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
         objecthash_struct!(
             hasher,
-            "optype" => self.optype as u32,
-            "path" => *self.path,
-            "object" => *self.get_object()
+            "optype" => &(self.optype as u32),
+            "path" => &self.path,
+            "object" => self.get_object()
         )
     }
 }

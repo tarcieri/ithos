@@ -800,16 +800,16 @@ impl ObjectHash for Credential {
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
         objecthash_struct!(
             hasher,
-            "keyid" => *self.keyid,
-            "credential_type" => self.credential_type as u32,
-            "credential_alg" => *self.credential_alg,
-            "sealing_alg" => self.sealing_alg as u32,
-            "encrypted_value" => *self.encrypted_value,
-            "salt" => *self.salt,
-            "public_key" => *self.public_key,
-            "not_before" => self.not_before as i64,
-            "not_after" => self.not_after as i64,
-            "description" => *self.description
+            "keyid" => &self.keyid,
+            "credential_type" => &(self.credential_type as u32),
+            "credential_alg" => &self.credential_alg,
+            "sealing_alg" => &(self.sealing_alg as u32),
+            "encrypted_value" => &self.encrypted_value,
+            "salt" => &self.salt,
+            "public_key" => &self.public_key,
+            "not_before" => &(self.not_before as i64),
+            "not_after" => &(self.not_after as i64),
+            "description" => &self.description
         );
     }
 }
