@@ -1,3 +1,13 @@
+//! adapter/mod.rs: A not-fully-fleshed-out "aspirational" abstraction for multiple storage adapters
+//!
+//! This API is heavily inspired by LMDB's multi-reader, single-writer model with separate
+//! read-only and read-write transactions, however it encapsulates LMDB internals and avoids
+//! exposing any LMDB-related types except as associated types.
+//!
+//! That said, this is probably not close to the ideal API for an abstract storage adapter, and
+//! much logic that's in lmdb.rs right now should probably get hoisted out first.
+//!
+
 pub mod lmdb;
 
 use block::Block;

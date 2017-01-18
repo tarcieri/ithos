@@ -1,3 +1,9 @@
+//! timestamp.rs: Unix time type
+//!
+//! All timestamps in the log are in the form of number of seconds since midnight GMT of
+//! the Unix epoch (January 1st, 1970)
+//!
+
 use objecthash::{ObjectHash, ObjectHasher};
 use time;
 

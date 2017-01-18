@@ -1,3 +1,16 @@
+//! setup.rs: A bunch of hastily written code for bootstrapping a new log
+//!
+//! This bootstraps the minimum viable directory structure to permit additional (authenticated)
+//! operations. It creates the following directory hierarchy:
+//!
+//! 1) Root object (ala LDAP root DSE)
+//! 2) Global domain
+//! 3) Root administrator account ("manager")
+//! 4) Signing key for root administrator account
+//!
+//! Once this has been done, all subsequent changes to the log can be authorized by credentials
+//!
+
 use algorithm::{CipherSuite, EncryptionAlgorithm, DigestAlgorithm};
 use block::{Block, Body};
 use crypto::signing::KeyPair;

@@ -1,3 +1,11 @@
+//! error.rs: Common Error and Result types
+//!
+//! A set of least common denominator error types which carry an optional dynamically generated
+//! String description.
+//!
+//! These could probably be better specialized to individual cases
+//!
+
 use protobuf::ProtobufError;
 use std::error::Error as StdError;
 use std::fmt;

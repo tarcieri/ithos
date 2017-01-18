@@ -1,3 +1,10 @@
+//! adapter/lmdb.rs: Storage adapter for the Lightning Memory-Mapped Database (LMDB)
+//!
+//! This adapter is presently the one-and-only storage adapter. Much of the logic it contains
+//! should probably be extracted elsewhere before a second storage adapter is written, as a lot of
+//! it is reusable and the adapter abstraction is not fully fleshed out.
+//!
+
 extern crate lmdb;
 extern crate lmdb_sys;
 

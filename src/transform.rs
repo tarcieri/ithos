@@ -1,3 +1,12 @@
+//! transform.rs: Apply the operations in a block to the current database state
+//!
+//! This module should ideally be the one true path all adapter writes happen through,
+//! as all writes to the database are mediated by the log.
+//!
+//! BIG SECURITY WARNING: This module does not perform cryptographic authorization checks.
+//! TODO: It should!
+//!
+
 use adapter::{Adapter, Transaction};
 use block::Block;
 use entry::{Class, Entry, SerializedEntry};

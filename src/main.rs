@@ -1,3 +1,5 @@
+//! The main ithos executable
+
 #![crate_name = "ithos"]
 #![crate_type = "bin"]
 

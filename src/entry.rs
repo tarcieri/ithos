@@ -1,3 +1,8 @@
+//! entry.rs: Entries within a directory tree
+//!
+//! Types for working with serialized and deserialized entries in the directory tree
+//!
+
 use adapter::Adapter;
 use error::{Error, Result};
 use id::EntryId;

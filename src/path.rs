@@ -1,3 +1,8 @@
+//! path.rs: Paths within the directory tree
+//!
+//! Functionality similar to std::path, but for paths within the ithos directory tree
+//!
+
 use objecthash::{ObjectHash, ObjectHasher};
 use std::borrow::Borrow;
 use std::hash::{Hash, Hasher};

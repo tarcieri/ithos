@@ -1,3 +1,8 @@
+//! id.rs: Type-specific identifiers
+//!
+//! A dumping ground for ID types. Well, only two at present.
+//!
+
 use block::Block;
 use error::{Error, Result};
 use objecthash::{self, ObjectHash, ObjectHasher};

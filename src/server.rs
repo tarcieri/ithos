@@ -1,3 +1,12 @@
+//! server.rs: The core ithos daemon and related admin functionality
+//!
+//! This is presently a bit of a dumping ground for server-side functionality
+//!
+//! Logic in here shouldn't get too complicated. This is (accidentally) prevented in part by
+//! the limitations of Rust's type system, as higher ranked trait bounds on Adapter prevent
+//! access to the associated types for transactions.
+//!
+
 use adapter::Adapter;
 use algorithm::{CipherSuite, SignatureAlgorithm, EncryptionAlgorithm};
 use block::Body;

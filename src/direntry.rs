@@ -1,3 +1,9 @@
+//! direntry.rs: Named association between an entry and its parent
+//!
+//! In practice this leverages LMDB's multi-entry-per-key functionality to store children
+//! in a directory hierarchy
+//!
+
 use error::{Error, Result};
 use id::EntryId;
 use std::str;

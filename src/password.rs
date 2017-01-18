@@ -1,3 +1,10 @@
+//! password.rs: Password hashing functionality and password-based key derivation
+//!
+//! scrypt is presently the only supported password hashing function / KDF
+//!
+//! TODO: Refactor into crypto/...
+//!
+
 use error::{Error, Result};
 use pwhash::scrypt::{self, ScryptParams};
 use ring::constant_time;

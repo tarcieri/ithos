@@ -1,3 +1,8 @@
+//! crypto/symmetric.rs: Authenticated symmetric encryption with associated data (AEAD)
+//!
+//! AES-256-GCM is the only supported algorithm. Implementation provided by *ring*
+//!
+
 use algorithm::EncryptionAlgorithm;
 use error::{Error, Result};
 use ring::aead;
