@@ -1,3 +1,11 @@
+//! crypto/signing.rs: Digital signature functionality
+//!
+//! This module contains types for producing digital signatures. Digital signatures are primarily
+//! used to authenticate and authorize changes to the directory tree.
+//!
+//! The Ed25519 digital signature algorithm (RFC 8032) is presently the only one supported
+//!
+
 use algorithm::{EncryptionAlgorithm, SignatureAlgorithm};
 use block::{Block, Body};
 use crypto;
