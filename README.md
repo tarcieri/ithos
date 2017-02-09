@@ -11,7 +11,7 @@ Modern directory services and credential management
 
 ## What is ithos?
 
-**ithos** (pronounced ˈēTHōs like "ethos") is a modern directory server
+**ithos** (pronounced ˈēTHäs like "ethos") is a modern directory server
 designed to be a master access control system for a fleet of Linux or other
 Unix-like servers. The design is inspired by [LDAP], but using
 [gRPC]<sup>†</sup> and [JSON] APIs in lieu of the LDAP wire protocol. As
