@@ -29,7 +29,6 @@ mod id;
 mod metadata;
 mod object;
 mod op;
-mod password;
 mod path;
 mod server;
 mod setup;
@@ -98,7 +97,7 @@ fn db_create(database_path: &str, admin_username: &str) {
     println!("Creating database at: {path}", path = database_path);
 
     let rng = rand::SystemRandom::new();
-    let admin_password = password::generate(&rng);
+    let admin_password = crypto::password::generate(&rng);
 
     match Server::<LmdbAdapter>::create_database(std::path::Path::new(database_path),
                                                  &rng,
@@ -149,9 +148,9 @@ fn domain_add(database_path: &str, admin_username: &str, domain_name: &str) {
                err = err);
     });
 
-    let admin_password = password::prompt(&format!("{}'s password: ", admin_username)).unwrap();
+    let admin_password = crypto::password::prompt(&format!("{}'s password: ", admin_username)).unwrap();
     let mut admin_symmetric_key = [0u8; AES256GCM_KEY_SIZE];
-    password::derive(password::PasswordAlgorithm::SCRYPT,
+    crypto::password::derive(crypto::password::PasswordAlgorithm::SCRYPT,
                      &admin_credential.salt,
                      &admin_password,
                      &mut admin_symmetric_key);

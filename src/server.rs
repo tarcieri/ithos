@@ -18,7 +18,7 @@ use object::Object;
 use object::credential::Credential;
 use object::domain::Domain;
 use op::{self, Op};
-use password::{self, PasswordAlgorithm};
+use crypto::password::{self, PasswordAlgorithm};
 use path::{Path, PathBuf};
 use protobuf::RepeatedField;
 use ring::rand::SecureRandom;
@@ -146,7 +146,7 @@ mod tests {
     use algorithm::CipherSuite;
     use crypto::signing::KeyPair;
     use crypto::symmetric::AES256GCM_KEY_SIZE;
-    use password::{self, PasswordAlgorithm};
+    use crypto::password::{self, PasswordAlgorithm};
     use path::PathBuf;
     use ring::rand;
     use server::Server;

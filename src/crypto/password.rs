@@ -129,8 +129,8 @@ fn encode(bytes: &[u8]) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
-    use password;
-    use password::PasswordAlgorithm;
+    use crypto::password;
+    use crypto::password::PasswordAlgorithm;
 
     use ring::rand;
 
