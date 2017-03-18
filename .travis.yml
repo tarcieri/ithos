@@ -1,6 +1,9 @@
 language: rust
 sudo: false
 
+before_script:
+    rustup update
+
 branches:
   only:
     - master
