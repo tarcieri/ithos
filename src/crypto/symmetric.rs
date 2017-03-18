@@ -29,22 +29,22 @@ pub fn seal(algorithm: EncryptionAlgorithm,
     let sealing_key = try!(aead::SealingKey::new(&aead::AES_256_GCM, secret_key)
         .map_err(|_| Error::crypto_failure(None)));
 
-    let max_overhead_len = sealing_key.algorithm().max_overhead_len();
-    let mut buffer = Vec::with_capacity(AES256GCM_NONCE_SIZE + plaintext.len() + max_overhead_len);
+    let tag_len = sealing_key.algorithm().tag_len();
+    let mut buffer = Vec::with_capacity(AES256GCM_NONCE_SIZE + plaintext.len() + tag_len);
 
     buffer.extend_from_slice(nonce);
     buffer.extend_from_slice(plaintext);
 
     // Add space in the buffer to store the GCM tag
-    for _ in 0..max_overhead_len {
+    for _ in 0..tag_len {
         buffer.push(0u8);
     }
 
     try!(aead::seal_in_place(&sealing_key,
                              &nonce,
+                             &b""[..],
                              &mut buffer[AES256GCM_NONCE_SIZE..],
-                             max_overhead_len,
-                             &b""[..])
+                             tag_len)
         .map_err(|_| Error::crypto_failure(None)));
 
     Ok(buffer)
@@ -69,8 +69,9 @@ pub fn unseal(algorithm: EncryptionAlgorithm,
     let nonce = &ciphertext[0..AES256GCM_NONCE_SIZE];
     let mut buffer = Vec::from(&ciphertext[AES256GCM_NONCE_SIZE..]);
 
-    let pt_len = try!(aead::open_in_place(&opening_key, nonce, 0, &mut buffer, &b""[..])
-        .map_err(|_| Error::crypto_failure(Some("decryption failed"))));
+    let pt_len = try!(aead::open_in_place(&opening_key, nonce, &b""[..], 0, &mut buffer)
+            .map_err(|_| Error::crypto_failure(Some("decryption failed"))))
+        .len();
 
     buffer.truncate(pt_len);
     Ok(buffer)

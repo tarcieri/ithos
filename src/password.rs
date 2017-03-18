@@ -93,7 +93,7 @@ fn encode(bytes: &[u8]) -> Vec<u8> {
 
     result.push(b'x');
 
-    #[allow(needless_range_loop)]
+    #[allow(unknown_lints, needless_range_loop)]
     for i in 0..(bytes.len() + 1) {
         if i % 2 != 0 {
             continue;

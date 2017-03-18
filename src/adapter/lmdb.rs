@@ -8,6 +8,9 @@
 extern crate lmdb;
 extern crate lmdb_sys;
 
+use self::lmdb::{Environment, Database, DatabaseFlags, Cursor, WriteFlags, DUP_SORT, INTEGER_KEY};
+use self::lmdb::Error as LmdbError;
+use self::lmdb::Transaction as LmdbTransaction;
 use adapter::{Adapter, Transaction};
 use block::Block;
 use direntry::DirEntry;
@@ -17,9 +20,6 @@ use id::{BlockId, EntryId};
 use metadata::Metadata;
 use path::Path;
 use protobuf::{self, Message};
-use self::lmdb::{Environment, Database, DatabaseFlags, Cursor, WriteFlags, DUP_SORT, INTEGER_KEY};
-use self::lmdb::Error as LmdbError;
-use self::lmdb::Transaction as LmdbTransaction;
 use std::{self, str};
 use std::error::Error as StdError;
 use std::io::Write;
@@ -203,11 +203,9 @@ impl<'a> Adapter<'a> for LmdbAdapter {
                 self.find_child(txn, try!(parent_direntry).id, component)
             });
 
-        result.map_err(|e| {
-            match e.kind {
-                ErrorKind::NotFound => Error::not_found(Some(path.as_ref())),
-                _ => e,
-            }
+        result.map_err(|e| match e.kind {
+            ErrorKind::NotFound => Error::not_found(Some(path.as_ref())),
+            _ => e,
         })
     }
 
@@ -385,7 +383,8 @@ mod tests {
 
         let mut txn = adapter.rw_transaction().unwrap();
         let result = adapter.add_block(&mut txn, &block);
-        assert_eq!(result, Err(Error::entry_already_exists(Some("initial block already set"))));
+        assert_eq!(result,
+                   Err(Error::entry_already_exists(Some("initial block already set"))));
     }
 
     #[test]
