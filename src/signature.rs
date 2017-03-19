@@ -26,7 +26,7 @@ use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
 #[derive(PartialEq,Clone,Default)]
 pub struct Signature {
     // message fields
-    pub algorithm: super::algorithm::SignatureAlgorithm,
+    pub algorithm: super::alg::SignatureAlg,
     pub public_key: ::std::vec::Vec<u8>,
     pub value: ::std::vec::Vec<u8>,
     // special fields
@@ -53,23 +53,23 @@ impl Signature {
     // .ithos.SignatureAlgorithm algorithm = 1;
 
     pub fn clear_algorithm(&mut self) {
-        self.algorithm = super::algorithm::SignatureAlgorithm::Ed25519;
+        self.algorithm = super::alg::SignatureAlg::Ed25519;
     }
 
     // Param is passed by value, moved
-    pub fn set_algorithm(&mut self, v: super::algorithm::SignatureAlgorithm) {
+    pub fn set_algorithm(&mut self, v: super::alg::SignatureAlg) {
         self.algorithm = v;
     }
 
-    pub fn get_algorithm(&self) -> super::algorithm::SignatureAlgorithm {
+    pub fn get_algorithm(&self) -> super::alg::SignatureAlg {
         self.algorithm
     }
 
-    fn get_algorithm_for_reflect(&self) -> &super::algorithm::SignatureAlgorithm {
+    fn get_algorithm_for_reflect(&self) -> &super::alg::SignatureAlg {
         &self.algorithm
     }
 
-    fn mut_algorithm_for_reflect(&mut self) -> &mut super::algorithm::SignatureAlgorithm {
+    fn mut_algorithm_for_reflect(&mut self) -> &mut super::alg::SignatureAlg {
         &mut self.algorithm
     }
 
@@ -185,7 +185,7 @@ impl ::protobuf::Message for Signature {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if self.algorithm != super::algorithm::SignatureAlgorithm::Ed25519 {
+        if self.algorithm != super::alg::SignatureAlg::Ed25519 {
             my_size += ::protobuf::rt::enum_size(1, self.algorithm);
         };
         if self.public_key != ::std::vec::Vec::new() {
@@ -202,7 +202,7 @@ impl ::protobuf::Message for Signature {
     fn write_to_with_cached_sizes(&self,
                                   os: &mut ::protobuf::CodedOutputStream)
                                   -> ::protobuf::ProtobufResult<()> {
-        if self.algorithm != super::algorithm::SignatureAlgorithm::Ed25519 {
+        if self.algorithm != super::alg::SignatureAlg::Ed25519 {
             os.write_enum(1, self.algorithm.value())?;
         };
         if self.public_key != ::std::vec::Vec::new() {
@@ -251,7 +251,7 @@ impl ::protobuf::MessageStatic for Signature {
         unsafe {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeEnum<super::algorithm::SignatureAlgorithm>>(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeEnum<super::alg::SignatureAlg>>(
                     "algorithm",
                     Signature::get_algorithm_for_reflect,
                     Signature::mut_algorithm_for_reflect,

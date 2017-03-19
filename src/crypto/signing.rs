@@ -6,7 +6,7 @@
 //! The Ed25519 digital signature algorithm (RFC 8032) is presently the only one supported
 //!
 
-use algorithm::{EncryptionAlgorithm, SignatureAlgorithm};
+use alg::{EncryptionAlg, SignatureAlg};
 use block::{Block, Body};
 use crypto;
 use error::{Error, Result};
@@ -20,7 +20,7 @@ use signature::Signature;
 use witness::Witness;
 
 pub struct KeyPair {
-    pub algorithm: SignatureAlgorithm,
+    pub algorithm: SignatureAlg,
     keypair: signature_impl::Ed25519KeyPair,
 }
 
@@ -28,20 +28,20 @@ impl<'a> KeyPair {
     #[cfg(test)]
     pub fn generate(rng: &SecureRandom) -> KeyPair {
         KeyPair {
-            algorithm: SignatureAlgorithm::Ed25519,
+            algorithm: SignatureAlg::Ed25519,
             keypair: signature_impl::Ed25519KeyPair::generate(rng).unwrap(),
         }
     }
 
     // Generate a new keypair and seal it with the given encryption algorithm and key
-    pub fn generate_and_seal(signature_alg: SignatureAlgorithm,
-                             encryption_alg: EncryptionAlgorithm,
+    pub fn generate_and_seal(signature_alg: SignatureAlg,
+                             encryption_alg: EncryptionAlg,
                              rng: &SecureRandom,
                              sealing_key: &[u8],
                              nonce: &[u8])
                              -> Result<(KeyPair, Vec<u8>)> {
         // Ed25519 is the only signature algorithm we presently support
-        assert!(signature_alg == SignatureAlgorithm::Ed25519);
+        assert!(signature_alg == SignatureAlg::Ed25519);
 
         let (keypair, serializable_keypair) =
             try!(signature_impl::Ed25519KeyPair::generate_serializable(rng)
@@ -53,7 +53,7 @@ impl<'a> KeyPair {
                                                       &serializable_keypair.private_key));
 
         let result = KeyPair {
-            algorithm: SignatureAlgorithm::Ed25519,
+            algorithm: SignatureAlg::Ed25519,
             keypair: keypair,
         };
 
@@ -68,21 +68,21 @@ impl<'a> KeyPair {
             return Err(Error::bad_type(Some("not a signature key")));
         }
 
-        KeyPair::unseal(SignatureAlgorithm::Ed25519,
-                        EncryptionAlgorithm::AES256GCM,
+        KeyPair::unseal(SignatureAlg::Ed25519,
+                        EncryptionAlg::AES256GCM,
                         symmetric_key_bytes,
                         &credential.encrypted_value,
                         &credential.public_key)
     }
 
-    pub fn unseal(signature_alg: SignatureAlgorithm,
-                  encryption_alg: EncryptionAlgorithm,
+    pub fn unseal(signature_alg: SignatureAlg,
+                  encryption_alg: EncryptionAlg,
                   sealing_key: &[u8],
                   sealed_keypair: &[u8],
                   public_key: &[u8])
                   -> Result<KeyPair> {
         // Ed25519 is the only signature algorithm we presently support
-        assert!(signature_alg == SignatureAlgorithm::Ed25519);
+        assert!(signature_alg == SignatureAlg::Ed25519);
 
         let private_key =
             try!(crypto::symmetric::unseal(encryption_alg, sealing_key, sealed_keypair));
@@ -91,7 +91,7 @@ impl<'a> KeyPair {
             .map_err(|_| Error::crypto_failure(Some("not a valid Ed25519 keypair"))));
 
         Ok(KeyPair {
-            algorithm: SignatureAlgorithm::Ed25519,
+            algorithm: SignatureAlg::Ed25519,
             keypair: keypair,
         })
     }
@@ -130,7 +130,7 @@ impl<'a> KeyPair {
 
 #[cfg(test)]
 pub mod tests {
-    use algorithm::{EncryptionAlgorithm, SignatureAlgorithm};
+    use alg::{EncryptionAlg, SignatureAlg};
     use crypto::signing::KeyPair;
     use crypto::symmetric::{AES256GCM_KEY_SIZE, AES256GCM_NONCE_SIZE};
     use ring::rand;
@@ -142,15 +142,15 @@ pub mod tests {
     fn test_sealing_and_unsealing() {
         let rng = rand::SystemRandom::new();
 
-        let (keypair, sealed_keypair) = KeyPair::generate_and_seal(SignatureAlgorithm::Ed25519,
-                                                                   EncryptionAlgorithm::AES256GCM,
+        let (keypair, sealed_keypair) = KeyPair::generate_and_seal(SignatureAlg::Ed25519,
+                                                                   EncryptionAlg::AES256GCM,
                                                                    &rng,
                                                                    &ENCRYPTION_KEY,
                                                                    &[0u8; AES256GCM_NONCE_SIZE])
             .unwrap();
 
-        let unsealed_keypair = KeyPair::unseal(SignatureAlgorithm::Ed25519,
-                                               EncryptionAlgorithm::AES256GCM,
+        let unsealed_keypair = KeyPair::unseal(SignatureAlg::Ed25519,
+                                               EncryptionAlg::AES256GCM,
                                                &ENCRYPTION_KEY,
                                                &sealed_keypair,
                                                keypair.public_key_bytes())

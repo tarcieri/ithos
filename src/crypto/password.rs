@@ -5,6 +5,7 @@
 //! TODO: Refactor into crypto/...
 //!
 
+use alg::PasswordAlg;
 use error::{Error, Result};
 use pwhash::scrypt::{self, ScryptParams};
 use ring::constant_time;
@@ -17,12 +18,6 @@ const RANDOM_SALT_SIZE: usize = 16;
 // Prefix added to all randomly generated passwords
 const GENPASS_PREFIX: &'static str = "ITHOS-GENPASS";
 
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub enum PasswordAlgorithm {
-    SCRYPT,
-}
-
-// TODO: factor these into the PasswordAlgorithm enum
 #[cfg(not(test))]
 #[inline]
 fn params() -> ScryptParams {
@@ -61,21 +56,21 @@ fn params() -> ScryptParams {
     ScryptParams::new(1, 1, 1)
 }
 
-pub fn derive(alg: PasswordAlgorithm, salt: &[u8], password: &str, out: &mut [u8]) {
+pub fn derive(alg: PasswordAlg, salt: &[u8], password: &str, out: &mut [u8]) {
     // scrypt is the only password hashing algorithm we support for now
-    assert!(alg == PasswordAlgorithm::SCRYPT);
+    assert!(alg == PasswordAlg::SCRYPT);
 
     scrypt::scrypt(password.as_bytes(), salt, &params(), out);
 }
 
 #[allow(dead_code)]
-pub fn verify(alg: PasswordAlgorithm,
+pub fn verify(alg: PasswordAlg,
               salt: &[u8],
               password: &str,
               previously_derived: &[u8])
               -> bool {
     // scrypt is the only password hashing algorithm we support for now
-    assert!(alg == PasswordAlgorithm::SCRYPT);
+    assert!(alg == PasswordAlg::SCRYPT);
 
     let mut out = vec![0u8; previously_derived.len()];
     scrypt::scrypt(password.as_bytes(), &*salt, &params(), &mut out);
@@ -130,7 +125,7 @@ fn encode(bytes: &[u8]) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use crypto::password;
-    use crypto::password::PasswordAlgorithm;
+    use alg::PasswordAlg;
 
     use ring::rand;
 
@@ -141,10 +136,10 @@ mod tests {
         let salt = [0u8; 32];
         let mut derived_buf = [0u8; 32];
 
-        password::derive(PasswordAlgorithm::SCRYPT, &salt, PASSWORD, &mut derived_buf);
+        password::derive(PasswordAlg::SCRYPT, &salt, PASSWORD, &mut derived_buf);
 
-        assert!(password::verify(PasswordAlgorithm::SCRYPT, &salt, PASSWORD, &derived_buf));
-        assert!(!password::verify(PasswordAlgorithm::SCRYPT, &salt, "WRONG", &derived_buf));
+        assert!(password::verify(PasswordAlg::SCRYPT, &salt, PASSWORD, &derived_buf));
+        assert!(!password::verify(PasswordAlg::SCRYPT, &salt, "WRONG", &derived_buf));
     }
 
     #[test]

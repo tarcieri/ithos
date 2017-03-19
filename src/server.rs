@@ -8,7 +8,7 @@
 //!
 
 use adapter::Adapter;
-use algorithm::{CipherSuite, SignatureAlgorithm, EncryptionAlgorithm};
+use alg::{CipherSuite, SignatureAlg, EncryptionAlg, PasswordAlg};
 use block::Body;
 use crypto::signing::KeyPair;
 use crypto::symmetric::{AES256GCM_KEY_SIZE, AES256GCM_NONCE_SIZE};
@@ -18,7 +18,7 @@ use object::Object;
 use object::credential::Credential;
 use object::domain::Domain;
 use op::{self, Op};
-use crypto::password::{self, PasswordAlgorithm};
+use crypto::password;
 use path::{Path, PathBuf};
 use protobuf::RepeatedField;
 use ring::rand::SecureRandom;
@@ -54,7 +54,7 @@ impl<A> Server<A>
         let admin_keypair_salt = try!(password::random_salt(rng));
 
         let mut admin_symmetric_key = [0u8; AES256GCM_KEY_SIZE];
-        password::derive(PasswordAlgorithm::SCRYPT,
+        password::derive(PasswordAlg::SCRYPT,
                          &admin_keypair_salt,
                          admin_password,
                          &mut admin_symmetric_key);
@@ -64,11 +64,11 @@ impl<A> Server<A>
 
         // TODO: honor ciphersuite algorithms
         let (admin_keypair, admin_keypair_sealed) = try!(KeyPair::generate_and_seal(
-                                       SignatureAlgorithm::Ed25519,
-                                       EncryptionAlgorithm::AES256GCM,
-                                       rng,
-                                       &admin_symmetric_key,
-                                       &nonce));
+            SignatureAlg::Ed25519,
+            EncryptionAlg::AES256GCM,
+            rng,
+            &admin_symmetric_key,
+            &nonce));
 
         let initial_block = setup::create_log(ciphersuite,
                                               admin_username,
@@ -143,10 +143,10 @@ impl<A> Server<A>
 #[cfg(test)]
 mod tests {
     use adapter::lmdb::LmdbAdapter;
-    use algorithm::CipherSuite;
+    use alg::{CipherSuite, PasswordAlg};
     use crypto::signing::KeyPair;
     use crypto::symmetric::AES256GCM_KEY_SIZE;
-    use crypto::password::{self, PasswordAlgorithm};
+    use crypto::password;
     use path::PathBuf;
     use ring::rand;
     use server::Server;
@@ -180,7 +180,7 @@ mod tests {
 
         let mut admin_symmetric_key = [0u8; AES256GCM_KEY_SIZE];
 
-        password::derive(PasswordAlgorithm::SCRYPT,
+        password::derive(PasswordAlg::SCRYPT,
                          &credential.salt,
                          ADMIN_PASSWORD,
                          &mut admin_symmetric_key);
