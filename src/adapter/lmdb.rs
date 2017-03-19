@@ -317,7 +317,7 @@ impl From<LmdbError> for Error {
 mod tests {
     use adapter::{Adapter, Transaction};
     use adapter::lmdb::LmdbAdapter;
-    use algorithm::CipherSuite;
+    use alg::CipherSuite;
     use block::Block;
     use crypto::signing::KeyPair;
     use entry::{Class, SerializedEntry};

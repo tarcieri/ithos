@@ -3,20 +3,20 @@
 //! AES-256-GCM is the only supported algorithm. Implementation provided by *ring*
 //!
 
-use algorithm::EncryptionAlgorithm;
+use alg::EncryptionAlg;
 use error::{Error, Result};
 use ring::aead;
 
 pub const AES256GCM_KEY_SIZE: usize = 32;
 pub const AES256GCM_NONCE_SIZE: usize = 12;
 
-pub fn seal(algorithm: EncryptionAlgorithm,
+pub fn seal(algorithm: EncryptionAlg,
             secret_key: &[u8],
             nonce: &[u8],
             plaintext: &[u8])
             -> Result<Vec<u8>> {
     // AES256GCM is the only encryption algorithm we presently support
-    assert!(algorithm == EncryptionAlgorithm::AES256GCM);
+    assert!(algorithm == EncryptionAlg::AES256GCM);
 
     // Nonce must be the expected length
     if nonce.len() != AES256GCM_NONCE_SIZE {
@@ -50,12 +50,12 @@ pub fn seal(algorithm: EncryptionAlgorithm,
     Ok(buffer)
 }
 
-pub fn unseal(algorithm: EncryptionAlgorithm,
+pub fn unseal(algorithm: EncryptionAlg,
               secret_key: &[u8],
               ciphertext: &[u8])
               -> Result<Vec<u8>> {
     // AES256GCM is the only encryption algorithm we presently support
-    assert!(algorithm == EncryptionAlgorithm::AES256GCM);
+    assert!(algorithm == EncryptionAlg::AES256GCM);
 
     // The ciphertext must start with a valid nonce
     if ciphertext.len() < AES256GCM_NONCE_SIZE {
@@ -79,7 +79,7 @@ pub fn unseal(algorithm: EncryptionAlgorithm,
 
 #[cfg(test)]
 pub mod tests {
-    use algorithm::EncryptionAlgorithm;
+    use alg::EncryptionAlg;
     use crypto::symmetric::{self, AES256GCM_KEY_SIZE, AES256GCM_NONCE_SIZE};
 
     // WARNING: Please don't ever use zeroes as an actual encryption key
@@ -90,14 +90,14 @@ pub mod tests {
 
     #[test]
     fn test_sealing_and_unsealing() {
-        let ciphertext = symmetric::seal(EncryptionAlgorithm::AES256GCM,
+        let ciphertext = symmetric::seal(EncryptionAlg::AES256GCM,
                                          &ENCRYPTION_KEY,
                                          &NONCE,
                                          PLAINTEXT)
             .unwrap();
 
         let plaintext =
-            symmetric::unseal(EncryptionAlgorithm::AES256GCM, &ENCRYPTION_KEY, &ciphertext)
+            symmetric::unseal(EncryptionAlg::AES256GCM, &ENCRYPTION_KEY, &ciphertext)
                 .unwrap();
 
         assert_eq!(Vec::from(PLAINTEXT), plaintext);

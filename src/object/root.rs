@@ -19,7 +19,7 @@
 
 // TODO: Hand edited! Figure out a better solution for objecthash support
 
-use algorithm;
+use alg;
 use objecthash::{self, ObjectHash, ObjectHasher};
 use protobuf::Message as Message_imported_for_functions;
 use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
@@ -27,7 +27,7 @@ use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
 #[derive(PartialEq,Clone,Default)]
 pub struct Root {
     // message fields
-    pub digest_alg: algorithm::DigestAlgorithm,
+    pub digest_alg: alg::DigestAlg,
     // special fields
     unknown_fields: ::protobuf::UnknownFields,
     cached_size: ::protobuf::CachedSize,
@@ -52,23 +52,23 @@ impl Root {
     // .ithos.DigestAlgorithm digest_alg = 1;
 
     pub fn clear_digest_alg(&mut self) {
-        self.digest_alg = algorithm::DigestAlgorithm::SHA256;
+        self.digest_alg = alg::DigestAlg::SHA256;
     }
 
     // Param is passed by value, moved
-    pub fn set_digest_alg(&mut self, v: algorithm::DigestAlgorithm) {
+    pub fn set_digest_alg(&mut self, v: alg::DigestAlg) {
         self.digest_alg = v;
     }
 
-    pub fn get_digest_alg(&self) -> algorithm::DigestAlgorithm {
+    pub fn get_digest_alg(&self) -> alg::DigestAlg {
         self.digest_alg
     }
 
-    fn get_digest_alg_for_reflect(&self) -> &algorithm::DigestAlgorithm {
+    fn get_digest_alg_for_reflect(&self) -> &alg::DigestAlg {
         &self.digest_alg
     }
 
-    fn mut_digest_alg_for_reflect(&mut self) -> &mut algorithm::DigestAlgorithm {
+    fn mut_digest_alg_for_reflect(&mut self) -> &mut alg::DigestAlg {
         &mut self.digest_alg
     }
 }
@@ -106,7 +106,7 @@ impl ::protobuf::Message for Root {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if self.digest_alg != algorithm::DigestAlgorithm::SHA256 {
+        if self.digest_alg != alg::DigestAlg::SHA256 {
             my_size += ::protobuf::rt::enum_size(1, self.digest_alg);
         };
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
@@ -117,7 +117,7 @@ impl ::protobuf::Message for Root {
     fn write_to_with_cached_sizes(&self,
                                   os: &mut ::protobuf::CodedOutputStream)
                                   -> ::protobuf::ProtobufResult<()> {
-        if self.digest_alg != algorithm::DigestAlgorithm::SHA256 {
+        if self.digest_alg != alg::DigestAlg::SHA256 {
             os.write_enum(1, self.digest_alg.value())?;
         };
         os.write_unknown_fields(self.get_unknown_fields())?;
@@ -160,7 +160,7 @@ impl ::protobuf::MessageStatic for Root {
         unsafe {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeEnum<algorithm::DigestAlgorithm>>(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeEnum<alg::DigestAlg>>(
                     "digest_alg",
                     Root::get_digest_alg_for_reflect,
                     Root::mut_digest_alg_for_reflect,

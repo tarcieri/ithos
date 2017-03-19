@@ -2,16 +2,20 @@ syntax = "proto3";
 
 package ithos;
 
-enum DigestAlgorithm {
+enum DigestAlg {
     SHA256 = 0;
 }
 
-enum EncryptionAlgorithm {
+enum EncryptionAlg {
     AES256GCM = 0;
 }
 
-enum SignatureAlgorithm {
+enum SignatureAlg {
     Ed25519 = 0;
+}
+
+enum PasswordAlg {
+    SCRYPT = 0;
 }
 
 enum CipherSuite {

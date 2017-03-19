@@ -11,7 +11,7 @@
 //! Once this has been done, all subsequent changes to the log can be authorized by credentials
 //!
 
-use algorithm::{CipherSuite, EncryptionAlgorithm, DigestAlgorithm};
+use alg::{CipherSuite, EncryptionAlg, DigestAlg};
 use block::{Block, Body};
 use crypto::signing::KeyPair;
 use id::BlockId;
@@ -53,7 +53,7 @@ pub fn create_log(ciphersuite: CipherSuite,
 
     // Root DSE
     let mut root = Root::new();
-    root.set_digest_alg(DigestAlgorithm::SHA256);
+    root.set_digest_alg(DigestAlg::SHA256);
 
     let mut root_object = Object::new();
     root_object.set_root(root);
@@ -131,7 +131,7 @@ pub fn create_log(ciphersuite: CipherSuite,
     // TODO: keyid, credential_alg
     let mut admin_signing_credential = Credential::new();
     admin_signing_credential.set_credential_type(credential::Type::SIGNATURE_KEY_PAIR);
-    admin_signing_credential.set_sealing_alg(EncryptionAlgorithm::AES256GCM);
+    admin_signing_credential.set_sealing_alg(EncryptionAlg::AES256GCM);
     admin_signing_credential.set_encrypted_value(Vec::from(admin_keypair_sealed));
     admin_signing_credential.set_salt(Vec::from(admin_keypair_salt));
     admin_signing_credential.set_public_key(Vec::from(admin_keypair.public_key_bytes()));
@@ -159,7 +159,7 @@ pub fn create_log(ciphersuite: CipherSuite,
 
 #[cfg(test)]
 pub mod tests {
-    use algorithm::CipherSuite;
+    use alg::CipherSuite;
     use crypto::signing::KeyPair;
     use ring::rand;
     use setup;

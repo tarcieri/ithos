@@ -19,7 +19,7 @@
 
 // TODO: Hand edited! Figure out a better solution for objecthash support
 
-use algorithm;
+use alg;
 use objecthash::{self, ObjectHash, ObjectHasher};
 use protobuf::Message as Message_imported_for_functions;
 use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;
@@ -30,7 +30,7 @@ pub struct Credential {
     pub keyid: ::std::vec::Vec<u8>,
     pub credential_type: Type,
     pub credential_alg: ::std::string::String,
-    pub sealing_alg: algorithm::EncryptionAlgorithm,
+    pub sealing_alg: alg::EncryptionAlg,
     pub encrypted_value: ::std::vec::Vec<u8>,
     pub salt: ::std::vec::Vec<u8>,
     pub public_key: ::std::vec::Vec<u8>,
@@ -152,23 +152,23 @@ impl Credential {
     // .ithos.EncryptionAlgorithm sealing_alg = 4;
 
     pub fn clear_sealing_alg(&mut self) {
-        self.sealing_alg = algorithm::EncryptionAlgorithm::AES256GCM;
+        self.sealing_alg = alg::EncryptionAlg::AES256GCM;
     }
 
     // Param is passed by value, moved
-    pub fn set_sealing_alg(&mut self, v: algorithm::EncryptionAlgorithm) {
+    pub fn set_sealing_alg(&mut self, v: alg::EncryptionAlg) {
         self.sealing_alg = v;
     }
 
-    pub fn get_sealing_alg(&self) -> algorithm::EncryptionAlgorithm {
+    pub fn get_sealing_alg(&self) -> alg::EncryptionAlg {
         self.sealing_alg
     }
 
-    fn get_sealing_alg_for_reflect(&self) -> &algorithm::EncryptionAlgorithm {
+    fn get_sealing_alg_for_reflect(&self) -> &alg::EncryptionAlg {
         &self.sealing_alg
     }
 
-    fn mut_sealing_alg_for_reflect(&mut self) -> &mut algorithm::EncryptionAlgorithm {
+    fn mut_sealing_alg_for_reflect(&mut self) -> &mut alg::EncryptionAlg {
         &mut self.sealing_alg
     }
 
@@ -446,7 +446,7 @@ impl ::protobuf::Message for Credential {
         if self.credential_alg != ::std::string::String::new() {
             my_size += ::protobuf::rt::string_size(3, &self.credential_alg);
         };
-        if self.sealing_alg != algorithm::EncryptionAlgorithm::AES256GCM {
+        if self.sealing_alg != alg::EncryptionAlg::AES256GCM {
             my_size += ::protobuf::rt::enum_size(4, self.sealing_alg);
         };
         if self.encrypted_value != ::std::vec::Vec::new() {
@@ -488,7 +488,7 @@ impl ::protobuf::Message for Credential {
         if self.credential_alg != ::std::string::String::new() {
             os.write_string(3, &self.credential_alg)?;
         };
-        if self.sealing_alg != algorithm::EncryptionAlgorithm::AES256GCM {
+        if self.sealing_alg != alg::EncryptionAlg::AES256GCM {
             os.write_enum(4, self.sealing_alg.value())?;
         };
         if self.encrypted_value != ::std::vec::Vec::new() {
@@ -564,7 +564,7 @@ impl ::protobuf::MessageStatic for Credential {
                     Credential::get_credential_alg_for_reflect,
                     Credential::mut_credential_alg_for_reflect,
                 ));
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeEnum<algorithm::EncryptionAlgorithm>>(
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeEnum<alg::EncryptionAlg>>(
                     "sealing_alg",
                     Credential::get_sealing_alg_for_reflect,
                     Credential::mut_sealing_alg_for_reflect,

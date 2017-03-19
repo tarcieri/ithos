@@ -154,7 +154,7 @@ impl<'a, A: Adapter<'a> + 'a> Transform<'a, A> {
 pub mod tests {
     use adapter::Adapter;
     use adapter::lmdb::LmdbAdapter;
-    use algorithm::DigestAlgorithm;
+    use alg::DigestAlg;
     use block::{Block, Body};
     use crypto::signing::KeyPair;
     use error::Error;
@@ -212,7 +212,7 @@ pub mod tests {
         let mut transform = Transform::new(&adapter).unwrap();
 
         let mut root1 = Root::new();
-        root1.set_digest_alg(DigestAlgorithm::SHA256);
+        root1.set_digest_alg(DigestAlg::SHA256);
 
         let root2 = root1.clone();
 

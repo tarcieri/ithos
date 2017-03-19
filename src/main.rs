@@ -19,7 +19,7 @@ extern crate time;
 extern crate tempdir;
 
 mod adapter;
-mod algorithm;
+mod alg;
 mod block;
 mod crypto;
 mod direntry;
@@ -38,7 +38,7 @@ mod transform;
 mod witness;
 
 use adapter::lmdb::LmdbAdapter;
-use algorithm::CipherSuite;
+use alg::{CipherSuite, PasswordAlg};
 use crypto::signing::KeyPair;
 use crypto::symmetric::AES256GCM_KEY_SIZE;
 use error::ErrorKind;
@@ -150,7 +150,7 @@ fn domain_add(database_path: &str, admin_username: &str, domain_name: &str) {
 
     let admin_password = crypto::password::prompt(&format!("{}'s password: ", admin_username)).unwrap();
     let mut admin_symmetric_key = [0u8; AES256GCM_KEY_SIZE];
-    crypto::password::derive(crypto::password::PasswordAlgorithm::SCRYPT,
+    crypto::password::derive(PasswordAlg::SCRYPT,
                      &admin_credential.salt,
                      &admin_password,
                      &mut admin_symmetric_key);
