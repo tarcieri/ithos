@@ -41,7 +41,7 @@ impl<'a> KeyPair {
                              nonce: &[u8])
                              -> Result<(KeyPair, Vec<u8>)> {
         // Ed25519 is the only signature algorithm we presently support
-        assert!(signature_alg == SignatureAlg::Ed25519);
+        assert_eq!(signature_alg, SignatureAlg::Ed25519);
 
         let (keypair, serializable_keypair) =
             try!(signature_impl::Ed25519KeyPair::generate_serializable(rng)
@@ -82,7 +82,7 @@ impl<'a> KeyPair {
                   public_key: &[u8])
                   -> Result<KeyPair> {
         // Ed25519 is the only signature algorithm we presently support
-        assert!(signature_alg == SignatureAlg::Ed25519);
+        assert_eq!(signature_alg, SignatureAlg::Ed25519);
 
         let private_key =
             try!(crypto::symmetric::unseal(encryption_alg, sealing_key, sealed_keypair));
@@ -105,7 +105,7 @@ impl<'a> KeyPair {
         let mut message = String::from("ithos.block.body.ni:///sha-256;");
         message.push_str(&objecthash::digest(&body).as_ref().to_base64(base64::URL_SAFE));
 
-        let signature = self.sign_raw_bytes(&message.as_bytes());
+        let signature = self.sign_raw_bytes(message.as_bytes());
         let mut witness = Witness::new();
         witness.set_signatures(RepeatedField::from_vec(vec![signature]));
 

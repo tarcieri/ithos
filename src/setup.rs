@@ -44,7 +44,7 @@ pub fn create_log(ciphersuite: CipherSuite,
                   comment: &str)
                   -> Block {
     // This is the only ciphersuite we presently support
-    assert!(ciphersuite == CipherSuite::Ed25519_AES256GCM_SHA256);
+    assert_eq!(ciphersuite, CipherSuite::Ed25519_AES256GCM_SHA256);
 
     let timestamp = Timestamp::now();
 

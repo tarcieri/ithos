@@ -1,17 +1,18 @@
 //! path.rs: Paths within the directory tree
 //!
-//! Functionality similar to std::path, but for paths within the ithos directory tree
+//! Functionality similar to `std::path`, but for paths within the ithos directory tree
 //!
+
+#![allow(unknown_lints, single_char_pattern)]
 
 use objecthash::{ObjectHash, ObjectHasher};
 use std::borrow::Borrow;
-use std::hash::{Hash, Hasher};
 use std::mem;
 
 pub const SEPARATOR: &'static str = "/";
 
 // Builder for absolute paths
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Hash, Eq, PartialEq, Clone)]
 pub struct PathBuf(String);
 
 impl PathBuf {
@@ -19,6 +20,7 @@ impl PathBuf {
         PathBuf(String::from(SEPARATOR))
     }
 
+    #[allow(dead_code)]
     pub fn as_path(&self) -> &Path {
         self.as_ref()
     }
@@ -56,12 +58,6 @@ impl Borrow<Path> for PathBuf {
     }
 }
 
-impl Hash for PathBuf {
-    fn hash<H: Hasher>(&self, h: &mut H) {
-        self.0.hash(h)
-    }
-}
-
 impl ObjectHash for PathBuf {
     #[inline]
     fn objecthash<H: ObjectHasher>(&self, hasher: &mut H) {
@@ -70,7 +66,7 @@ impl ObjectHash for PathBuf {
 }
 
 // Slices of absolute paths
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Hash, Eq, PartialEq)]
 pub struct Path(str);
 
 impl Path {
@@ -145,12 +141,6 @@ impl ToOwned for Path {
 
     fn to_owned(&self) -> PathBuf {
         PathBuf(String::from(&self.0))
-    }
-}
-
-impl Hash for Path {
-    fn hash<H: Hasher>(&self, h: &mut H) {
-        self.0.hash(h)
     }
 }
 

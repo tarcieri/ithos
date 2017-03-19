@@ -58,19 +58,15 @@ fn params() -> ScryptParams {
 
 pub fn derive(alg: PasswordAlg, salt: &[u8], password: &str, out: &mut [u8]) {
     // scrypt is the only password hashing algorithm we support for now
-    assert!(alg == PasswordAlg::SCRYPT);
+    assert_eq!(alg, PasswordAlg::SCRYPT);
 
     scrypt::scrypt(password.as_bytes(), salt, &params(), out);
 }
 
 #[allow(dead_code)]
-pub fn verify(alg: PasswordAlg,
-              salt: &[u8],
-              password: &str,
-              previously_derived: &[u8])
-              -> bool {
+pub fn verify(alg: PasswordAlg, salt: &[u8], password: &str, previously_derived: &[u8]) -> bool {
     // scrypt is the only password hashing algorithm we support for now
-    assert!(alg == PasswordAlg::SCRYPT);
+    assert_eq!(alg, PasswordAlg::SCRYPT);
 
     let mut out = vec![0u8; previously_derived.len()];
     scrypt::scrypt(password.as_bytes(), &*salt, &params(), &mut out);
@@ -124,8 +120,8 @@ fn encode(bytes: &[u8]) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
-    use crypto::password;
     use alg::PasswordAlg;
+    use crypto::password;
 
     use ring::rand;
 
