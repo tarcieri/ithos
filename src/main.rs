@@ -148,12 +148,13 @@ fn domain_add(database_path: &str, admin_username: &str, domain_name: &str) {
                err = err);
     });
 
-    let admin_password = crypto::password::prompt(&format!("{}'s password: ", admin_username)).unwrap();
+    let admin_password = crypto::password::prompt(&format!("{}'s password: ", admin_username))
+        .unwrap();
     let mut admin_symmetric_key = [0u8; AES256GCM_KEY_SIZE];
     crypto::password::derive(PasswordAlg::SCRYPT,
-                     &admin_credential.salt,
-                     &admin_password,
-                     &mut admin_symmetric_key);
+                             &admin_credential.salt,
+                             &admin_password,
+                             &mut admin_symmetric_key);
 
     let admin_keypair = KeyPair::unseal_from_credential(&admin_credential, &admin_symmetric_key)
         .unwrap_or_else(|err| {

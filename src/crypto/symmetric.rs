@@ -16,7 +16,7 @@ pub fn seal(algorithm: EncryptionAlg,
             plaintext: &[u8])
             -> Result<Vec<u8>> {
     // AES256GCM is the only encryption algorithm we presently support
-    assert!(algorithm == EncryptionAlg::AES256GCM);
+    assert_eq!(algorithm, EncryptionAlg::AES256GCM);
 
     // Nonce must be the expected length
     if nonce.len() != AES256GCM_NONCE_SIZE {
@@ -50,12 +50,9 @@ pub fn seal(algorithm: EncryptionAlg,
     Ok(buffer)
 }
 
-pub fn unseal(algorithm: EncryptionAlg,
-              secret_key: &[u8],
-              ciphertext: &[u8])
-              -> Result<Vec<u8>> {
+pub fn unseal(algorithm: EncryptionAlg, secret_key: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>> {
     // AES256GCM is the only encryption algorithm we presently support
-    assert!(algorithm == EncryptionAlg::AES256GCM);
+    assert_eq!(algorithm, EncryptionAlg::AES256GCM);
 
     // The ciphertext must start with a valid nonce
     if ciphertext.len() < AES256GCM_NONCE_SIZE {
@@ -90,15 +87,11 @@ pub mod tests {
 
     #[test]
     fn test_sealing_and_unsealing() {
-        let ciphertext = symmetric::seal(EncryptionAlg::AES256GCM,
-                                         &ENCRYPTION_KEY,
-                                         &NONCE,
-                                         PLAINTEXT)
-            .unwrap();
+        let ciphertext =
+            symmetric::seal(EncryptionAlg::AES256GCM, &ENCRYPTION_KEY, &NONCE, PLAINTEXT).unwrap();
 
-        let plaintext =
-            symmetric::unseal(EncryptionAlg::AES256GCM, &ENCRYPTION_KEY, &ciphertext)
-                .unwrap();
+        let plaintext = symmetric::unseal(EncryptionAlg::AES256GCM, &ENCRYPTION_KEY, &ciphertext)
+            .unwrap();
 
         assert_eq!(Vec::from(PLAINTEXT), plaintext);
     }

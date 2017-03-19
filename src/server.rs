@@ -10,6 +10,7 @@
 use adapter::Adapter;
 use alg::{CipherSuite, SignatureAlg, EncryptionAlg, PasswordAlg};
 use block::Body;
+use crypto::password;
 use crypto::signing::KeyPair;
 use crypto::symmetric::{AES256GCM_KEY_SIZE, AES256GCM_NONCE_SIZE};
 use entry::Entry;
@@ -18,7 +19,6 @@ use object::Object;
 use object::credential::Credential;
 use object::domain::Domain;
 use op::{self, Op};
-use crypto::password;
 use path::{Path, PathBuf};
 use protobuf::RepeatedField;
 use ring::rand::SecureRandom;
@@ -49,7 +49,7 @@ impl<A> Server<A>
                            admin_password: &str)
                            -> Result<()> {
         // We presently only support one ciphersuite
-        assert!(ciphersuite == CipherSuite::Ed25519_AES256GCM_SHA256);
+        assert_eq!(ciphersuite, CipherSuite::Ed25519_AES256GCM_SHA256);
 
         let admin_keypair_salt = try!(password::random_salt(rng));
 
@@ -144,9 +144,9 @@ impl<A> Server<A>
 mod tests {
     use adapter::lmdb::LmdbAdapter;
     use alg::{CipherSuite, PasswordAlg};
+    use crypto::password;
     use crypto::signing::KeyPair;
     use crypto::symmetric::AES256GCM_KEY_SIZE;
-    use crypto::password;
     use path::PathBuf;
     use ring::rand;
     use server::Server;
