@@ -19,7 +19,9 @@ use rustc_serialize::base64::{self, ToBase64};
 use signature::Signature;
 use witness::Witness;
 
+/// Digital signature keypair (includes public and private key)
 pub struct KeyPair {
+    /// The signature algorithm this key supports
     pub algorithm: SignatureAlg,
     keypair: signature_impl::Ed25519KeyPair,
 }
@@ -33,7 +35,7 @@ impl<'a> KeyPair {
         }
     }
 
-    // Generate a new keypair and seal it with the given encryption algorithm and key
+    /// Generate a new `KeyPair` and seal it with the given encryption algorithm and key
     pub fn generate_and_seal(signature_alg: SignatureAlg,
                              encryption_alg: EncryptionAlg,
                              rng: &SecureRandom,
@@ -60,6 +62,7 @@ impl<'a> KeyPair {
         Ok((result, ciphertext))
     }
 
+    /// Unseal an encrypted `KeyPair` from a `Credential` object
     pub fn unseal_from_credential(credential: &Credential,
                                   symmetric_key_bytes: &[u8])
                                   -> Result<KeyPair> {
@@ -75,6 +78,7 @@ impl<'a> KeyPair {
                         &credential.public_key)
     }
 
+    /// Unseal an encrypted `KeyPair`
     pub fn unseal(signature_alg: SignatureAlg,
                   encryption_alg: EncryptionAlg,
                   sealing_key: &[u8],
@@ -96,6 +100,7 @@ impl<'a> KeyPair {
         })
     }
 
+    /// Return the public key for this `KeyPair`, serialized as bytes
     pub fn public_key_bytes(&'a self) -> &'a [u8] {
         self.keypair.public_key_bytes()
     }

@@ -30,9 +30,10 @@ use transform::Transform;
 #[cfg(test)]
 extern crate tempdir;
 
-// Comment
+/// Default comment used for the initial block
 const DEFAULT_INITIAL_BLOCK_COMMENT: &'static str = "Initial log creation";
 
+/// An ithos server
 pub struct Server<A>
     where A: for<'a> Adapter<'a>
 {
@@ -42,6 +43,7 @@ pub struct Server<A>
 impl<A> Server<A>
     where A: for<'a> Adapter<'a>
 {
+    /// Create a new ithos database at the given filesystem path
     pub fn create_database(path: &std::path::Path,
                            rng: &SecureRandom,
                            ciphersuite: CipherSuite,
@@ -86,11 +88,13 @@ impl<A> Server<A>
         Ok(())
     }
 
+    /// Open an existing ithos database
     pub fn open_database(path: &std::path::Path) -> Result<Server<A>> {
         let adapter = try!(A::open_database(path));
         Ok(Server { adapter: adapter })
     }
 
+    /// Add a new `Domain` object to this ithos server
     pub fn add_domain(&self,
                       admin_keypair: &KeyPair,
                       domain_name: &str,
@@ -132,6 +136,7 @@ impl<A> Server<A>
         Ok(())
     }
 
+    /// Obtain a credential from the directory
     pub fn find_credential(&self, path: &Path) -> Result<Credential> {
         match try!(Entry::find(&self.adapter, path)) {
             Entry::Credential(credential_entry) => Ok(credential_entry),

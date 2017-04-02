@@ -21,12 +21,15 @@ use timestamp::Timestamp;
 #[cfg(test)]
 extern crate tempdir;
 
+/// An uncommitted entry being processed during a transactional transform
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 struct TransformEntry {
     id: EntryId,
     class: Class,
 }
 
+/// Transactionally apply the operations contained within a block to the
+/// database, aborting if there are any consistency errors
 pub struct Transform<'a, A: Adapter<'a> + 'a> {
     adapter: &'a A,
     txn: A::W,
@@ -35,6 +38,7 @@ pub struct Transform<'a, A: Adapter<'a> + 'a> {
 }
 
 impl<'a, A: Adapter<'a> + 'a> Transform<'a, A> {
+    /// Create a new transform for the current adapter
     pub fn new(adapter: &'a A) -> Result<Transform<'a, A>> {
         let txn = try!(adapter.rw_transaction());
         let next_entry_id = try!(adapter.next_free_entry_id(&txn));
@@ -47,10 +51,12 @@ impl<'a, A: Adapter<'a> + 'a> Transform<'a, A> {
         })
     }
 
+    /// Obtain the current block ID (i.e. prior to the transaction being committed)
     pub fn block_id(&mut self) -> Result<BlockId> {
         self.adapter.current_block_id(&self.txn)
     }
 
+    /// Apply the operations in the given block to the database
     pub fn apply(&mut self, block: &Block) -> Result<()> {
         // NOTE: This only stores the block in the database. It does not process it
         try!(self.adapter.add_block(&mut self.txn, block));
@@ -73,10 +79,12 @@ impl<'a, A: Adapter<'a> + 'a> Transform<'a, A> {
 
     }
 
+    /// Commit the transaction in which the ops contained in a block have been applied
     pub fn commit(self) -> Result<()> {
         self.txn.commit()
     }
 
+    /// Add a new entry to the directory tree
     fn add(&mut self, op: &Op, block_id: &BlockId, timestamp: Timestamp) -> Result<()> {
         let child_path = try!(Path::new(op.get_path()).ok_or(Error::path_invalid(None)));
         let parent_path = child_path.parent();
@@ -135,6 +143,8 @@ impl<'a, A: Adapter<'a> + 'a> Transform<'a, A> {
         Ok(())
     }
 
+    /// Get an entry, either from the buffer of uncommitted entries, or failing that, by reading
+    /// from the current view of the directory tree
     fn get_entry(&self, path: &Path) -> Result<TransformEntry> {
         if let Some(parent_entry) = self.new_entries.get(path) {
             Ok(*parent_entry)

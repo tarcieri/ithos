@@ -9,22 +9,26 @@ use objecthash::{ObjectHash, ObjectHasher};
 use std::borrow::Borrow;
 use std::mem;
 
+/// Character which separates components of paths
 pub const SEPARATOR: &'static str = "/";
 
-// Builder for absolute paths
-#[derive(Debug, Hash, Eq, PartialEq, Clone)]
+/// `std::path::PathBuf`-like builder for absolute paths
+#[derive(Debug, Default, Hash, Eq, PartialEq, Clone)]
 pub struct PathBuf(String);
 
 impl PathBuf {
+    /// Create a new empty `PathBuf`
     pub fn new() -> PathBuf {
         PathBuf(String::from(SEPARATOR))
     }
 
+    /// Obtain a `Path` which references this `PathBuf`
     #[allow(dead_code)]
     pub fn as_path(&self) -> &Path {
         self.as_ref()
     }
 
+    /// Add a component to this path
     pub fn push<P: AsRef<str>>(&mut self, path: P) {
         if !self.0.ends_with(SEPARATOR) {
             self.0.push_str(SEPARATOR);
@@ -65,15 +69,17 @@ impl ObjectHash for PathBuf {
     }
 }
 
-// Slices of absolute paths
+/// `std::path::Path`-like slices of absolute paths
 #[derive(Debug, Hash, Eq, PartialEq)]
 pub struct Path(str);
 
 impl Path {
+    /// The root entry ("/") in the directory (ala LDAP root DSE)
     pub fn root() -> &'static Path {
         Path::new(SEPARATOR).unwrap()
     }
 
+    /// Create a new `Path` from the given string
     pub fn new<S: AsRef<str> + ?Sized>(s: &S) -> Option<&Path> {
         if s.as_ref().starts_with(SEPARATOR) {
             Some(unsafe { mem::transmute(s.as_ref()) })
@@ -82,6 +88,7 @@ impl Path {
         }
     }
 
+    /// Obtain the components of this path
     // TODO: replace Vec with Components type ala std::path
     pub fn components(&self) -> Vec<&str> {
         if self.0 == *SEPARATOR {
@@ -93,6 +100,7 @@ impl Path {
         result
     }
 
+    /// Parent of the current path (ala '..')
     pub fn parent(&self) -> Option<&Path> {
         let result = self.0.rsplitn(2, SEPARATOR).last();
 
@@ -107,6 +115,7 @@ impl Path {
         result.map(|component| Path::new(component).unwrap())
     }
 
+    /// Name of the entry this path refers to (ala filename)
     pub fn entry_name(&self) -> Option<&str> {
         self.0.rsplitn(2, SEPARATOR).next()
     }

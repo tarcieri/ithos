@@ -38,12 +38,24 @@ const STATE_DB: &'static str = "state";
 const LOG_ID_KEY: &'static [u8] = b"log_id";
 const LATEST_BLOCK_ID_KEY: &'static [u8] = b"latest_block_id";
 
+/// Adapter implementation for the Lightning Memory Database
 pub struct LmdbAdapter {
+    /// LMDB "environment" (directory containing multiple databases)
     env: Environment,
+
+    /// Blocks in the log, persisted by ID
     blocks: Database,
+
+    /// Directory hierarchy, mapping names to entry IDs
     directories: Database,
+
+    /// Entries indexed by integer entry ID
     entries: Database,
+
+    /// Per-entry metadata, e.g. creation/modification time
     metadata: Database,
+
+    /// Global metadata about the current state of the directory
     state: Database,
 }
 
@@ -237,7 +249,10 @@ impl LmdbAdapter {
     }
 }
 
+/// Read-write transaction: only one allowed at a time
 pub struct RwTransaction<'a>(self::lmdb::RwTransaction<'a>);
+
+/// Read-only transaction: several can be active concurrently
 pub struct RoTransaction<'a>(self::lmdb::RoTransaction<'a>);
 
 // TODO: since LMDB is ordered, we could e.g. perform a binary search for find
@@ -284,12 +299,14 @@ impl_transaction!(RwTransaction);
 impl_transaction!(RoTransaction);
 
 impl<'a> RwTransaction<'a> {
+    /// Reserve the given amount of space in LMDB for the given key
     pub fn reserve(&mut self, database: Database, key: &[u8], len: usize) -> Result<&mut [u8]> {
         self.0
             .reserve(database, &key, len, WriteFlags::empty())
             .map_err(|_| Error::transaction(None))
     }
 
+    /// Put the given data into LMDB under the given key
     fn put(&mut self, database: Database, key: &[u8], data: &[u8]) -> Result<()> {
         self.0
             .put(database, &key, &data, WriteFlags::empty())
