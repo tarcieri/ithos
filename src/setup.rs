@@ -28,13 +28,13 @@ use timestamp::Timestamp;
 
 const ADMIN_KEYPAIR_LIFETIME: u64 = 315_532_800; // 10 years
 
-// Create the first block in a new log, with a parent ID of zero.
-//
-// This block contains the initial administrative signature key which will
-// be used as the initial root authority for new blocks in the log.
-//
-// The block is self-signed with the initial administrator key.
-//
+/// Create the first block in a new log, with a parent ID of zero.
+///
+/// This block contains the initial administrative signature key which will
+/// be used as the initial root authority for new blocks in the log.
+///
+/// The block is self-signed with the initial administrator key.
+///
 // TODO: Refactor this mess or create a policy language for these tasks instead
 pub fn create_log(ciphersuite: CipherSuite,
                   admin_username: &str,

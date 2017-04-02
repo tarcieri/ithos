@@ -16,16 +16,27 @@ use path::Path;
 use protobuf::{self, Message};
 use std::mem;
 
+/// Entry type (ala LDAP objectclass)
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum Class {
-    Root, // Root entry in the tree (ala LDAP root DSE)
-    Domain, // Administrative Domain (ala DNS domain or Kerberos realm)
-    OrgUnit, // Unit/department within an organization
-    System, // System User (i.e. non-human account)
-    Credential, // Encrypted access credential
+    /// Root entry in the tree (ala LDAP root DSE)
+    Root,
+
+    /// Administrative Domain (ala DNS domain or Kerberos realm)
+    Domain,
+
+    /// Unit/department within an organization
+    OrgUnit,
+
+    /// System User (i.e. non-human account)
+    System,
+
+    /// Encrypted access credential
+    Credential,
 }
 
 impl Class {
+    /// Deserialize an entry ID from its byte representation (host-native endianness)
     pub fn from_bytes(bytes: &[u8]) -> Result<Class> {
         if bytes.len() != 4 {
             return Err(Error::parse(None));
@@ -48,6 +59,7 @@ impl Class {
         Ok(result)
     }
 
+    /// Obtain the class associated with a given object
     pub fn from_object(object: &Object) -> Option<Class> {
         if object.has_root() {
             Some(Class::Root)
@@ -64,7 +76,7 @@ impl Class {
         }
     }
 
-    // Are children of the given class allowed under this class?
+    /// Are children of the given class allowed under this class?
     pub fn allows_child(&self, child: &Class) -> bool {
         match *self {
             Class::Root => {
@@ -95,6 +107,7 @@ impl Class {
         }
     }
 
+    /// Serialize class as its byte representation (host-native endianness)
     #[inline]
     pub fn as_bytes(&self) -> [u8; 4] {
         let id = *self as u32;
@@ -114,16 +127,27 @@ impl ToString for Class {
     }
 }
 
+/// Sum type representing deserialized entries
 #[derive(Debug, PartialEq)]
 pub enum Entry {
-    Root(Root), // Root entry in the tree (ala LDAP root DSE)
-    Domain(Domain), // Administrative Domain (ala DNS domain or Kerberos realm)
-    OrgUnit(OrgUnit), // Unit/department within an organization
-    System(System), // System User (i.e. non-human account)
-    Credential(Credential), // Encrypted access credential
+    /// Root entry in the tree (ala LDAP root DSE)
+    Root(Root),
+
+    /// Administrative Domain (ala DNS domain or Kerberos realm)
+    Domain(Domain),
+
+    /// Unit/department within an organization
+    OrgUnit(OrgUnit),
+
+    /// System User (i.e. non-human account)
+    System(System),
+
+    /// Encrypted access credential
+    Credential(Credential),
 }
 
 impl Entry {
+    /// Find an entry located at the given path
     pub fn find<'a, A>(adapter: &'a A, path: &Path) -> Result<Entry>
         where A: Adapter<'a>
     {
@@ -134,6 +158,7 @@ impl Entry {
         Ok(try!(entry.deserialize()))
     }
 
+    /// Convert an object to the `Entry` sum type
     pub fn from_object(object: &mut Object) -> Option<Entry> {
         if object.has_root() {
             Some(Entry::Root(object.take_root()))
@@ -150,6 +175,7 @@ impl Entry {
         }
     }
 
+    /// Serialize an entry in its byte representation
     pub fn serialize(&self) -> Result<Vec<u8>> {
         let result = match *self {
             Entry::Root(ref entry) => entry.write_to_bytes(),
@@ -163,13 +189,20 @@ impl Entry {
     }
 }
 
+/// Raw entry serialized as bytes (i.e. reference type)
 pub struct SerializedEntry<'a> {
+    /// Host-native integer identifier for this entry
     pub id: EntryId,
+
+    /// Class associated with this entry
     pub class: Class,
+
+    /// Raw serialized entry (Protobuf)
     pub data: &'a [u8],
 }
 
 impl<'a> SerializedEntry<'a> {
+    /// Parse entry header and determine its type
     pub fn from_bytes(id: EntryId, bytes: &[u8]) -> Result<SerializedEntry> {
         if bytes.len() < 4 {
             return Err(Error::parse(None));
@@ -182,6 +215,7 @@ impl<'a> SerializedEntry<'a> {
         })
     }
 
+    /// Deserialize an entry into the (owned) `Entry` sum type
     pub fn deserialize(&self) -> Result<Entry> {
         let result = match self.class {
             Class::Root => Entry::Root(try!(protobuf::parse_from_bytes::<Root>(self.data))),

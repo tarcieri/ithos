@@ -7,9 +7,14 @@ use alg::EncryptionAlg;
 use error::{Error, Result};
 use ring::aead;
 
+/// Size of an AES-256-GCM key
 pub const AES256GCM_KEY_SIZE: usize = 32;
+
+/// Size of an AES-256-GCM nonce (as used by ithos)
 pub const AES256GCM_NONCE_SIZE: usize = 12;
 
+
+/// Encrypt the given plaintext using the given algorithm
 pub fn seal(algorithm: EncryptionAlg,
             secret_key: &[u8],
             nonce: &[u8],
@@ -50,6 +55,7 @@ pub fn seal(algorithm: EncryptionAlg,
     Ok(buffer)
 }
 
+/// Decrypt the given ciphertext using the given algorithm
 pub fn unseal(algorithm: EncryptionAlg, secret_key: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>> {
     // AES256GCM is the only encryption algorithm we presently support
     assert_eq!(algorithm, EncryptionAlg::AES256GCM);

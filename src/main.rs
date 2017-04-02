@@ -3,6 +3,8 @@
 #![crate_name = "ithos"]
 #![crate_type = "bin"]
 
+#![deny(missing_docs)]
+
 extern crate clap;
 use clap::{App, Arg, SubCommand};
 
@@ -18,24 +20,24 @@ extern crate time;
 #[cfg(test)]
 extern crate tempdir;
 
-mod adapter;
-mod alg;
-mod block;
-mod crypto;
-mod direntry;
-mod entry;
-mod error;
-mod id;
-mod metadata;
-mod object;
-mod op;
-mod path;
-mod server;
-mod setup;
-mod signature;
-mod timestamp;
-mod transform;
-mod witness;
+pub mod adapter;
+pub mod alg;
+pub mod block;
+pub mod crypto;
+pub mod direntry;
+pub mod entry;
+pub mod error;
+pub mod id;
+pub mod metadata;
+pub mod object;
+pub mod op;
+pub mod path;
+pub mod server;
+pub mod setup;
+pub mod signature;
+pub mod timestamp;
+pub mod transform;
+pub mod witness;
 
 use adapter::lmdb::LmdbAdapter;
 use alg::{CipherSuite, PasswordAlg};

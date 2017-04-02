@@ -24,7 +24,14 @@ fn params() -> ScryptParams {
     ScryptParams::new(16, 8, 1)
 }
 
-// Generate a password from a random number generator
+// Use a weak set of parameters when running tests to reduce test times
+// WARNING: do not use these params in release versions of this software!
+#[cfg(test)]
+fn params() -> ScryptParams {
+    ScryptParams::new(1, 1, 1)
+}
+
+/// Generate an easy-to-type password from a random number generator
 pub fn generate(rng: &SecureRandom) -> String {
     let mut bytes = [0u8; 8];
 
@@ -33,36 +40,32 @@ pub fn generate(rng: &SecureRandom) -> String {
 
     format!("{prefix}-{password}-{digits1:02}{digits2:03}",
             prefix = GENPASS_PREFIX,
-            password = String::from_utf8(encode(&bytes[0..6])).unwrap(),
+            password = String::from_utf8(encode_bubblebabble(&bytes[0..6])).unwrap(),
             digits1 = bytes[6] % 100,
             digits2 = bytes[7])
 }
 
+/// Generate a random salt to use with a password
 pub fn random_salt(rng: &SecureRandom) -> Result<[u8; RANDOM_SALT_SIZE]> {
     let mut salt = [0u8; RANDOM_SALT_SIZE];
     try!(rng.fill(&mut salt).map_err(|_| Error::rng(None)));
     Ok(salt)
 }
 
-// Prompt for a password from standard input
+/// Prompt for a password from standard input
 pub fn prompt(message: &str) -> Result<String> {
     rpassword::prompt_password_stdout(message).map_err(|_| Error::system(None))
 }
 
-// Use a weak set of parameters when running tests to reduce test times
-// WARNING: do not use these params in release versions of this software!
-#[cfg(test)]
-fn params() -> ScryptParams {
-    ScryptParams::new(1, 1, 1)
-}
-
-pub fn derive(alg: PasswordAlg, salt: &[u8], password: &str, out: &mut [u8]) {
+/// Derive a cryptographically secure key from the given password and salt
+pub fn derive(alg: PasswordAlg, salt: &[u8], password: &str, output_key: &mut [u8]) {
     // scrypt is the only password hashing algorithm we support for now
     assert_eq!(alg, PasswordAlg::SCRYPT);
 
-    scrypt::scrypt(password.as_bytes(), salt, &params(), out);
+    scrypt::scrypt(password.as_bytes(), salt, &params(), output_key);
 }
 
+/// Verify a password is correct against a previously derived key/digest
 #[allow(dead_code)]
 pub fn verify(alg: PasswordAlg, salt: &[u8], password: &str, previously_derived: &[u8]) -> bool {
     // scrypt is the only password hashing algorithm we support for now
@@ -74,8 +77,8 @@ pub fn verify(alg: PasswordAlg, salt: &[u8], password: &str, previously_derived:
     constant_time::verify_slices_are_equal(previously_derived, &out).is_ok()
 }
 
-// Encode random data with the Bubble Babble encoding
-fn encode(bytes: &[u8]) -> Vec<u8> {
+/// Encode random data with the Bubble Babble encoding
+fn encode_bubblebabble(bytes: &[u8]) -> Vec<u8> {
     let vowels = b"aeiouy";
     let consonants = b"bcdfghklmnprstvzx";
 
@@ -145,16 +148,18 @@ mod tests {
 
     #[test]
     fn test_bubblebabble() {
-        assert_eq!(&*password::encode(b""), b"xexax".as_ref());
-        assert_eq!(&*password::encode(b"abcd"), b"ximek-domek-gyxox".as_ref());
-        assert_eq!(&*password::encode(b"asdf"), b"ximel-finek-koxex".as_ref());
-        assert_eq!(&*password::encode(b"0123456789"),
+        assert_eq!(&*password::encode_bubblebabble(b""), b"xexax".as_ref());
+        assert_eq!(&*password::encode_bubblebabble(b"abcd"),
+                   b"ximek-domek-gyxox".as_ref());
+        assert_eq!(&*password::encode_bubblebabble(b"asdf"),
+                   b"ximel-finek-koxex".as_ref());
+        assert_eq!(&*password::encode_bubblebabble(b"0123456789"),
                    b"xesaf-casef-fytef-hutif-lovof-nixix".as_ref());
-        assert_eq!(&*password::encode(b"Testing a sentence."),
+        assert_eq!(&*password::encode_bubblebabble(b"Testing a sentence."),
                    b"xihak-hysul-gapak-venyd-bumud-besek-heryl-gynek-vumuk-hyrox".as_ref());
-        assert_eq!(&*password::encode(b"1234567890"),
+        assert_eq!(&*password::encode_bubblebabble(b"1234567890"),
                    b"xesef-disof-gytuf-katof-movif-baxux".as_ref());
-        assert_eq!(&*password::encode(b"Pineapple"),
+        assert_eq!(&*password::encode_bubblebabble(b"Pineapple"),
                    b"xigak-nyryk-humil-bosek-sonax".as_ref());
     }
 }
