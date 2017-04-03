@@ -4,6 +4,7 @@
 //!
 
 use block::Block;
+use byteorder::{ByteOrder, NativeEndian};
 use error::{Error, Result};
 use objecthash::{self, ObjectHash, ObjectHasher};
 use std::mem;
@@ -68,10 +69,7 @@ impl EntryId {
             return Err(Error::parse(None));
         }
 
-        let mut id = [0u8; 8];
-        id.copy_from_slice(&bytes[0..8]);
-
-        Ok(EntryId(unsafe { mem::transmute(id) }))
+        Ok(EntryId(NativeEndian::read_u64(bytes)))
     }
 
     /// Obtain the next sequential EntryID after this one
@@ -81,7 +79,9 @@ impl EntryId {
 }
 
 impl AsRef<[u8; 8]> for EntryId {
+    // TODO: get rid of transmute
     #[inline]
+    #[allow(unsafe_code)]
     fn as_ref(&self) -> &[u8; 8] {
         unsafe { mem::transmute(&self.0) }
     }
