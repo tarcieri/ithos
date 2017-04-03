@@ -39,7 +39,6 @@ pub mod timestamp;
 pub mod transform;
 pub mod witness;
 
-use adapter::lmdb::LmdbAdapter;
 use alg::{CipherSuite, PasswordAlg};
 use crypto::signing::KeyPair;
 use crypto::symmetric::AES256GCM_KEY_SIZE;
@@ -47,6 +46,7 @@ use error::ErrorKind;
 use path::PathBuf;
 use ring::rand;
 use server::Server;
+use std::path::Path as StdPath;
 
 const DEFAULT_ADMIN_USERNAME: &'static str = "manager";
 
@@ -101,11 +101,11 @@ fn db_create(database_path: &str, admin_username: &str) {
     let rng = rand::SystemRandom::new();
     let admin_password = crypto::password::generate(&rng);
 
-    match Server::<LmdbAdapter>::create_database(std::path::Path::new(database_path),
-                                                 &rng,
-                                                 CipherSuite::Ed25519_AES256GCM_SHA256,
-                                                 admin_username,
-                                                 &admin_password) {
+    match Server::create_database(StdPath::new(database_path),
+                                  &rng,
+                                  CipherSuite::Ed25519_AES256GCM_SHA256,
+                                  admin_username,
+                                  &admin_password) {
         Ok(_) => {
             println!("\nDatabase created! Below is the password for the admin user ('{admin}')",
                      admin = admin_username);
@@ -130,7 +130,7 @@ fn domain_add(database_path: &str, admin_username: &str, domain_name: &str) {
              path = database_path,
              domain = domain_name);
 
-    let server = Server::<LmdbAdapter>::open_database(std::path::Path::new(database_path))
+    let server = Server::open_database(StdPath::new(database_path))
         .unwrap_or_else(|err| {
             panic!("*** Error: couldn't open database at {path}: {err}",
                    path = database_path,

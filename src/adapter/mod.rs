@@ -8,6 +8,7 @@
 //! much logic that's in lmdb.rs right now should probably get hoisted out first.
 //!
 
+#[cfg(feature = "lmdb")]
 pub mod lmdb;
 
 use block::Block;
@@ -32,7 +33,7 @@ pub trait Transaction {
     fn get(&self, db: Self::D, key: &[u8]) -> Result<&[u8]>;
 
     /// Perform a search of the given database, looking for an entry that matches the predicate
-    /// (TODO: remove this from this trait)
+    // (TODO: remove this from this trait)
     fn find<P>(&self, db: Self::D, key: &[u8], predicate: P) -> Result<&[u8]>
         where P: Fn(&[u8]) -> bool;
 }

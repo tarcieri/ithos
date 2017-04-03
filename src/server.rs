@@ -8,6 +8,8 @@
 //!
 
 use adapter::Adapter;
+#[cfg(feature = "lmdb")]
+use adapter::lmdb::LmdbAdapter;
 use alg::{CipherSuite, SignatureAlg, EncryptionAlg, PasswordAlg};
 use block::Body;
 use crypto::password;
@@ -24,6 +26,7 @@ use protobuf::RepeatedField;
 use ring::rand::SecureRandom;
 use setup;
 use std::{self, str};
+use std::path::Path as StdPath;
 use timestamp::Timestamp;
 use transform::Transform;
 
@@ -34,17 +37,13 @@ extern crate tempdir;
 const DEFAULT_INITIAL_BLOCK_COMMENT: &'static str = "Initial log creation";
 
 /// An ithos server
-pub struct Server<A>
-    where A: for<'a> Adapter<'a>
-{
-    adapter: A,
-}
+#[cfg(feature = "lmdb")]
+pub struct Server(LmdbAdapter);
 
-impl<A> Server<A>
-    where A: for<'a> Adapter<'a>
-{
+impl Server {
     /// Create a new ithos database at the given filesystem path
-    pub fn create_database(path: &std::path::Path,
+    #[cfg(feature = "lmdb")]
+    pub fn create_database(path: &StdPath,
                            rng: &SecureRandom,
                            ciphersuite: CipherSuite,
                            admin_username: &str,
@@ -79,7 +78,7 @@ impl<A> Server<A>
                                               &admin_keypair_salt,
                                               DEFAULT_INITIAL_BLOCK_COMMENT);
 
-        let adapter = try!(A::create_database(path));
+        let adapter = try!(LmdbAdapter::create_database(path));
 
         let mut transform = try!(Transform::new(&adapter));
         try!(transform.apply(&initial_block));
@@ -89,9 +88,10 @@ impl<A> Server<A>
     }
 
     /// Open an existing ithos database
-    pub fn open_database(path: &std::path::Path) -> Result<Server<A>> {
-        let adapter = try!(A::open_database(path));
-        Ok(Server { adapter: adapter })
+    #[cfg(feature = "lmdb")]
+    pub fn open_database(path: &StdPath) -> Result<Server> {
+        let adapter = try!(LmdbAdapter::open_database(path));
+        Ok(Server(adapter))
     }
 
     /// Add a new `Domain` object to this ithos server
@@ -119,7 +119,7 @@ impl<A> Server<A>
         op.set_path(path.into());
         op.set_object(domain_entry_object);
 
-        let mut transform = try!(Transform::new(&self.adapter));
+        let mut transform = try!(Transform::new(&self.0));
 
         let mut body = Body::new();
         body.set_parent_id(Vec::from(try!(transform.block_id()).as_ref()));
@@ -138,7 +138,7 @@ impl<A> Server<A>
 
     /// Obtain a credential from the directory
     pub fn find_credential(&self, path: &Path) -> Result<Credential> {
-        match try!(Entry::find(&self.adapter, path)) {
+        match try!(Entry::find(&self.0, path)) {
             Entry::Credential(credential_entry) => Ok(credential_entry),
             _ => Err(Error::bad_type(None)),
         }
@@ -147,7 +147,6 @@ impl<A> Server<A>
 
 #[cfg(test)]
 mod tests {
-    use adapter::lmdb::LmdbAdapter;
     use alg::{CipherSuite, PasswordAlg};
     use crypto::password;
     use crypto::signing::KeyPair;
@@ -161,19 +160,19 @@ mod tests {
     const ADMIN_PASSWORD: &'static str = "The Magic Words are Squeamish Ossifrage";
     const EXAMPLE_DOMAIN: &'static str = "example.com";
 
-    fn create_database() -> Server<LmdbAdapter> {
+    fn create_database() -> Server {
         let rng = rand::SystemRandom::new();
         let dir = TempDir::new("ithos-test").unwrap();
-        Server::<LmdbAdapter>::create_database(dir.path(),
-                                               &rng,
-                                               CipherSuite::Ed25519_AES256GCM_SHA256,
-                                               ADMIN_USERNAME,
-                                               ADMIN_PASSWORD)
+        Server::create_database(dir.path(),
+                                &rng,
+                                CipherSuite::Ed25519_AES256GCM_SHA256,
+                                ADMIN_USERNAME,
+                                ADMIN_PASSWORD)
             .unwrap();
-        Server::<LmdbAdapter>::open_database(dir.path()).unwrap()
+        Server::open_database(dir.path()).unwrap()
     }
 
-    fn admin_keypair(server: &Server<LmdbAdapter>) -> KeyPair {
+    fn admin_keypair(server: &Server) -> KeyPair {
         let mut keypair_path = PathBuf::new();
         keypair_path.push("global");
         keypair_path.push("users");
