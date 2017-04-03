@@ -20,10 +20,10 @@ use id::{BlockId, EntryId};
 use metadata::Metadata;
 use path::Path;
 use protobuf::{self, Message};
-use std::{self, str};
 use std::error::Error as StdError;
 use std::io::Write;
 use std::path::Path as StdPath;
+use std::str;
 
 const MAX_DBS: u32 = 8;
 const DB_PERMS: lmdb_sys::mode_t = 0o600;

@@ -82,6 +82,8 @@ impl Path {
     /// Create a new `Path` from the given string
     pub fn new<S: AsRef<str> + ?Sized>(s: &S) -> Option<&Path> {
         if s.as_ref().starts_with(SEPARATOR) {
+            // TODO: get rid of transmute
+            #[allow(unsafe_code)]
             Some(unsafe { mem::transmute(s.as_ref()) })
         } else {
             None

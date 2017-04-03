@@ -4,6 +4,7 @@
 //!
 
 use adapter::Adapter;
+use byteorder::{ByteOrder, NativeEndian};
 use error::{Error, Result};
 use id::EntryId;
 use object::Object;
@@ -14,7 +15,6 @@ use object::root::Root;
 use object::system::System;
 use path::Path;
 use protobuf::{self, Message};
-use std::mem;
 
 /// Entry type (ala LDAP objectclass)
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
@@ -42,12 +42,7 @@ impl Class {
             return Err(Error::parse(None));
         }
 
-        let mut id_bytes = [0u8; 4];
-        id_bytes.copy_from_slice(&bytes[0..4]);
-
-        let id: u32 = unsafe { mem::transmute(id_bytes) };
-
-        let result = match id {
+        let result = match NativeEndian::read_u32(bytes) {
             0 => Class::Root,
             1 => Class::Domain,
             2 => Class::OrgUnit,
@@ -110,8 +105,9 @@ impl Class {
     /// Serialize class as its byte representation (host-native endianness)
     #[inline]
     pub fn as_bytes(&self) -> [u8; 4] {
-        let id = *self as u32;
-        unsafe { mem::transmute(id) }
+        let mut result = [0u8; 4];
+        NativeEndian::write_u32(&mut result, *self as u32);
+        result
     }
 }
 

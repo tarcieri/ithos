@@ -3,11 +3,12 @@
 #![crate_name = "ithos"]
 #![crate_type = "bin"]
 
-#![deny(missing_docs)]
+#![deny(missing_docs, unsafe_code)]
 
 extern crate clap;
 use clap::{App, Arg, SubCommand};
 
+extern crate byteorder;
 #[macro_use]
 extern crate objecthash;
 extern crate protobuf;
@@ -130,12 +131,11 @@ fn domain_add(database_path: &str, admin_username: &str, domain_name: &str) {
              path = database_path,
              domain = domain_name);
 
-    let server = Server::open_database(StdPath::new(database_path))
-        .unwrap_or_else(|err| {
-            panic!("*** Error: couldn't open database at {path}: {err}",
-                   path = database_path,
-                   err = err);
-        });
+    let server = Server::open_database(StdPath::new(database_path)).unwrap_or_else(|err| {
+        panic!("*** Error: couldn't open database at {path}: {err}",
+               path = database_path,
+               err = err);
+    });
 
     let mut keypair_path = PathBuf::new();
     keypair_path.push("global");

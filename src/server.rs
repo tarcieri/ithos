@@ -25,8 +25,8 @@ use path::{Path, PathBuf};
 use protobuf::RepeatedField;
 use ring::rand::SecureRandom;
 use setup;
-use std::{self, str};
 use std::path::Path as StdPath;
+use std::str;
 use timestamp::Timestamp;
 use transform::Transform;
 
