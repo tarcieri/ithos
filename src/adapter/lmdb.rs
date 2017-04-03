@@ -23,6 +23,7 @@ use protobuf::{self, Message};
 use std::{self, str};
 use std::error::Error as StdError;
 use std::io::Write;
+use std::path::Path as StdPath;
 
 const MAX_DBS: u32 = 8;
 const DB_PERMS: lmdb_sys::mode_t = 0o600;
@@ -64,7 +65,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
     type R = RoTransaction<'a>;
     type W = RwTransaction<'a>;
 
-    fn create_database(path: &std::path::Path) -> Result<LmdbAdapter> {
+    fn create_database(path: &StdPath) -> Result<LmdbAdapter> {
         let env = try!(Environment::new()
             .set_max_dbs(MAX_DBS)
             .open_with_permissions(&path, DB_PERMS));
@@ -85,7 +86,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
         })
     }
 
-    fn open_database(path: &std::path::Path) -> Result<LmdbAdapter> {
+    fn open_database(path: &StdPath) -> Result<LmdbAdapter> {
         let env = try!(Environment::new()
             .set_max_dbs(MAX_DBS)
             .open_with_permissions(&path, DB_PERMS));
