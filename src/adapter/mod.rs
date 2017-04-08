@@ -11,6 +11,11 @@
 #[cfg(feature = "lmdb")]
 pub mod lmdb;
 
+// Allow adapters to define a trait of their internal transaction methods
+
+#[cfg(feature = "lmdb")]
+pub use self::lmdb::AdapterTransaction;
+
 use block::Block;
 use direntry::DirEntry;
 use entry::SerializedEntry;
@@ -22,33 +27,19 @@ use std::marker::Sized;
 use std::path::Path as StdPath;
 
 /// All access to the underlying storage system is transactional
-pub trait Transaction {
-    /// Database type (TODO: hoist this out of here)
-    type D;
-
+pub trait Transaction: AdapterTransaction {
     /// Commit this transaction (performing writes if this is a read-write transaction
     fn commit(self) -> Result<()>;
-
-    /// Get the raw data associated with an object (TODO: remove this from this trait)
-    fn get(&self, db: Self::D, key: &[u8]) -> Result<&[u8]>;
-
-    /// Perform a search of the given database, looking for an entry that matches the predicate
-    // (TODO: remove this from this trait)
-    fn find<P>(&self, db: Self::D, key: &[u8], predicate: P) -> Result<&[u8]>
-        where P: Fn(&[u8]) -> bool;
 }
 
 /// Abstract (but still roughly LMDB-shaped) adapter interface with high-level APIs to work with
 /// the various types of data in an ithos directory
 pub trait Adapter<'a> {
-    /// Database type (TODO: hoist this out of here)
-    type D;
-
     /// Read-only transaction type
-    type R: Transaction<D = Self::D>;
+    type R: Transaction;
 
     /// Read-write transaction type
-    type W: Transaction<D = Self::D>;
+    type W: Transaction;
 
     /// Create a new database at the given path
     fn create_database(path: &StdPath) -> Result<Self> where Self: Sized;
@@ -69,8 +60,7 @@ pub trait Adapter<'a> {
     fn add_block<'t>(&'t self, txn: &'t mut Self::W, block: &Block) -> Result<()>;
 
     /// Obtain the current block ID
-    fn current_block_id<'t, T>(&'t self, txn: &'t T) -> Result<BlockId>
-        where T: Transaction<D = Self::D>;
+    fn current_block_id<'t, T>(&'t self, txn: &'t T) -> Result<BlockId> where T: Transaction;
 
     /// Add an entry to the database
     fn add_entry<'t>(&'t self,
@@ -83,13 +73,13 @@ pub trait Adapter<'a> {
 
     /// Find the directory entry (including entry ID) under the given path
     fn find_direntry<'t, T>(&'t self, txn: &'t T, path: &path::Path) -> Result<DirEntry>
-        where T: Transaction<D = Self::D>;
+        where T: Transaction;
 
     /// Find the metadata associated with a given entry ID
     fn find_metadata<'t, T>(&'t self, txn: &'t T, id: &EntryId) -> Result<Metadata>
-        where T: Transaction<D = Self::D>;
+        where T: Transaction;
 
     /// Find the serialized entry under a given entry ID
     fn find_entry<'t, T>(&'t self, txn: &'t T, id: &EntryId) -> Result<SerializedEntry>
-        where T: Transaction<D = Self::D>;
+        where T: Transaction;
 }

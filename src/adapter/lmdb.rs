@@ -60,7 +60,6 @@ pub struct LmdbAdapter {
 }
 
 impl<'a> Adapter<'a> for LmdbAdapter {
-    type D = Database;
     type R = RoTransaction<'a>;
     type W = RwTransaction<'a>;
 
@@ -131,7 +130,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
 
         // Ensure the block we're adding is the next in the chain
         if *parent_id == BlockId::zero().as_ref() {
-            match txn.get(self.state, LOG_ID_KEY) {
+            match txn.lmdb_get(self.state, LOG_ID_KEY) {
                 Ok(_) => {
                     let msg = "initial block already set".to_string();
                     return Err(ErrorKind::EntryAlreadyExists(msg).into());
@@ -147,7 +146,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
         }
 
         // This check should be redundant given the one above, but is here just in case
-        match txn.get(self.blocks, block_id.as_ref()) {
+        match txn.lmdb_get(self.blocks, block_id.as_ref()) {
             Ok(_) => {
                 let msg = "new block has already been committed".to_string();
                 return Err(ErrorKind::EntryAlreadyExists(msg).into());
@@ -168,9 +167,9 @@ impl<'a> Adapter<'a> for LmdbAdapter {
     }
 
     fn current_block_id<'t, T>(&'t self, txn: &'t T) -> Result<BlockId>
-        where T: Transaction<D = Database>
+        where T: Transaction
     {
-        BlockId::from_bytes(try!(txn.get(self.state, LATEST_BLOCK_ID_KEY)))
+        BlockId::from_bytes(try!(txn.lmdb_get(self.state, LATEST_BLOCK_ID_KEY)))
     }
 
     fn add_entry<'t>(&'t self,
@@ -180,7 +179,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
                      parent_id: EntryId,
                      metadata: &Metadata)
                      -> Result<DirEntry> {
-        match txn.get(self.entries, entry.id.as_ref()) {
+        match txn.lmdb_get(self.entries, entry.id.as_ref()) {
             Ok(_) => {
                 let msg = format!("error creating '{}': entry ID '{:?}' already exists",
                                   name,
@@ -191,7 +190,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
             Err(err) => return Err(err).chain_err(|| format!("error creating {}", name)),
         }
 
-        match txn.get(self.directories, parent_id.as_ref()) {
+        match txn.lmdb_get(self.directories, parent_id.as_ref()) {
             Ok(_) => {
                 match self.find_child(txn, parent_id, name) {
                     Ok(_) => {
@@ -235,7 +234,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
     }
 
     fn find_direntry<'t, T>(&'t self, txn: &'t T, path: &Path) -> Result<DirEntry>
-        where T: Transaction<D = Database>
+        where T: Transaction
     {
         let result =
             path.components().iter().fold(Ok(DirEntry::root()), |parent_direntry, component| {
@@ -252,30 +251,73 @@ impl<'a> Adapter<'a> for LmdbAdapter {
     }
 
     fn find_metadata<'t, T>(&'t self, txn: &'t T, id: &EntryId) -> Result<Metadata>
-        where T: Transaction<D = Database>
+        where T: Transaction
     {
-        let proto = try!(txn.get(self.metadata, id.as_ref()));
+        let proto = try!(txn.lmdb_get(self.metadata, id.as_ref()));
         Ok(try!(protobuf::parse_from_bytes::<Metadata>(proto)))
     }
 
     fn find_entry<'t, T>(&'t self, txn: &'t T, id: &EntryId) -> Result<SerializedEntry>
-        where T: Transaction<D = Database>
+        where T: Transaction
     {
-        let bytes = try!(txn.get(self.entries, id.as_ref()));
+        let bytes = try!(txn.lmdb_get(self.entries, id.as_ref()));
         SerializedEntry::from_bytes(*id, bytes)
     }
 }
 
 impl LmdbAdapter {
     fn find_child<'a, T>(&'a self, txn: &'a T, parent_id: EntryId, name: &str) -> Result<DirEntry>
-        where T: Transaction<D = Database>
+        where T: Transaction
     {
-        let direntry_bytes = try!(txn.find(self.directories, parent_id.as_ref(), |direntry_bytes| {
+        let direntry_bytes =
+            try!(txn.lmdb_find(self.directories, parent_id.as_ref(), |direntry_bytes| {
                 let direntry = DirEntry::new(parent_id, direntry_bytes).unwrap();
                 direntry.name == name
             }));
 
         DirEntry::new(parent_id, direntry_bytes)
+    }
+}
+
+/// Internal functionality which is not part of the public `Transaction` API
+/// NOTE: these methods should not be called from outside of this module
+pub trait AdapterTransaction {
+    /// Underlying transaction type from the `lmdb` crate
+    type T: LmdbTransaction;
+
+    /// Obtain the inner `LmdbTransaction`
+    fn lmdb_txn(&self) -> &Self::T;
+
+    /// Get the raw data associated with an object (TODO: remove this from this trait)
+    fn lmdb_get(&self, db: Database, key: &[u8]) -> Result<&[u8]> {
+        Ok(self.lmdb_txn().get(db, &key)?)
+    }
+
+    /// Perform a search of the given database, looking for an entry that matches the predicate
+    // TODO: since LMDB is ordered, we could e.g. perform a binary search
+    fn lmdb_find<P>(&self, db: Database, key: &[u8], predicate: P) -> Result<&[u8]>
+        where P: Fn(&[u8]) -> bool
+    {
+        // Ensure the entry exists
+        // TODO: Fix upstream unwrap in lmdb crate's iter_from
+        try!(self.lmdb_get(db, key));
+
+        let mut cursor = try!(self.lmdb_txn().open_ro_cursor(db));
+        let mut result = None;
+
+        // TODO: Remove earlier check once this no longer panics on missing keys
+        for (cursor_key, value) in cursor.iter_from(key) {
+            if cursor_key != key {
+                return Err(ErrorKind::NotFound("key not found".to_string()).into());
+            }
+
+            if predicate(value) {
+                result = Some(value);
+                break;
+            }
+        }
+
+        result.ok_or_else(|| ErrorKind::NotFound("key not found".to_string()).into())
     }
 }
 
@@ -285,48 +327,33 @@ pub struct RwTransaction<'a>(self::lmdb::RwTransaction<'a>);
 /// Read-only transaction: several can be active concurrently
 pub struct RoTransaction<'a>(self::lmdb::RoTransaction<'a>);
 
-macro_rules! impl_transaction (($newtype:ident) => (
-    impl<'a> Transaction for $newtype<'a> {
-        type D = Database;
+impl<'a> AdapterTransaction for RwTransaction<'a> {
+    type T = self::lmdb::RwTransaction<'a>;
 
-        fn get(&self, db: Database, key: &[u8]) -> Result<&[u8]> {
-            Ok(self.0.get(db, &key)?)
-        }
-
-        // TODO: since LMDB is ordered, we could e.g. perform a binary search
-        fn find<P>(&self, db: Database, key: &[u8], predicate: P) -> Result<&[u8]>
-            where P: Fn(&[u8]) -> bool
-        {
-            // Ensure the entry exists
-            // TODO: Fix upstream unwrap in lmdb crate's iter_from
-            try!(self.get(db, key));
-
-            let mut cursor = try!(self.0.open_ro_cursor(db));
-            let mut result = None;
-
-            // TODO: Remove earlier check once this no longer panics on missing keys
-            for (cursor_key, value) in cursor.iter_from(key) {
-                if cursor_key != key {
-                    return Err(ErrorKind::NotFound("key not found".to_string()).into());
-                }
-
-                if predicate(value) {
-                    result = Some(value);
-                    break;
-                }
-            }
-
-            result.ok_or(ErrorKind::NotFound("key not found".to_string()).into())
-        }
-
-        fn commit(self) -> Result<()> {
-            Ok(self.0.commit()?)
-        }
+    fn lmdb_txn(&self) -> &self::lmdb::RwTransaction<'a> {
+        &self.0
     }
-));
+}
 
-impl_transaction!(RwTransaction);
-impl_transaction!(RoTransaction);
+impl<'a> AdapterTransaction for RoTransaction<'a> {
+    type T = self::lmdb::RoTransaction<'a>;
+
+    fn lmdb_txn(&self) -> &self::lmdb::RoTransaction<'a> {
+        &self.0
+    }
+}
+
+impl<'a> Transaction for RwTransaction<'a> {
+    fn commit(self) -> Result<()> {
+        Ok(self.0.commit()?)
+    }
+}
+
+impl<'a> Transaction for RoTransaction<'a> {
+    fn commit(self) -> Result<()> {
+        Ok(self.0.commit()?)
+    }
+}
 
 impl<'a> RwTransaction<'a> {
     /// Reserve the given amount of space in LMDB for the given key
