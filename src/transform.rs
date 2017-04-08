@@ -164,8 +164,8 @@ impl<'a, A: Adapter<'a> + 'a> Transform<'a, A> {
         if let Some(parent_entry) = self.new_entries.get(path) {
             Ok(*parent_entry)
         } else {
-            let id = try!(self.adapter.find_direntry(&self.txn, path)).id;
-            let class = try!(self.adapter.find_entry(&self.txn, &id)).class;
+            let id = self.adapter.find_direntry(&self.txn, path)?.id;
+            let class = self.adapter.find_entry(&self.txn, &id)?.class;
 
             Ok(TransformEntry {
                 id: id,

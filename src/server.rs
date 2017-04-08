@@ -52,7 +52,7 @@ impl Server {
         // We presently only support one ciphersuite
         assert_eq!(ciphersuite, CipherSuite::Ed25519_AES256GCM_SHA256);
 
-        let admin_keypair_salt = try!(password::random_salt(rng));
+        let admin_keypair_salt = password::random_salt(rng)?;
 
         let mut admin_symmetric_key = [0u8; AES256GCM_KEY_SIZE];
         password::derive(PasswordAlg::SCRYPT,
@@ -64,12 +64,12 @@ impl Server {
         let nonce = [0u8; AES256GCM_NONCE_SIZE];
 
         // TODO: honor ciphersuite algorithms
-        let (admin_keypair, admin_keypair_sealed) = try!(KeyPair::generate_and_seal(
-            SignatureAlg::Ed25519,
-            EncryptionAlg::AES256GCM,
-            rng,
-            &admin_symmetric_key,
-            &nonce));
+        let (admin_keypair, admin_keypair_sealed) =
+            KeyPair::generate_and_seal(SignatureAlg::Ed25519,
+                                       EncryptionAlg::AES256GCM,
+                                       rng,
+                                       &admin_symmetric_key,
+                                       &nonce)?;
 
         let initial_block = setup::create_log(ciphersuite,
                                               admin_username,
@@ -78,11 +78,11 @@ impl Server {
                                               &admin_keypair_salt,
                                               DEFAULT_INITIAL_BLOCK_COMMENT);
 
-        let adapter = try!(LmdbAdapter::create_database(path));
+        let adapter = LmdbAdapter::create_database(path)?;
 
-        let mut transform = try!(Transform::new(&adapter));
-        try!(transform.apply(&initial_block));
-        try!(transform.commit());
+        let mut transform = Transform::new(&adapter)?;
+        transform.apply(&initial_block)?;
+        transform.commit()?;
 
         Ok(())
     }
@@ -90,7 +90,7 @@ impl Server {
     /// Open an existing ithos database
     #[cfg(feature = "lmdb")]
     pub fn open_database(path: &StdPath) -> Result<Server> {
-        let adapter = try!(LmdbAdapter::open_database(path));
+        let adapter = LmdbAdapter::open_database(path)?;
         Ok(Server(adapter))
     }
 

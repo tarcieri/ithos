@@ -64,15 +64,14 @@ impl<'a> Adapter<'a> for LmdbAdapter {
     type W = RwTransaction<'a>;
 
     fn create_database(path: &StdPath) -> Result<LmdbAdapter> {
-        let env = try!(Environment::new()
-            .set_max_dbs(MAX_DBS)
-            .open_with_permissions(&path, DB_PERMS));
+        let env = Environment::new().set_max_dbs(MAX_DBS)
+            .open_with_permissions(path, DB_PERMS)?;
 
-        let blocks = try!(env.create_db(Some(BLOCKS_DB), DatabaseFlags::empty()));
-        let directories = try!(env.create_db(Some(DIRECTORIES_DB), INTEGER_KEY | DUP_SORT));
-        let entries = try!(env.create_db(Some(ENTRIES_DB), INTEGER_KEY));
-        let metadata = try!(env.create_db(Some(METADATA_DB), INTEGER_KEY));
-        let state = try!(env.create_db(Some(STATE_DB), DatabaseFlags::empty()));
+        let blocks = env.create_db(Some(BLOCKS_DB), DatabaseFlags::empty())?;
+        let directories = env.create_db(Some(DIRECTORIES_DB), INTEGER_KEY | DUP_SORT)?;
+        let entries = env.create_db(Some(ENTRIES_DB), INTEGER_KEY)?;
+        let metadata = env.create_db(Some(METADATA_DB), INTEGER_KEY)?;
+        let state = env.create_db(Some(STATE_DB), DatabaseFlags::empty())?;
 
         Ok(LmdbAdapter {
             env: env,
@@ -85,15 +84,14 @@ impl<'a> Adapter<'a> for LmdbAdapter {
     }
 
     fn open_database(path: &StdPath) -> Result<LmdbAdapter> {
-        let env = try!(Environment::new()
-            .set_max_dbs(MAX_DBS)
-            .open_with_permissions(&path, DB_PERMS));
+        let env = Environment::new().set_max_dbs(MAX_DBS)
+            .open_with_permissions(path, DB_PERMS)?;
 
-        let blocks = try!(env.open_db(Some(BLOCKS_DB)));
-        let directories = try!(env.open_db(Some(DIRECTORIES_DB)));
-        let entries = try!(env.open_db(Some(ENTRIES_DB)));
-        let metadata = try!(env.open_db(Some(METADATA_DB)));
-        let state = try!(env.open_db(Some(STATE_DB)));
+        let blocks = env.open_db(Some(BLOCKS_DB))?;
+        let directories = env.open_db(Some(DIRECTORIES_DB))?;
+        let entries = env.open_db(Some(ENTRIES_DB))?;
+        let metadata = env.open_db(Some(METADATA_DB))?;
+        let state = env.open_db(Some(STATE_DB))?;
 
         Ok(LmdbAdapter {
             env: env,
@@ -114,7 +112,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
     }
 
     fn next_free_entry_id(&self, txn: &RwTransaction) -> Result<EntryId> {
-        let cursor = try!(txn.0.open_ro_cursor(self.entries));
+        let cursor = txn.0.open_ro_cursor(self.entries)?;
 
         let last_id = match cursor.get(None, None, lmdb_sys::MDB_LAST) {
             Ok((id, _)) => EntryId::from_bytes(id.unwrap()).unwrap(),
@@ -139,8 +137,8 @@ impl<'a> Adapter<'a> for LmdbAdapter {
                 Err(err) => return Err(err),
             };
 
-            try!(txn.put(self.state, LOG_ID_KEY, block_id.as_ref()));
-        } else if *parent_id != try!(self.current_block_id(txn)).as_ref() {
+            txn.put(self.state, LOG_ID_KEY, block_id.as_ref())?;
+        } else if *parent_id != self.current_block_id(txn)?.as_ref() {
             let msg = "new block's parent does not match current ID".to_string();
             return Err(ErrorKind::OrderingInvalid(msg).into());
         }
@@ -156,12 +154,10 @@ impl<'a> Adapter<'a> for LmdbAdapter {
         }
 
         // Store the new block
-        try!(txn.put(self.blocks,
-                     block_id.as_ref(),
-                     &try!(block.write_to_bytes())));
+        txn.put(self.blocks, block_id.as_ref(), &block.write_to_bytes()?)?;
 
         // Update the current block ID in the state table
-        try!(txn.put(self.state, LATEST_BLOCK_ID_KEY, block_id.as_ref()));
+        txn.put(self.state, LATEST_BLOCK_ID_KEY, block_id.as_ref())?;
 
         Ok(())
     }
@@ -169,7 +165,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
     fn current_block_id<'t, T>(&'t self, txn: &'t T) -> Result<BlockId>
         where T: Transaction
     {
-        BlockId::from_bytes(try!(txn.lmdb_get(self.state, LATEST_BLOCK_ID_KEY)))
+        BlockId::from_bytes(txn.lmdb_get(self.state, LATEST_BLOCK_ID_KEY)?)
     }
 
     fn add_entry<'t>(&'t self,
@@ -216,19 +212,19 @@ impl<'a> Adapter<'a> for LmdbAdapter {
         };
 
         if entry.id != EntryId::root() {
-            try!(txn.put(self.directories, parent_id.as_ref(), &direntry.to_bytes()));
+            txn.put(self.directories, parent_id.as_ref(), &direntry.to_bytes())?;
         }
 
-        try!(txn.put(self.metadata,
+        txn.put(self.metadata,
+                 entry.id.as_ref(),
+                 &metadata.write_to_bytes()?)?;
+
+        let mut buffer = txn.reserve(self.entries,
                      entry.id.as_ref(),
-                     &try!(metadata.write_to_bytes())));
+                     entry::HEADER_SIZE + entry.data.len())?;
 
-        let mut buffer = try!(txn.reserve(self.entries,
-                                          entry.id.as_ref(),
-                                          entry::HEADER_SIZE + entry.data.len()));
-
-        try!(buffer.write_all(&entry.class.as_bytes()));
-        try!(buffer.write_all(entry.data));
+        buffer.write_all(&entry.class.as_bytes())?;
+        buffer.write_all(entry.data)?;
 
         Ok(direntry)
     }
@@ -238,7 +234,7 @@ impl<'a> Adapter<'a> for LmdbAdapter {
     {
         let result =
             path.components().iter().fold(Ok(DirEntry::root()), |parent_direntry, component| {
-                self.find_child(txn, try!(parent_direntry).id, component)
+                self.find_child(txn, parent_direntry?.id, component)
             });
 
         match result {
@@ -253,14 +249,14 @@ impl<'a> Adapter<'a> for LmdbAdapter {
     fn find_metadata<'t, T>(&'t self, txn: &'t T, id: &EntryId) -> Result<Metadata>
         where T: Transaction
     {
-        let proto = try!(txn.lmdb_get(self.metadata, id.as_ref()));
-        Ok(try!(protobuf::parse_from_bytes::<Metadata>(proto)))
+        let proto = txn.lmdb_get(self.metadata, id.as_ref())?;
+        Ok(protobuf::parse_from_bytes::<Metadata>(proto)?)
     }
 
     fn find_entry<'t, T>(&'t self, txn: &'t T, id: &EntryId) -> Result<SerializedEntry>
         where T: Transaction
     {
-        let bytes = try!(txn.lmdb_get(self.entries, id.as_ref()));
+        let bytes = txn.lmdb_get(self.entries, id.as_ref())?;
         SerializedEntry::from_bytes(*id, bytes)
     }
 }
@@ -269,11 +265,10 @@ impl LmdbAdapter {
     fn find_child<'a, T>(&'a self, txn: &'a T, parent_id: EntryId, name: &str) -> Result<DirEntry>
         where T: Transaction
     {
-        let direntry_bytes =
-            try!(txn.lmdb_find(self.directories, parent_id.as_ref(), |direntry_bytes| {
+        let direntry_bytes = txn.lmdb_find(self.directories, parent_id.as_ref(), |direntry_bytes| {
                 let direntry = DirEntry::new(parent_id, direntry_bytes).unwrap();
                 direntry.name == name
-            }));
+            })?;
 
         DirEntry::new(parent_id, direntry_bytes)
     }
@@ -300,9 +295,9 @@ pub trait AdapterTransaction {
     {
         // Ensure the entry exists
         // TODO: Fix upstream unwrap in lmdb crate's iter_from
-        try!(self.lmdb_get(db, key));
+        self.lmdb_get(db, key)?;
 
-        let mut cursor = try!(self.lmdb_txn().open_ro_cursor(db));
+        let mut cursor = self.lmdb_txn().open_ro_cursor(db)?;
         let mut result = None;
 
         // TODO: Remove earlier check once this no longer panics on missing keys

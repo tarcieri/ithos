@@ -88,8 +88,7 @@ impl<'a> KeyPair {
         // Ed25519 is the only signature algorithm we presently support
         assert_eq!(signature_alg, SignatureAlg::Ed25519);
 
-        let private_key =
-            try!(crypto::symmetric::unseal(encryption_alg, sealing_key, sealed_keypair));
+        let private_key = crypto::symmetric::unseal(encryption_alg, sealing_key, sealed_keypair)?;
 
         let keypair = signature_impl::Ed25519KeyPair::from_bytes(&private_key, public_key)
             .chain_err(|| "not a valid Ed25519 keypair")?;
