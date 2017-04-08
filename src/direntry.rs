@@ -4,8 +4,8 @@
 //! in a directory hierarchy
 //!
 
-use error::{Error, Result};
-use id::EntryId;
+use errors::*;
+use id::{EntryId, ENTRY_ID_SIZE};
 use std::str;
 
 /// Entries in the directory tree which map names to identifiers
@@ -33,12 +33,14 @@ impl<'a> DirEntry<'a> {
 
     /// Parse a serialized directory entry into a DirEntry structure
     pub fn new(parent_id: EntryId, bytes: &[u8]) -> Result<DirEntry> {
-        if bytes.len() < 8 {
-            return Err(Error::parse(None));
+        if bytes.len() < ENTRY_ID_SIZE {
+            let msg = format!("direntry header too small: {}", bytes.len());
+            return Err(ErrorKind::ParseFailure(msg).into());
         }
 
-        let id = try!(EntryId::from_bytes(&bytes[0..8]));
-        let name = try!(str::from_utf8(&bytes[8..]).map_err(|_| Error::parse(None)));
+        let id = EntryId::from_bytes(&bytes[0..ENTRY_ID_SIZE])?;
+        let name =
+            str::from_utf8(&bytes[ENTRY_ID_SIZE..]).chain_err(|| "couldn't parse direntry)")?;
 
         Ok(DirEntry {
             id: id,
@@ -49,7 +51,7 @@ impl<'a> DirEntry<'a> {
 
     /// Serialize a DirEntry to its byte representation
     pub fn to_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(8 + self.name.len());
+        let mut bytes = Vec::with_capacity(ENTRY_ID_SIZE + self.name.len());
         bytes.extend_from_slice(self.id.as_ref());
         bytes.extend_from_slice(self.name.as_bytes());
         bytes

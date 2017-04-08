@@ -16,7 +16,7 @@ use crypto::password;
 use crypto::signing::KeyPair;
 use crypto::symmetric::{AES256GCM_KEY_SIZE, AES256GCM_NONCE_SIZE};
 use entry::Entry;
-use error::{Error, Result};
+use errors::*;
 use object::Object;
 use object::credential::Credential;
 use object::domain::Domain;
@@ -34,7 +34,7 @@ use transform::Transform;
 extern crate tempdir;
 
 /// Default comment used for the initial block
-const DEFAULT_INITIAL_BLOCK_COMMENT: &'static str = "Initial log creation";
+const DEFAULT_INITIAL_BLOCK_COMMENT: &str = "Initial block";
 
 /// An ithos server
 #[cfg(feature = "lmdb")]
@@ -119,10 +119,10 @@ impl Server {
         op.set_path(path.into());
         op.set_object(domain_entry_object);
 
-        let mut transform = try!(Transform::new(&self.0));
+        let mut transform = Transform::new(&self.0)?;
 
         let mut body = Body::new();
-        body.set_parent_id(Vec::from(try!(transform.block_id()).as_ref()));
+        body.set_parent_id(transform.block_id()?.as_ref().to_vec());
         body.set_timestamp(timestamp.to_int());
         body.set_ops(RepeatedField::from_vec(vec![op]));
         body.set_comment(comment.to_owned());
@@ -130,17 +130,20 @@ impl Server {
         let block = admin_keypair.sign_block(body);
 
         // TODO: authenticate signature before committing (BIG SECURITY PROBLEM!!!)
-        try!(transform.apply(&block));
-        try!(transform.commit());
+        transform.apply(&block)?;
+        transform.commit()?;
 
         Ok(())
     }
 
     /// Obtain a credential from the directory
     pub fn find_credential(&self, path: &Path) -> Result<Credential> {
-        match try!(Entry::find(&self.0, path)) {
+        match Entry::find(&self.0, path)? {
             Entry::Credential(credential_entry) => Ok(credential_entry),
-            _ => Err(Error::bad_type(None)),
+            other => {
+                let msg = format!("expecting credential, found {:?}", other);
+                Err(ErrorKind::TypeInvalid(msg).into())
+            }
         }
     }
 }
@@ -156,9 +159,9 @@ mod tests {
     use server::Server;
     use server::tempdir::TempDir;
 
-    const ADMIN_USERNAME: &'static str = "manager";
-    const ADMIN_PASSWORD: &'static str = "The Magic Words are Squeamish Ossifrage";
-    const EXAMPLE_DOMAIN: &'static str = "example.com";
+    const ADMIN_USERNAME: &str = "manager";
+    const ADMIN_PASSWORD: &str = "The Magic Words are Squeamish Ossifrage";
+    const EXAMPLE_DOMAIN: &str = "example.com";
 
     fn create_database() -> Server {
         let rng = rand::SystemRandom::new();

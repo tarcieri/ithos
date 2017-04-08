@@ -4,7 +4,7 @@
 //!
 
 use alg::EncryptionAlg;
-use error::{Error, Result};
+use errors::*;
 use ring::aead;
 
 /// Size of an AES-256-GCM key
@@ -28,11 +28,10 @@ pub fn seal(algorithm: EncryptionAlg,
         let msg = format!("nonce must be {} bytes (got {})",
                           AES256GCM_NONCE_SIZE,
                           nonce.len());
-        return Err(Error::crypto_failure(Some(&msg)));
+        return Err(ErrorKind::CryptoFailure(msg).into());
     }
 
-    let sealing_key = try!(aead::SealingKey::new(&aead::AES_256_GCM, secret_key)
-        .map_err(|_| Error::crypto_failure(None)));
+    let sealing_key = aead::SealingKey::new(&aead::AES_256_GCM, secret_key)?;
 
     let tag_len = sealing_key.algorithm().tag_len();
     let mut buffer = Vec::with_capacity(AES256GCM_NONCE_SIZE + plaintext.len() + tag_len);
@@ -45,12 +44,11 @@ pub fn seal(algorithm: EncryptionAlg,
         buffer.push(0u8);
     }
 
-    try!(aead::seal_in_place(&sealing_key,
-                             &nonce,
-                             &b""[..],
-                             &mut buffer[AES256GCM_NONCE_SIZE..],
-                             tag_len)
-        .map_err(|_| Error::crypto_failure(None)));
+    aead::seal_in_place(&sealing_key,
+                        nonce,
+                        &b""[..],
+                        &mut buffer[AES256GCM_NONCE_SIZE..],
+                        tag_len)?;
 
     Ok(buffer)
 }
@@ -62,18 +60,18 @@ pub fn unseal(algorithm: EncryptionAlg, secret_key: &[u8], ciphertext: &[u8]) ->
 
     // The ciphertext must start with a valid nonce
     if ciphertext.len() < AES256GCM_NONCE_SIZE {
-        return Err(Error::crypto_failure(Some("nonce missing from ciphertext")));
+        return Err(ErrorKind::CryptoFailure("nonce missing from ciphertext".to_string()).into());
     }
 
-    let opening_key = try!(aead::OpeningKey::new(&aead::AES_256_GCM, secret_key)
-        .map_err(|_| Error::crypto_failure(Some("encryption key is corrupt"))));
+    let opening_key = aead::OpeningKey::new(&aead::AES_256_GCM, secret_key)
+        .chain_err(|| "encryption key is corrupt")?;
 
     // Extract nonce from beginning of plaintext
     let nonce = &ciphertext[0..AES256GCM_NONCE_SIZE];
     let mut buffer = Vec::from(&ciphertext[AES256GCM_NONCE_SIZE..]);
 
-    let pt_len = try!(aead::open_in_place(&opening_key, nonce, &b""[..], 0, &mut buffer)
-            .map_err(|_| Error::crypto_failure(Some("decryption failed"))))
+    let pt_len = aead::open_in_place(&opening_key, nonce, &b""[..], 0, &mut buffer)
+        .chain_err(|| "decryption failed")?
         .len();
 
     buffer.truncate(pt_len);

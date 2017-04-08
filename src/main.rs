@@ -4,11 +4,17 @@
 #![crate_type = "bin"]
 
 #![deny(missing_docs, unsafe_code)]
+#![cfg_attr(test, feature(result_expect_err))]
+
+// For error-chain
+#![recursion_limit = "1024"]
 
 extern crate clap;
 use clap::{App, Arg, SubCommand};
 
 extern crate byteorder;
+#[macro_use]
+extern crate error_chain;
 #[macro_use]
 extern crate objecthash;
 extern crate protobuf;
@@ -27,7 +33,7 @@ pub mod block;
 pub mod crypto;
 pub mod direntry;
 pub mod entry;
-pub mod error;
+pub mod errors;
 pub mod id;
 pub mod metadata;
 pub mod object;
@@ -43,7 +49,7 @@ pub mod witness;
 use alg::{CipherSuite, PasswordAlg};
 use crypto::signing::KeyPair;
 use crypto::symmetric::AES256GCM_KEY_SIZE;
-use error::ErrorKind;
+use errors::*;
 use path::PathBuf;
 use ring::rand;
 use server::Server;
@@ -115,12 +121,12 @@ fn db_create(database_path: &str, admin_username: &str) {
             println!("{password}", password = admin_password);
         }
         Err(err) => {
-            match err.kind {
-                ErrorKind::EntryAlreadyExists => {
+            match *err.kind() {
+                ErrorKind::EntryAlreadyExists(_) => {
                     println!("*** Error: a database already exists at {path}",
                              path = database_path)
                 }
-                _ => panic!(err),
+                _ => panic!(err), // TODO: display more information
             }
         }
     }

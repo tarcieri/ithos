@@ -10,7 +10,7 @@
 use adapter::{Adapter, Transaction};
 use block::Block;
 use entry::{Class, Entry, SerializedEntry};
-use error::{Error, Result};
+use errors::*;
 use id::{BlockId, EntryId};
 use metadata::Metadata;
 use op::{self, Op};
@@ -40,8 +40,8 @@ pub struct Transform<'a, A: Adapter<'a> + 'a> {
 impl<'a, A: Adapter<'a> + 'a> Transform<'a, A> {
     /// Create a new transform for the current adapter
     pub fn new(adapter: &'a A) -> Result<Transform<'a, A>> {
-        let txn = try!(adapter.rw_transaction());
-        let next_entry_id = try!(adapter.next_free_entry_id(&txn));
+        let txn = adapter.rw_transaction()?;
+        let next_entry_id = adapter.next_free_entry_id(&txn)?;
 
         Ok(Transform {
             adapter: adapter,
@@ -59,7 +59,7 @@ impl<'a, A: Adapter<'a> + 'a> Transform<'a, A> {
     /// Apply the operations in the given block to the database
     pub fn apply(&mut self, block: &Block) -> Result<()> {
         // NOTE: This only stores the block in the database. It does not process it
-        try!(self.adapter.add_block(&mut self.txn, block));
+        self.adapter.add_block(&mut self.txn, block)?;
 
         let block_id = BlockId::of(block);
         let ops = &block.get_body().get_ops();
@@ -68,9 +68,9 @@ impl<'a, A: Adapter<'a> + 'a> Transform<'a, A> {
         for op in ops.iter() {
             match op.get_optype() {
                 op::Type::ADD => {
-                    try!(self.add(op,
-                                  &block_id,
-                                  Timestamp::at(block.get_body().get_timestamp())))
+                    self.add(op,
+                             &block_id,
+                             Timestamp::at(block.get_body().get_timestamp()))?
                 }
             };
         }
@@ -86,16 +86,24 @@ impl<'a, A: Adapter<'a> + 'a> Transform<'a, A> {
 
     /// Add a new entry to the directory tree
     fn add(&mut self, op: &Op, block_id: &BlockId, timestamp: Timestamp) -> Result<()> {
-        let child_path = try!(Path::new(op.get_path()).ok_or(Error::path_invalid(None)));
+        let child_path = Path::new(op.get_path())
+            .ok_or_else(|| ErrorKind::PathInvalid(format!("bad path: {}", op.get_path())))?;
+
         let parent_path = child_path.parent();
-        let child_class = try!(Class::from_object(op.get_object()).ok_or(Error::bad_type(None)));
+        let child_class =
+            Class::from_object(op.get_object()).ok_or_else(|| {
+                    ErrorKind::TypeInvalid(format!("bad object type: {:?}", op.get_object()))
+                })?;
 
         let (parent_id, entry_id) = match parent_path {
             Some(path) => {
-                let parent_entry = try!(self.get_entry(path));
+                let parent_entry = self.get_entry(path)?;
 
                 if !parent_entry.class.allows_child(&child_class) {
-                    return Err(Error::nesting_invalid(None));
+                    let msg = format!("{:?} does not allow {:?} as child",
+                                      parent_entry.class,
+                                      child_class);
+                    return Err(ErrorKind::StructureInvalid(msg).into());
                 }
 
                 let next_id = self.next_entry_id;
@@ -105,7 +113,8 @@ impl<'a, A: Adapter<'a> + 'a> Transform<'a, A> {
             }
             None => {
                 if child_class != Class::Root {
-                    return Err(Error::nesting_invalid(None));
+                    let msg = format!("{:?} not allowed as root entry", child_class);
+                    return Err(ErrorKind::StructureInvalid(msg).into());
                 }
 
                 (EntryId::root(), EntryId::root())
@@ -119,19 +128,25 @@ impl<'a, A: Adapter<'a> + 'a> Transform<'a, A> {
         metadata.set_created_at(timestamp.to_int());
         metadata.set_updated_at(timestamp.to_int());
 
-        let entry = try!(Entry::from_object(&mut op.get_object().clone())
-            .ok_or(Error::serialize(None)));
+        let entry =
+            Entry::from_object(&mut op.get_object().clone()).ok_or_else(|| {
+                    ErrorKind::SerializationFailure("unsupported object type".to_string())
+                })?;
 
         let entry = SerializedEntry {
             id: entry_id,
             class: child_class,
-            data: &try!(entry.serialize()),
+            data: &entry.serialize()?,
         };
 
-        let entry_name = try!(child_path.entry_name().ok_or(Error::path_invalid(None)));
+        let entry_name =
+            child_path.entry_name()
+                .ok_or_else(|| {
+                    ErrorKind::PathInvalid(format!("missing entry name: {:?}", child_path))
+                })?;
 
         // NOTE: The underlying adapter must handle Error::EntryAlreadyExists
-        try!(self.adapter.add_entry(&mut self.txn, &entry, &entry_name, parent_id, &metadata));
+        self.adapter.add_entry(&mut self.txn, &entry, entry_name, parent_id, &metadata)?;
 
         let new_entry = TransformEntry {
             id: entry_id,
@@ -167,7 +182,7 @@ pub mod tests {
     use alg::DigestAlg;
     use block::{Block, Body};
     use crypto::signing::KeyPair;
-    use error::Error;
+    use errors::*;
     use id::BlockId;
     use object::Object;
     use object::domain::Domain;
@@ -211,9 +226,11 @@ pub mod tests {
         op.set_object(domain_object);
 
         let block = example_block(BlockId::zero(), vec![op]);
-        let result = transform.apply(&block);
 
-        assert_eq!(result, Err(Error::nesting_invalid(None)));
+        match *transform.apply(&block).expect_err("expected a structural error").kind() {
+            ErrorKind::StructureInvalid(_) => (),
+            ref other => panic!("unexpected error: {:?}", other),
+        }
     }
 
     #[test]
@@ -246,6 +263,9 @@ pub mod tests {
         op2.set_object(root2_object);
 
         let block2 = example_block(BlockId::of(&block1), vec![op2]);
-        assert_eq!(transform.apply(&block2), Err(Error::nesting_invalid(None)));
+        match *transform.apply(&block2).expect_err("expected a structural error").kind() {
+            ErrorKind::StructureInvalid(_) => (),
+            ref other => panic!("unexpected error kind: {:?}", other),
+        }
     }
 }

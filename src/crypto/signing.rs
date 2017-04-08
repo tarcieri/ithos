@@ -9,7 +9,7 @@
 use alg::{EncryptionAlg, SignatureAlg};
 use block::{Block, Body};
 use crypto;
-use error::{Error, Result};
+use errors::*;
 use object::credential::{self, Credential};
 use objecthash;
 use protobuf::RepeatedField;
@@ -46,13 +46,13 @@ impl<'a> KeyPair {
         assert_eq!(signature_alg, SignatureAlg::Ed25519);
 
         let (keypair, serializable_keypair) =
-            try!(signature_impl::Ed25519KeyPair::generate_serializable(rng)
-                .map_err(|_| Error::crypto_failure(None)));
+            signature_impl::Ed25519KeyPair::generate_serializable(rng)?;
 
-        let ciphertext = try!(crypto::symmetric::seal(encryption_alg,
-                                                      sealing_key,
-                                                      nonce,
-                                                      &serializable_keypair.private_key));
+
+        let ciphertext = crypto::symmetric::seal(encryption_alg,
+                                                 sealing_key,
+                                                 nonce,
+                                                 &serializable_keypair.private_key)?;
 
         let result = KeyPair {
             algorithm: SignatureAlg::Ed25519,
@@ -68,7 +68,7 @@ impl<'a> KeyPair {
                                   -> Result<KeyPair> {
         // Ed25519 is the only signature algorithm we presently support
         if credential.credential_type != credential::Type::SIGNATURE_KEY_PAIR {
-            return Err(Error::bad_type(Some("not a signature key")));
+            return Err(ErrorKind::KeyInvalid("not a signature key".to_string()).into());
         }
 
         KeyPair::unseal(SignatureAlg::Ed25519,
@@ -91,8 +91,8 @@ impl<'a> KeyPair {
         let private_key =
             try!(crypto::symmetric::unseal(encryption_alg, sealing_key, sealed_keypair));
 
-        let keypair = try!(signature_impl::Ed25519KeyPair::from_bytes(&private_key, &public_key)
-            .map_err(|_| Error::crypto_failure(Some("not a valid Ed25519 keypair"))));
+        let keypair = signature_impl::Ed25519KeyPair::from_bytes(&private_key, public_key)
+            .chain_err(|| "not a valid Ed25519 keypair")?;
 
         Ok(KeyPair {
             algorithm: SignatureAlg::Ed25519,
