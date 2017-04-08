@@ -14,7 +14,7 @@ pub mod lmdb;
 use block::Block;
 use direntry::DirEntry;
 use entry::SerializedEntry;
-use error::Result;
+use errors::*;
 use id::{BlockId, EntryId};
 use metadata::Metadata;
 use path;

@@ -5,7 +5,7 @@
 
 use adapter::Adapter;
 use byteorder::{ByteOrder, NativeEndian};
-use error::{Error, Result};
+use errors::*;
 use id::EntryId;
 use object::Object;
 use object::credential::Credential;
@@ -15,6 +15,9 @@ use object::root::Root;
 use object::system::System;
 use path::Path;
 use protobuf::{self, Message};
+
+/// Number of bytes of space in a serialized entry header
+pub const HEADER_SIZE: usize = 4;
 
 /// Entry type (ala LDAP objectclass)
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
@@ -38,8 +41,9 @@ pub enum Class {
 impl Class {
     /// Deserialize an entry ID from its byte representation (host-native endianness)
     pub fn from_bytes(bytes: &[u8]) -> Result<Class> {
-        if bytes.len() != 4 {
-            return Err(Error::parse(None));
+        if bytes.len() != HEADER_SIZE {
+            let msg = format!("entry header too small: {}", bytes.len());
+            return Err(ErrorKind::ParseFailure(msg).into());
         }
 
         let result = match NativeEndian::read_u32(bytes) {
@@ -48,7 +52,10 @@ impl Class {
             2 => Class::OrgUnit,
             3 => Class::System,
             4 => Class::Credential,
-            _ => return Err(Error::parse(None)),
+            other => {
+                let msg = format!("bad entry type: {}", other);
+                return Err(ErrorKind::ParseFailure(msg).into());
+            }
         };
 
         Ok(result)
@@ -147,11 +154,11 @@ impl Entry {
     pub fn find<'a, A>(adapter: &'a A, path: &Path) -> Result<Entry>
         where A: Adapter<'a>
     {
-        let txn = try!(adapter.ro_transaction());
-        let direntry = try!(adapter.find_direntry(&txn, path));
-        let entry = try!(adapter.find_entry(&txn, &direntry.id));
+        let txn = adapter.ro_transaction()?;
+        let direntry = adapter.find_direntry(&txn, path)?;
+        let entry = adapter.find_entry(&txn, &direntry.id)?;
 
-        Ok(try!(entry.deserialize()))
+        Ok(entry.deserialize()?)
     }
 
     /// Convert an object to the `Entry` sum type
@@ -174,14 +181,14 @@ impl Entry {
     /// Serialize an entry in its byte representation
     pub fn serialize(&self) -> Result<Vec<u8>> {
         let result = match *self {
-            Entry::Root(ref entry) => entry.write_to_bytes(),
-            Entry::Domain(ref entry) => entry.write_to_bytes(),
-            Entry::OrgUnit(ref entry) => entry.write_to_bytes(),
-            Entry::System(ref entry) => entry.write_to_bytes(),
-            Entry::Credential(ref entry) => entry.write_to_bytes(),
+            Entry::Root(ref entry) => entry.write_to_bytes()?,
+            Entry::Domain(ref entry) => entry.write_to_bytes()?,
+            Entry::OrgUnit(ref entry) => entry.write_to_bytes()?,
+            Entry::System(ref entry) => entry.write_to_bytes()?,
+            Entry::Credential(ref entry) => entry.write_to_bytes()?,
         };
 
-        Ok(try!(result))
+        Ok(result)
     }
 }
 
@@ -200,31 +207,28 @@ pub struct SerializedEntry<'a> {
 impl<'a> SerializedEntry<'a> {
     /// Parse entry header and determine its type
     pub fn from_bytes(id: EntryId, bytes: &[u8]) -> Result<SerializedEntry> {
-        if bytes.len() < 4 {
-            return Err(Error::parse(None));
+        if bytes.len() < HEADER_SIZE {
+            let msg = format!("entry header too small: {}", bytes.len());
+            return Err(ErrorKind::ParseFailure(msg).into());
         }
 
         Ok(SerializedEntry {
             id: id,
-            class: try!(Class::from_bytes(&bytes[0..4])),
-            data: &bytes[4..],
+            class: Class::from_bytes(&bytes[0..HEADER_SIZE])?,
+            data: &bytes[HEADER_SIZE..],
         })
     }
 
     /// Deserialize an entry into the (owned) `Entry` sum type
     pub fn deserialize(&self) -> Result<Entry> {
-        let result = match self.class {
-            Class::Root => Entry::Root(try!(protobuf::parse_from_bytes::<Root>(self.data))),
-            Class::Domain => Entry::Domain(try!(protobuf::parse_from_bytes::<Domain>(self.data))),
-            Class::OrgUnit => {
-                Entry::OrgUnit(try!(protobuf::parse_from_bytes::<OrgUnit>(self.data)))
-            }
-            Class::System => Entry::System(try!(protobuf::parse_from_bytes::<System>(self.data))),
+        Ok(match self.class {
+            Class::Root => Entry::Root(protobuf::parse_from_bytes::<Root>(self.data)?),
+            Class::Domain => Entry::Domain(protobuf::parse_from_bytes::<Domain>(self.data)?),
+            Class::OrgUnit => Entry::OrgUnit(protobuf::parse_from_bytes::<OrgUnit>(self.data)?),
+            Class::System => Entry::System(protobuf::parse_from_bytes::<System>(self.data)?),
             Class::Credential => {
-                Entry::Credential(try!(protobuf::parse_from_bytes::<Credential>(self.data)))
+                Entry::Credential(protobuf::parse_from_bytes::<Credential>(self.data)?)
             }
-        };
-
-        Ok(result)
+        })
     }
 }

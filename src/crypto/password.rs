@@ -2,11 +2,9 @@
 //!
 //! scrypt is presently the only supported password hashing function / KDF
 //!
-//! TODO: Refactor into crypto/...
-//!
 
 use alg::PasswordAlg;
-use error::{Error, Result};
+use errors::*;
 use pwhash::scrypt::{self, ScryptParams};
 use ring::constant_time;
 use ring::rand::SecureRandom;
@@ -48,13 +46,13 @@ pub fn generate(rng: &SecureRandom) -> String {
 /// Generate a random salt to use with a password
 pub fn random_salt(rng: &SecureRandom) -> Result<[u8; RANDOM_SALT_SIZE]> {
     let mut salt = [0u8; RANDOM_SALT_SIZE];
-    try!(rng.fill(&mut salt).map_err(|_| Error::rng(None)));
+    rng.fill(&mut salt)?;
     Ok(salt)
 }
 
 /// Prompt for a password from standard input
 pub fn prompt(message: &str) -> Result<String> {
-    rpassword::prompt_password_stdout(message).map_err(|_| Error::system(None))
+    Ok(rpassword::prompt_password_stdout(message)?)
 }
 
 /// Derive a cryptographically secure key from the given password and salt

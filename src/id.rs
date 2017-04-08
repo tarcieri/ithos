@@ -5,30 +5,35 @@
 
 use block::Block;
 use byteorder::{ByteOrder, NativeEndian};
-use error::{Error, Result};
+use errors::*;
 use objecthash::{self, ObjectHash, ObjectHasher};
 use std::mem;
 
-const DIGEST_SIZE: usize = 32;
+/// Size of a block identifier
+pub const BLOCK_ID_SIZE: usize = 32;
+
+/// Size of an entry identifier
+pub const ENTRY_ID_SIZE: usize = 8;
 
 /// Identifiers for blocks. All `BlockID` values are presently SHA-256 only
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub struct BlockId([u8; DIGEST_SIZE]);
+pub struct BlockId([u8; BLOCK_ID_SIZE]);
 
 impl BlockId {
     /// Parent ID of the initial block (256-bits of zero)
     pub fn zero() -> BlockId {
-        BlockId([0u8; DIGEST_SIZE])
+        BlockId([0u8; BLOCK_ID_SIZE])
     }
 
     /// Create a block ID from a serialized
     pub fn from_bytes(bytes: &[u8]) -> Result<BlockId> {
-        if bytes.len() != DIGEST_SIZE {
-            return Err(Error::parse(None));
+        if bytes.len() != BLOCK_ID_SIZE {
+            let msg = format!("block ID too small: {}", bytes.len());
+            return Err(ErrorKind::ParseFailure(msg).into());
         }
 
-        let mut id = [0u8; DIGEST_SIZE];
-        id.copy_from_slice(&bytes[0..DIGEST_SIZE]);
+        let mut id = [0u8; BLOCK_ID_SIZE];
+        id.copy_from_slice(&bytes[0..BLOCK_ID_SIZE]);
 
         Ok(BlockId(id))
     }
@@ -65,8 +70,9 @@ impl EntryId {
 
     /// Deserialize an `EntryID` from a host native byte format
     pub fn from_bytes(bytes: &[u8]) -> Result<EntryId> {
-        if bytes.len() != 8 {
-            return Err(Error::parse(None));
+        if bytes.len() != ENTRY_ID_SIZE {
+            let msg = format!("entry ID too small: {}", bytes.len());
+            return Err(ErrorKind::ParseFailure(msg).into());
         }
 
         Ok(EntryId(NativeEndian::read_u64(bytes)))
