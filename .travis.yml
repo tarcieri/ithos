@@ -17,3 +17,4 @@ matrix:
 
 notifications:
   irc: 'irc.freenode.org#cryptosphere'
+  webhooks: http://iqulus.cryptosphere.org:10103/travis
