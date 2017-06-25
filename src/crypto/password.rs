@@ -36,11 +36,13 @@ pub fn generate(rng: &SecureRandom) -> String {
     // TODO: Don't Panic
     rng.fill(&mut bytes).unwrap();
 
-    format!("{prefix}-{password}-{digits1:02}{digits2:03}",
-            prefix = GENPASS_PREFIX,
-            password = String::from_utf8(encode_bubblebabble(&bytes[0..6])).unwrap(),
-            digits1 = bytes[6] % 100,
-            digits2 = bytes[7])
+    format!(
+        "{prefix}-{password}-{digits1:02}{digits2:03}",
+        prefix = GENPASS_PREFIX,
+        password = String::from_utf8(encode_bubblebabble(&bytes[0..6])).unwrap(),
+        digits1 = bytes[6] % 100,
+        digits2 = bytes[7]
+    )
 }
 
 /// Generate a random salt to use with a password
@@ -135,8 +137,18 @@ mod tests {
 
         password::derive(PasswordAlg::SCRYPT, &salt, PASSWORD, &mut derived_buf);
 
-        assert!(password::verify(PasswordAlg::SCRYPT, &salt, PASSWORD, &derived_buf));
-        assert!(!password::verify(PasswordAlg::SCRYPT, &salt, "WRONG", &derived_buf));
+        assert!(password::verify(
+            PasswordAlg::SCRYPT,
+            &salt,
+            PASSWORD,
+            &derived_buf,
+        ));
+        assert!(!password::verify(
+            PasswordAlg::SCRYPT,
+            &salt,
+            "WRONG",
+            &derived_buf,
+        ));
     }
 
     #[test]
@@ -147,17 +159,29 @@ mod tests {
     #[test]
     fn test_bubblebabble() {
         assert_eq!(&*password::encode_bubblebabble(b""), b"xexax".as_ref());
-        assert_eq!(&*password::encode_bubblebabble(b"abcd"),
-                   b"ximek-domek-gyxox".as_ref());
-        assert_eq!(&*password::encode_bubblebabble(b"asdf"),
-                   b"ximel-finek-koxex".as_ref());
-        assert_eq!(&*password::encode_bubblebabble(b"0123456789"),
-                   b"xesaf-casef-fytef-hutif-lovof-nixix".as_ref());
-        assert_eq!(&*password::encode_bubblebabble(b"Testing a sentence."),
-                   b"xihak-hysul-gapak-venyd-bumud-besek-heryl-gynek-vumuk-hyrox".as_ref());
-        assert_eq!(&*password::encode_bubblebabble(b"1234567890"),
-                   b"xesef-disof-gytuf-katof-movif-baxux".as_ref());
-        assert_eq!(&*password::encode_bubblebabble(b"Pineapple"),
-                   b"xigak-nyryk-humil-bosek-sonax".as_ref());
+        assert_eq!(
+            &*password::encode_bubblebabble(b"abcd"),
+            b"ximek-domek-gyxox".as_ref()
+        );
+        assert_eq!(
+            &*password::encode_bubblebabble(b"asdf"),
+            b"ximel-finek-koxex".as_ref()
+        );
+        assert_eq!(
+            &*password::encode_bubblebabble(b"0123456789"),
+            b"xesaf-casef-fytef-hutif-lovof-nixix".as_ref()
+        );
+        assert_eq!(
+            &*password::encode_bubblebabble(b"Testing a sentence."),
+            b"xihak-hysul-gapak-venyd-bumud-besek-heryl-gynek-vumuk-hyrox".as_ref()
+        );
+        assert_eq!(
+            &*password::encode_bubblebabble(b"1234567890"),
+            b"xesef-disof-gytuf-katof-movif-baxux".as_ref()
+        );
+        assert_eq!(
+            &*password::encode_bubblebabble(b"Pineapple"),
+            b"xigak-nyryk-humil-bosek-sonax".as_ref()
+        );
     }
 }

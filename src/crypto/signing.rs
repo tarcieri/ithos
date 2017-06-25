@@ -36,12 +36,13 @@ impl<'a> KeyPair {
     }
 
     /// Generate a new `KeyPair` and seal it with the given encryption algorithm and key
-    pub fn generate_and_seal(signature_alg: SignatureAlg,
-                             encryption_alg: EncryptionAlg,
-                             rng: &SecureRandom,
-                             sealing_key: &[u8],
-                             nonce: &[u8])
-                             -> Result<(KeyPair, Vec<u8>)> {
+    pub fn generate_and_seal(
+        signature_alg: SignatureAlg,
+        encryption_alg: EncryptionAlg,
+        rng: &SecureRandom,
+        sealing_key: &[u8],
+        nonce: &[u8],
+    ) -> Result<(KeyPair, Vec<u8>)> {
         // Ed25519 is the only signature algorithm we presently support
         assert_eq!(signature_alg, SignatureAlg::Ed25519);
 
@@ -49,10 +50,12 @@ impl<'a> KeyPair {
             signature_impl::Ed25519KeyPair::generate_serializable(rng)?;
 
 
-        let ciphertext = crypto::symmetric::seal(encryption_alg,
-                                                 sealing_key,
-                                                 nonce,
-                                                 &serializable_keypair.private_key)?;
+        let ciphertext = crypto::symmetric::seal(
+            encryption_alg,
+            sealing_key,
+            nonce,
+            &serializable_keypair.private_key,
+        )?;
 
         let result = KeyPair {
             algorithm: SignatureAlg::Ed25519,
@@ -63,28 +66,34 @@ impl<'a> KeyPair {
     }
 
     /// Unseal an encrypted `KeyPair` from a `Credential` object
-    pub fn unseal_from_credential(credential: &Credential,
-                                  symmetric_key_bytes: &[u8])
-                                  -> Result<KeyPair> {
+    pub fn unseal_from_credential(
+        credential: &Credential,
+        symmetric_key_bytes: &[u8],
+    ) -> Result<KeyPair> {
         // Ed25519 is the only signature algorithm we presently support
         if credential.credential_type != credential::Type::SIGNATURE_KEY_PAIR {
-            return Err(ErrorKind::KeyInvalid("not a signature key".to_string()).into());
+            return Err(
+                ErrorKind::KeyInvalid("not a signature key".to_string()).into(),
+            );
         }
 
-        KeyPair::unseal(SignatureAlg::Ed25519,
-                        EncryptionAlg::AES256GCM,
-                        symmetric_key_bytes,
-                        &credential.encrypted_value,
-                        &credential.public_key)
+        KeyPair::unseal(
+            SignatureAlg::Ed25519,
+            EncryptionAlg::AES256GCM,
+            symmetric_key_bytes,
+            &credential.encrypted_value,
+            &credential.public_key,
+        )
     }
 
     /// Unseal an encrypted `KeyPair`
-    pub fn unseal(signature_alg: SignatureAlg,
-                  encryption_alg: EncryptionAlg,
-                  sealing_key: &[u8],
-                  sealed_keypair: &[u8],
-                  public_key: &[u8])
-                  -> Result<KeyPair> {
+    pub fn unseal(
+        signature_alg: SignatureAlg,
+        encryption_alg: EncryptionAlg,
+        sealing_key: &[u8],
+        sealed_keypair: &[u8],
+        public_key: &[u8],
+    ) -> Result<KeyPair> {
         // Ed25519 is the only signature algorithm we presently support
         assert_eq!(signature_alg, SignatureAlg::Ed25519);
 
@@ -107,7 +116,9 @@ impl<'a> KeyPair {
     /// Sign the body of a block, returning a complete block with signature/witness data
     pub fn sign_block(&self, body: Body) -> Block {
         let mut message = String::from("ithos.block.body.ni:///sha-256;");
-        message.push_str(&objecthash::digest(&body).as_ref().to_base64(base64::URL_SAFE));
+        message.push_str(&objecthash::digest(&body).as_ref().to_base64(
+            base64::URL_SAFE,
+        ));
 
         let signature = self.sign_raw_bytes(message.as_bytes());
         let mut witness = Witness::new();
@@ -146,22 +157,26 @@ pub mod tests {
     fn test_sealing_and_unsealing() {
         let rng = rand::SystemRandom::new();
 
-        let (keypair, sealed_keypair) = KeyPair::generate_and_seal(SignatureAlg::Ed25519,
-                                                                   EncryptionAlg::AES256GCM,
-                                                                   &rng,
-                                                                   &ENCRYPTION_KEY,
-                                                                   &[0u8; AES256GCM_NONCE_SIZE])
-            .unwrap();
+        let (keypair, sealed_keypair) = KeyPair::generate_and_seal(
+            SignatureAlg::Ed25519,
+            EncryptionAlg::AES256GCM,
+            &rng,
+            &ENCRYPTION_KEY,
+            &[0u8; AES256GCM_NONCE_SIZE],
+        ).unwrap();
 
-        let unsealed_keypair = KeyPair::unseal(SignatureAlg::Ed25519,
-                                               EncryptionAlg::AES256GCM,
-                                               &ENCRYPTION_KEY,
-                                               &sealed_keypair,
-                                               keypair.public_key_bytes())
-            .unwrap();
+        let unsealed_keypair = KeyPair::unseal(
+            SignatureAlg::Ed25519,
+            EncryptionAlg::AES256GCM,
+            &ENCRYPTION_KEY,
+            &sealed_keypair,
+            keypair.public_key_bytes(),
+        ).unwrap();
 
         // *ring* verifies private key correctness when we call Ed25519KeyPair::from_bytes
-        assert_eq!(keypair.public_key_bytes(),
-                   unsealed_keypair.public_key_bytes());
+        assert_eq!(
+            keypair.public_key_bytes(),
+            unsealed_keypair.public_key_bytes()
+        );
     }
 }

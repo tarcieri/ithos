@@ -152,7 +152,8 @@ pub enum Entry {
 impl Entry {
     /// Find an entry located at the given path
     pub fn find<'a, A>(adapter: &'a A, path: &Path) -> Result<Entry>
-        where A: Adapter<'a>
+    where
+        A: Adapter<'a>,
     {
         let txn = adapter.ro_transaction()?;
         let direntry = adapter.find_direntry(&txn, path)?;

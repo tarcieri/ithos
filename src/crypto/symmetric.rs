@@ -15,19 +15,22 @@ pub const AES256GCM_NONCE_SIZE: usize = 12;
 
 
 /// Encrypt the given plaintext using the given algorithm
-pub fn seal(algorithm: EncryptionAlg,
-            secret_key: &[u8],
-            nonce: &[u8],
-            plaintext: &[u8])
-            -> Result<Vec<u8>> {
+pub fn seal(
+    algorithm: EncryptionAlg,
+    secret_key: &[u8],
+    nonce: &[u8],
+    plaintext: &[u8],
+) -> Result<Vec<u8>> {
     // AES256GCM is the only encryption algorithm we presently support
     assert_eq!(algorithm, EncryptionAlg::AES256GCM);
 
     // Nonce must be the expected length
     if nonce.len() != AES256GCM_NONCE_SIZE {
-        let msg = format!("nonce must be {} bytes (got {})",
-                          AES256GCM_NONCE_SIZE,
-                          nonce.len());
+        let msg = format!(
+            "nonce must be {} bytes (got {})",
+            AES256GCM_NONCE_SIZE,
+            nonce.len()
+        );
         return Err(ErrorKind::CryptoFailure(msg).into());
     }
 
@@ -44,11 +47,13 @@ pub fn seal(algorithm: EncryptionAlg,
         buffer.push(0u8);
     }
 
-    aead::seal_in_place(&sealing_key,
-                        nonce,
-                        &b""[..],
-                        &mut buffer[AES256GCM_NONCE_SIZE..],
-                        tag_len)?;
+    aead::seal_in_place(
+        &sealing_key,
+        nonce,
+        &b""[..],
+        &mut buffer[AES256GCM_NONCE_SIZE..],
+        tag_len,
+    )?;
 
     Ok(buffer)
 }
@@ -60,7 +65,9 @@ pub fn unseal(algorithm: EncryptionAlg, secret_key: &[u8], ciphertext: &[u8]) ->
 
     // The ciphertext must start with a valid nonce
     if ciphertext.len() < AES256GCM_NONCE_SIZE {
-        return Err(ErrorKind::CryptoFailure("nonce missing from ciphertext".to_string()).into());
+        return Err(
+            ErrorKind::CryptoFailure("nonce missing from ciphertext".to_string()).into(),
+        );
     }
 
     let opening_key = aead::OpeningKey::new(&aead::AES_256_GCM, secret_key)

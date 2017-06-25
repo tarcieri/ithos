@@ -42,10 +42,14 @@ pub trait Adapter<'a> {
     type W: Transaction;
 
     /// Create a new database at the given path
-    fn create_database(path: &StdPath) -> Result<Self> where Self: Sized;
+    fn create_database(path: &StdPath) -> Result<Self>
+    where
+        Self: Sized;
 
     /// Open an existing database at the given path
-    fn open_database(path: &StdPath) -> Result<Self> where Self: Sized;
+    fn open_database(path: &StdPath) -> Result<Self>
+    where
+        Self: Sized;
 
     /// Begin a read-only transaction
     fn ro_transaction(&'a self) -> Result<Self::R>;
@@ -60,26 +64,32 @@ pub trait Adapter<'a> {
     fn add_block<'t>(&'t self, txn: &'t mut Self::W, block: &Block) -> Result<()>;
 
     /// Obtain the current block ID
-    fn current_block_id<'t, T>(&'t self, txn: &'t T) -> Result<BlockId> where T: Transaction;
+    fn current_block_id<'t, T>(&'t self, txn: &'t T) -> Result<BlockId>
+    where
+        T: Transaction;
 
     /// Add an entry to the database
-    fn add_entry<'t>(&'t self,
-                     txn: &'t mut Self::W,
-                     entry: &SerializedEntry,
-                     name: &'t str,
-                     parent_id: EntryId,
-                     metadata: &Metadata)
-                     -> Result<DirEntry>;
+    fn add_entry<'t>(
+        &'t self,
+        txn: &'t mut Self::W,
+        entry: &SerializedEntry,
+        name: &'t str,
+        parent_id: EntryId,
+        metadata: &Metadata,
+    ) -> Result<DirEntry>;
 
     /// Find the directory entry (including entry ID) under the given path
     fn find_direntry<'t, T>(&'t self, txn: &'t T, path: &path::Path) -> Result<DirEntry>
-        where T: Transaction;
+    where
+        T: Transaction;
 
     /// Find the metadata associated with a given entry ID
     fn find_metadata<'t, T>(&'t self, txn: &'t T, id: &EntryId) -> Result<Metadata>
-        where T: Transaction;
+    where
+        T: Transaction;
 
     /// Find the serialized entry under a given entry ID
     fn find_entry<'t, T>(&'t self, txn: &'t T, id: &EntryId) -> Result<SerializedEntry>
-        where T: Transaction;
+    where
+        T: Transaction;
 }
