@@ -83,8 +83,7 @@ impl Path {
     pub fn new<S: AsRef<str> + ?Sized>(s: &S) -> Option<&Path> {
         if s.as_ref().starts_with(SEPARATOR) {
             // TODO: get rid of transmute
-            #[allow(unsafe_code)]
-            Some(unsafe { mem::transmute(s.as_ref()) })
+            #[allow(unsafe_code)] Some(unsafe { mem::transmute(s.as_ref()) })
         } else {
             None
         }
@@ -203,8 +202,10 @@ mod tests {
     fn path_parent() {
         assert_eq!(Path::root().parent(), None);
         assert_eq!(Path::new("/foo").unwrap().parent().unwrap(), Path::root());
-        assert_eq!(Path::new("/foo/bar").unwrap().parent().unwrap(),
-                   Path::new("/foo").unwrap());
+        assert_eq!(
+            Path::new("/foo/bar").unwrap().parent().unwrap(),
+            Path::new("/foo").unwrap()
+        );
     }
 
     #[test]

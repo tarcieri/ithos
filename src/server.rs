@@ -43,40 +43,46 @@ pub struct Server(LmdbAdapter);
 impl Server {
     /// Create a new ithos database at the given filesystem path
     #[cfg(feature = "lmdb")]
-    pub fn create_database(path: &StdPath,
-                           rng: &SecureRandom,
-                           ciphersuite: CipherSuite,
-                           admin_username: &str,
-                           admin_password: &str)
-                           -> Result<()> {
+    pub fn create_database(
+        path: &StdPath,
+        rng: &SecureRandom,
+        ciphersuite: CipherSuite,
+        admin_username: &str,
+        admin_password: &str,
+    ) -> Result<()> {
         // We presently only support one ciphersuite
         assert_eq!(ciphersuite, CipherSuite::Ed25519_AES256GCM_SHA256);
 
         let admin_keypair_salt = password::random_salt(rng)?;
 
         let mut admin_symmetric_key = [0u8; AES256GCM_KEY_SIZE];
-        password::derive(PasswordAlg::SCRYPT,
-                         &admin_keypair_salt,
-                         admin_password,
-                         &mut admin_symmetric_key);
+        password::derive(
+            PasswordAlg::SCRYPT,
+            &admin_keypair_salt,
+            admin_password,
+            &mut admin_symmetric_key,
+        );
 
         // NOTE: Fixed nonce. The admin password should be randomly generated and never reused
         let nonce = [0u8; AES256GCM_NONCE_SIZE];
 
         // TODO: honor ciphersuite algorithms
-        let (admin_keypair, admin_keypair_sealed) =
-            KeyPair::generate_and_seal(SignatureAlg::Ed25519,
-                                       EncryptionAlg::AES256GCM,
-                                       rng,
-                                       &admin_symmetric_key,
-                                       &nonce)?;
+        let (admin_keypair, admin_keypair_sealed) = KeyPair::generate_and_seal(
+            SignatureAlg::Ed25519,
+            EncryptionAlg::AES256GCM,
+            rng,
+            &admin_symmetric_key,
+            &nonce,
+        )?;
 
-        let initial_block = setup::create_log(ciphersuite,
-                                              admin_username,
-                                              &admin_keypair,
-                                              &admin_keypair_sealed,
-                                              &admin_keypair_salt,
-                                              DEFAULT_INITIAL_BLOCK_COMMENT);
+        let initial_block = setup::create_log(
+            ciphersuite,
+            admin_username,
+            &admin_keypair,
+            &admin_keypair_sealed,
+            &admin_keypair_salt,
+            DEFAULT_INITIAL_BLOCK_COMMENT,
+        );
 
         let adapter = LmdbAdapter::create_database(path)?;
 
@@ -95,12 +101,13 @@ impl Server {
     }
 
     /// Add a new `Domain` object to this ithos server
-    pub fn add_domain(&self,
-                      admin_keypair: &KeyPair,
-                      domain_name: &str,
-                      description: Option<String>,
-                      comment: &str)
-                      -> Result<()> {
+    pub fn add_domain(
+        &self,
+        admin_keypair: &KeyPair,
+        domain_name: &str,
+        description: Option<String>,
+        comment: &str,
+    ) -> Result<()> {
         let mut domain_entry = Domain::new();
 
         if let Some(desc) = description {
@@ -166,12 +173,13 @@ mod tests {
     fn create_database() -> Server {
         let rng = rand::SystemRandom::new();
         let dir = TempDir::new("ithos-test").unwrap();
-        Server::create_database(dir.path(),
-                                &rng,
-                                CipherSuite::Ed25519_AES256GCM_SHA256,
-                                ADMIN_USERNAME,
-                                ADMIN_PASSWORD)
-            .unwrap();
+        Server::create_database(
+            dir.path(),
+            &rng,
+            CipherSuite::Ed25519_AES256GCM_SHA256,
+            ADMIN_USERNAME,
+            ADMIN_PASSWORD,
+        ).unwrap();
         Server::open_database(dir.path()).unwrap()
     }
 
@@ -187,10 +195,12 @@ mod tests {
 
         let mut admin_symmetric_key = [0u8; AES256GCM_KEY_SIZE];
 
-        password::derive(PasswordAlg::SCRYPT,
-                         &credential.salt,
-                         ADMIN_PASSWORD,
-                         &mut admin_symmetric_key);
+        password::derive(
+            PasswordAlg::SCRYPT,
+            &credential.salt,
+            ADMIN_PASSWORD,
+            &mut admin_symmetric_key,
+        );
 
         KeyPair::unseal_from_credential(&credential, &admin_symmetric_key).unwrap()
     }
@@ -200,6 +210,8 @@ mod tests {
         let server = create_database();
         let keypair = admin_keypair(&server);
 
-        server.add_domain(&keypair, EXAMPLE_DOMAIN, None, "Testing 1 2 3").unwrap();
+        server
+            .add_domain(&keypair, EXAMPLE_DOMAIN, None, "Testing 1 2 3")
+            .unwrap();
     }
 }

@@ -68,9 +68,11 @@ impl<'a, A: Adapter<'a> + 'a> Transform<'a, A> {
         for op in ops.iter() {
             match op.get_optype() {
                 op::Type::ADD => {
-                    self.add(op,
-                             &block_id,
-                             Timestamp::at(block.get_body().get_timestamp()))?
+                    self.add(
+                        op,
+                        &block_id,
+                        Timestamp::at(block.get_body().get_timestamp()),
+                    )?
                 }
             };
         }
@@ -86,23 +88,25 @@ impl<'a, A: Adapter<'a> + 'a> Transform<'a, A> {
 
     /// Add a new entry to the directory tree
     fn add(&mut self, op: &Op, block_id: &BlockId, timestamp: Timestamp) -> Result<()> {
-        let child_path = Path::new(op.get_path())
-            .ok_or_else(|| ErrorKind::PathInvalid(format!("bad path: {}", op.get_path())))?;
+        let child_path = Path::new(op.get_path()).ok_or_else(|| {
+            ErrorKind::PathInvalid(format!("bad path: {}", op.get_path()))
+        })?;
 
         let parent_path = child_path.parent();
-        let child_class =
-            Class::from_object(op.get_object()).ok_or_else(|| {
-                    ErrorKind::TypeInvalid(format!("bad object type: {:?}", op.get_object()))
-                })?;
+        let child_class = Class::from_object(op.get_object()).ok_or_else(|| {
+            ErrorKind::TypeInvalid(format!("bad object type: {:?}", op.get_object()))
+        })?;
 
         let (parent_id, entry_id) = match parent_path {
             Some(path) => {
                 let parent_entry = self.get_entry(path)?;
 
                 if !parent_entry.class.allows_child(&child_class) {
-                    let msg = format!("{:?} does not allow {:?} as child",
-                                      parent_entry.class,
-                                      child_class);
+                    let msg = format!(
+                        "{:?} does not allow {:?} as child",
+                        parent_entry.class,
+                        child_class
+                    );
                     return Err(ErrorKind::StructureInvalid(msg).into());
                 }
 
@@ -128,10 +132,10 @@ impl<'a, A: Adapter<'a> + 'a> Transform<'a, A> {
         metadata.set_created_at(timestamp.to_int());
         metadata.set_updated_at(timestamp.to_int());
 
-        let entry =
-            Entry::from_object(&mut op.get_object().clone()).ok_or_else(|| {
-                    ErrorKind::SerializationFailure("unsupported object type".to_string())
-                })?;
+        let entry = Entry::from_object(&mut op.get_object().clone())
+            .ok_or_else(|| {
+                ErrorKind::SerializationFailure("unsupported object type".to_string())
+            })?;
 
         let entry = SerializedEntry {
             id: entry_id,
@@ -139,14 +143,18 @@ impl<'a, A: Adapter<'a> + 'a> Transform<'a, A> {
             data: &entry.serialize()?,
         };
 
-        let entry_name =
-            child_path.entry_name()
-                .ok_or_else(|| {
-                    ErrorKind::PathInvalid(format!("missing entry name: {:?}", child_path))
-                })?;
+        let entry_name = child_path.entry_name().ok_or_else(|| {
+            ErrorKind::PathInvalid(format!("missing entry name: {:?}", child_path))
+        })?;
 
         // NOTE: The underlying adapter must handle Error::EntryAlreadyExists
-        self.adapter.add_entry(&mut self.txn, &entry, entry_name, parent_id, &metadata)?;
+        self.adapter.add_entry(
+            &mut self.txn,
+            &entry,
+            entry_name,
+            parent_id,
+            &metadata,
+        )?;
 
         let new_entry = TransformEntry {
             id: entry_id,
@@ -227,7 +235,10 @@ pub mod tests {
 
         let block = example_block(BlockId::zero(), vec![op]);
 
-        match *transform.apply(&block).expect_err("expected a structural error").kind() {
+        match *transform
+            .apply(&block)
+            .expect_err("expected a structural error")
+            .kind() {
             ErrorKind::StructureInvalid(_) => (),
             ref other => panic!("unexpected error: {:?}", other),
         }
@@ -263,7 +274,10 @@ pub mod tests {
         op2.set_object(root2_object);
 
         let block2 = example_block(BlockId::of(&block1), vec![op2]);
-        match *transform.apply(&block2).expect_err("expected a structural error").kind() {
+        match *transform
+            .apply(&block2)
+            .expect_err("expected a structural error")
+            .kind() {
             ErrorKind::StructureInvalid(_) => (),
             ref other => panic!("unexpected error kind: {:?}", other),
         }

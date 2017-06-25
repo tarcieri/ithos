@@ -64,7 +64,8 @@ impl<'a> Adapter<'a> for LmdbAdapter {
     type W = RwTransaction<'a>;
 
     fn create_database(path: &StdPath) -> Result<LmdbAdapter> {
-        let env = Environment::new().set_max_dbs(MAX_DBS)
+        let env = Environment::new()
+            .set_max_dbs(MAX_DBS)
             .open_with_permissions(path, DB_PERMS)?;
 
         let blocks = env.create_db(Some(BLOCKS_DB), DatabaseFlags::empty())?;
@@ -84,7 +85,8 @@ impl<'a> Adapter<'a> for LmdbAdapter {
     }
 
     fn open_database(path: &StdPath) -> Result<LmdbAdapter> {
-        let env = Environment::new().set_max_dbs(MAX_DBS)
+        let env = Environment::new()
+            .set_max_dbs(MAX_DBS)
             .open_with_permissions(path, DB_PERMS)?;
 
         let blocks = env.open_db(Some(BLOCKS_DB))?;
@@ -154,7 +156,11 @@ impl<'a> Adapter<'a> for LmdbAdapter {
         }
 
         // Store the new block
-        txn.put(self.blocks, block_id.as_ref(), &block.write_to_bytes()?)?;
+        txn.put(
+            self.blocks,
+            block_id.as_ref(),
+            &block.write_to_bytes()?,
+        )?;
 
         // Update the current block ID in the state table
         txn.put(self.state, LATEST_BLOCK_ID_KEY, block_id.as_ref())?;
@@ -163,23 +169,27 @@ impl<'a> Adapter<'a> for LmdbAdapter {
     }
 
     fn current_block_id<'t, T>(&'t self, txn: &'t T) -> Result<BlockId>
-        where T: Transaction
+    where
+        T: Transaction,
     {
         BlockId::from_bytes(txn.lmdb_get(self.state, LATEST_BLOCK_ID_KEY)?)
     }
 
-    fn add_entry<'t>(&'t self,
-                     txn: &'t mut RwTransaction,
-                     entry: &SerializedEntry,
-                     name: &'t str,
-                     parent_id: EntryId,
-                     metadata: &Metadata)
-                     -> Result<DirEntry> {
+    fn add_entry<'t>(
+        &'t self,
+        txn: &'t mut RwTransaction,
+        entry: &SerializedEntry,
+        name: &'t str,
+        parent_id: EntryId,
+        metadata: &Metadata,
+    ) -> Result<DirEntry> {
         match txn.lmdb_get(self.entries, entry.id.as_ref()) {
             Ok(_) => {
-                let msg = format!("error creating '{}': entry ID '{:?}' already exists",
-                                  name,
-                                  entry.id);
+                let msg = format!(
+                    "error creating '{}': entry ID '{:?}' already exists",
+                    name,
+                    entry.id
+                );
                 return Err(ErrorKind::EntryAlreadyExists(msg).into());
             }
             Err(Error(ErrorKind::Lmdb(LmdbError::NotFound), _)) => (),
@@ -212,16 +222,24 @@ impl<'a> Adapter<'a> for LmdbAdapter {
         };
 
         if entry.id != EntryId::root() {
-            txn.put(self.directories, parent_id.as_ref(), &direntry.to_bytes())?;
+            txn.put(
+                self.directories,
+                parent_id.as_ref(),
+                &direntry.to_bytes(),
+            )?;
         }
 
-        txn.put(self.metadata,
-                 entry.id.as_ref(),
-                 &metadata.write_to_bytes()?)?;
+        txn.put(
+            self.metadata,
+            entry.id.as_ref(),
+            &metadata.write_to_bytes()?,
+        )?;
 
-        let mut buffer = txn.reserve(self.entries,
-                     entry.id.as_ref(),
-                     entry::HEADER_SIZE + entry.data.len())?;
+        let mut buffer = txn.reserve(
+            self.entries,
+            entry.id.as_ref(),
+            entry::HEADER_SIZE + entry.data.len(),
+        )?;
 
         buffer.write_all(&entry.class.as_bytes())?;
         buffer.write_all(entry.data)?;
@@ -230,12 +248,15 @@ impl<'a> Adapter<'a> for LmdbAdapter {
     }
 
     fn find_direntry<'t, T>(&'t self, txn: &'t T, path: &Path) -> Result<DirEntry>
-        where T: Transaction
+    where
+        T: Transaction,
     {
-        let result =
-            path.components().iter().fold(Ok(DirEntry::root()), |parent_direntry, component| {
+        let result = path.components().iter().fold(
+            Ok(DirEntry::root()),
+            |parent_direntry, component| {
                 self.find_child(txn, parent_direntry?.id, component)
-            });
+            },
+        );
 
         match result {
             Ok(_) => result,
@@ -247,14 +268,16 @@ impl<'a> Adapter<'a> for LmdbAdapter {
     }
 
     fn find_metadata<'t, T>(&'t self, txn: &'t T, id: &EntryId) -> Result<Metadata>
-        where T: Transaction
+    where
+        T: Transaction,
     {
         let proto = txn.lmdb_get(self.metadata, id.as_ref())?;
         Ok(protobuf::parse_from_bytes::<Metadata>(proto)?)
     }
 
     fn find_entry<'t, T>(&'t self, txn: &'t T, id: &EntryId) -> Result<SerializedEntry>
-        where T: Transaction
+    where
+        T: Transaction,
     {
         let bytes = txn.lmdb_get(self.entries, id.as_ref())?;
         SerializedEntry::from_bytes(*id, bytes)
@@ -263,12 +286,17 @@ impl<'a> Adapter<'a> for LmdbAdapter {
 
 impl LmdbAdapter {
     fn find_child<'a, T>(&'a self, txn: &'a T, parent_id: EntryId, name: &str) -> Result<DirEntry>
-        where T: Transaction
+    where
+        T: Transaction,
     {
-        let direntry_bytes = txn.lmdb_find(self.directories, parent_id.as_ref(), |direntry_bytes| {
+        let direntry_bytes = txn.lmdb_find(
+            self.directories,
+            parent_id.as_ref(),
+            |direntry_bytes| {
                 let direntry = DirEntry::new(parent_id, direntry_bytes).unwrap();
                 direntry.name == name
-            })?;
+            },
+        )?;
 
         DirEntry::new(parent_id, direntry_bytes)
     }
@@ -291,7 +319,8 @@ pub trait AdapterTransaction {
     /// Perform a search of the given database, looking for an entry that matches the predicate
     // TODO: since LMDB is ordered, we could e.g. perform a binary search
     fn lmdb_find<P>(&self, db: Database, key: &[u8], predicate: P) -> Result<&[u8]>
-        where P: Fn(&[u8]) -> bool
+    where
+        P: Fn(&[u8]) -> bool,
     {
         // Ensure the entry exists
         // TODO: Fix upstream unwrap in lmdb crate's iter_from
@@ -393,12 +422,14 @@ mod tests {
         let rng = rand::SystemRandom::new();
         let admin_keypair = KeyPair::generate(&rng);
 
-        setup::create_log(CipherSuite::Ed25519_AES256GCM_SHA256,
-                          setup::tests::ADMIN_USERNAME,
-                          &admin_keypair,
-                          setup::tests::ADMIN_KEYPAIR_SEALED,
-                          setup::tests::ADMIN_KEYPAIR_SALT,
-                          setup::tests::COMMENT)
+        setup::create_log(
+            CipherSuite::Ed25519_AES256GCM_SHA256,
+            setup::tests::ADMIN_USERNAME,
+            &admin_keypair,
+            setup::tests::ADMIN_KEYPAIR_SEALED,
+            setup::tests::ADMIN_KEYPAIR_SALT,
+            setup::tests::COMMENT,
+        )
     }
 
     fn example_metadata() -> Metadata {
@@ -432,8 +463,9 @@ mod tests {
         txn.commit().unwrap();
 
         let mut txn = adapter.rw_transaction().unwrap();
-        let err = adapter.add_block(&mut txn, &block)
-            .expect_err("expected duplicate block to cause error");
+        let err = adapter.add_block(&mut txn, &block).expect_err(
+            "expected duplicate block to cause error",
+        );
 
         match *err.kind() {
             ErrorKind::EntryAlreadyExists(ref msg) => assert_eq!(msg, "initial block already set"),
@@ -450,27 +482,36 @@ mod tests {
             let mut txn = adapter.rw_transaction().unwrap();
 
             let domain_id = adapter.next_free_entry_id(&txn).unwrap();
-            adapter.add_entry(&mut txn,
-                           &example_entry(domain_id, b"example domain entry"),
-                           "example.com",
-                           EntryId::root(),
-                           &example_metadata())
+            adapter
+                .add_entry(
+                    &mut txn,
+                    &example_entry(domain_id, b"example domain entry"),
+                    "example.com",
+                    EntryId::root(),
+                    &example_metadata(),
+                )
                 .unwrap();
 
             let hosts_id = domain_id.next();
-            adapter.add_entry(&mut txn,
-                           &example_entry(hosts_id, b"example hosts ou"),
-                           "hosts",
-                           domain_id,
-                           &example_metadata())
+            adapter
+                .add_entry(
+                    &mut txn,
+                    &example_entry(hosts_id, b"example hosts ou"),
+                    "hosts",
+                    domain_id,
+                    &example_metadata(),
+                )
                 .unwrap();
 
             let host_id = hosts_id.next();
-            adapter.add_entry(&mut txn,
-                           &example_entry(host_id, example_data),
-                           "master.example.com",
-                           hosts_id,
-                           &example_metadata())
+            adapter
+                .add_entry(
+                    &mut txn,
+                    &example_entry(host_id, example_data),
+                    "master.example.com",
+                    hosts_id,
+                    &example_metadata(),
+                )
                 .unwrap();
 
             txn.commit().unwrap();
@@ -503,18 +544,24 @@ mod tests {
         let mut txn = adapter.rw_transaction().unwrap();
 
         let domain_id = adapter.next_free_entry_id(&txn).unwrap();
-        adapter.add_entry(&mut txn,
-                       &example_entry(domain_id, b"domain"),
-                       "example.com",
-                       EntryId::root(),
-                       &example_metadata())
+        adapter
+            .add_entry(
+                &mut txn,
+                &example_entry(domain_id, b"domain"),
+                "example.com",
+                EntryId::root(),
+                &example_metadata(),
+            )
             .unwrap();
 
-        let err = adapter.add_entry(&mut txn,
-                       &example_entry(domain_id, b"domain"),
-                       "another.com",
-                       EntryId::root(),
-                       &example_metadata())
+        let err = adapter
+            .add_entry(
+                &mut txn,
+                &example_entry(domain_id, b"domain"),
+                "another.com",
+                EntryId::root(),
+                &example_metadata(),
+            )
             .expect_err("expected duplicate entry ID to cause error");
 
         match *err.kind() {
@@ -530,18 +577,24 @@ mod tests {
         let mut txn = adapter.rw_transaction().unwrap();
 
         let domain_id = adapter.next_free_entry_id(&txn).unwrap();
-        adapter.add_entry(&mut txn,
-                       &example_entry(domain_id, b"domain"),
-                       "example.com",
-                       EntryId::root(),
-                       &example_metadata())
+        adapter
+            .add_entry(
+                &mut txn,
+                &example_entry(domain_id, b"domain"),
+                "example.com",
+                EntryId::root(),
+                &example_metadata(),
+            )
             .unwrap();
 
-        let err = adapter.add_entry(&mut txn,
-                       &example_entry(domain_id.next(), b"domain"),
-                       "example.com",
-                       EntryId::root(),
-                       &example_metadata())
+        let err = adapter
+            .add_entry(
+                &mut txn,
+                &example_entry(domain_id.next(), b"domain"),
+                "example.com",
+                EntryId::root(),
+                &example_metadata(),
+            )
             .expect_err("expected duplicate entry name to cause error");
 
         match *err.kind() {

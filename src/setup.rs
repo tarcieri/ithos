@@ -36,13 +36,14 @@ const ADMIN_KEYPAIR_LIFETIME: u64 = 315_532_800; // 10 years
 /// The block is self-signed with the initial administrator key.
 ///
 // TODO: Refactor this mess or create a policy language for these tasks instead
-pub fn create_log(ciphersuite: CipherSuite,
-                  admin_username: &str,
-                  admin_keypair: &KeyPair,
-                  admin_keypair_sealed: &[u8],
-                  admin_keypair_salt: &[u8],
-                  comment: &str)
-                  -> Block {
+pub fn create_log(
+    ciphersuite: CipherSuite,
+    admin_username: &str,
+    admin_keypair: &KeyPair,
+    admin_keypair_sealed: &[u8],
+    admin_keypair_salt: &[u8],
+    comment: &str,
+) -> Block {
     // This is the only ciphersuite we presently support
     assert_eq!(ciphersuite, CipherSuite::Ed25519_AES256GCM_SHA256);
 
@@ -174,11 +175,13 @@ pub mod tests {
         let rng = rand::SystemRandom::new();
         let admin_keypair = KeyPair::generate(&rng);
 
-        setup::create_log(CipherSuite::Ed25519_AES256GCM_SHA256,
-                          ADMIN_USERNAME,
-                          &admin_keypair,
-                          ADMIN_KEYPAIR_SEALED,
-                          ADMIN_KEYPAIR_SALT,
-                          COMMENT);
+        setup::create_log(
+            CipherSuite::Ed25519_AES256GCM_SHA256,
+            ADMIN_USERNAME,
+            &admin_keypair,
+            ADMIN_KEYPAIR_SEALED,
+            ADMIN_KEYPAIR_SALT,
+            COMMENT,
+        );
     }
 }

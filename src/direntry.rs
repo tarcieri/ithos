@@ -39,8 +39,9 @@ impl<'a> DirEntry<'a> {
         }
 
         let id = EntryId::from_bytes(&bytes[0..ENTRY_ID_SIZE])?;
-        let name =
-            str::from_utf8(&bytes[ENTRY_ID_SIZE..]).chain_err(|| "couldn't parse direntry)")?;
+        let name = str::from_utf8(&bytes[ENTRY_ID_SIZE..]).chain_err(
+            || "couldn't parse direntry)",
+        )?;
 
         Ok(DirEntry {
             id: id,
