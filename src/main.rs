@@ -17,7 +17,6 @@ extern crate byteorder;
 extern crate error_chain;
 #[macro_use]
 extern crate objecthash;
-extern crate protobuf;
 extern crate ring;
 extern crate ring_pwhash as pwhash;
 extern crate rpassword;
@@ -28,23 +27,16 @@ extern crate time;
 extern crate tempdir;
 
 pub mod adapter;
-pub mod alg;
-pub mod block;
 pub mod crypto;
 pub mod direntry;
 pub mod entry;
 pub mod errors;
 pub mod id;
-pub mod metadata;
-pub mod object;
-pub mod op;
 pub mod path;
 pub mod server;
 pub mod setup;
-pub mod signature;
 pub mod timestamp;
 pub mod transform;
-pub mod witness;
 
 use alg::{CipherSuite, PasswordAlg};
 use crypto::signing::KeyPair;

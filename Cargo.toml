@@ -1,20 +1,21 @@
 [package]
 name        = "ithos"
 description = "Modern directory services and credential management"
-homepage    = "https://github.com/cryptosphere/ithos"
-repository  = "https://github.com/cryptosphere/ithos"
-readme      = "README.md"
-categories  = ["authentication", "database-implementations"]
-keywords    = ["directory", "identity", "access", "secrets", "ldap"]
-license     = "Apache-2.0"
 version     = "0.0.0"
 authors     = ["Tony Arcieri <bascule@gmail.com>"]
+license     = "Apache-2.0"
+homepage    = "https://github.com/cryptosphere/ithos"
+repository  = "https://github.com/cryptosphere/ithos"
+categories  = ["authentication", "database-implementations"]
+keywords    = ["directory", "identity", "access", "secrets", "ldap"]
+readme      = "README.md"
+build       = "build.rs"
 
 [dependencies]
 byteorder       = "^0.5"
+capnp           = "^0.8"
 clap            = "^2.22"
 error-chain     = "^0.10"
-protobuf        = "^1.0"
 rustc-serialize = "^0.3"
 ring            = "^0.7"
 ring-pwhash     = "^0.1"
@@ -35,6 +36,10 @@ features = ["octet-strings"]
 
 [dev-dependencies]
 tempdir = "^0.3"
+
+[build-dependencies]
+capnpc = "^0.8"
+glob = "^0.2"
 
 [features]
 default = ["lmdb-adapter"]
