@@ -22,6 +22,7 @@ extern crate ring;
 extern crate ring_pwhash as pwhash;
 extern crate rpassword;
 extern crate time;
+extern crate untrusted;
 
 #[cfg(test)]
 extern crate tempdir;

@@ -14,24 +14,30 @@ use errors::*;
 use object::credential::{self, Credential};
 use objecthash;
 use protobuf::RepeatedField;
+use ring;
 use ring::rand::SecureRandom;
-use ring::signature as signature_impl;
 use signature::Signature;
+use untrusted;
 use witness::Witness;
 
 /// Digital signature keypair (includes public and private key)
 pub struct KeyPair {
     /// The signature algorithm this key supports
     pub algorithm: SignatureAlg,
-    keypair: signature_impl::Ed25519KeyPair,
+    keypair: ring::signature::Ed25519KeyPair,
 }
 
 impl<'a> KeyPair {
     #[cfg(test)]
     pub fn generate(rng: &SecureRandom) -> KeyPair {
+        let pkcs8_bytes = ring::signature::Ed25519KeyPair::generate_pkcs8(rng)
+            .expect("random PKCS#8 key");
+
         KeyPair {
             algorithm: SignatureAlg::Ed25519,
-            keypair: signature_impl::Ed25519KeyPair::generate(rng).unwrap(),
+            keypair: ring::signature::Ed25519KeyPair::from_pkcs8(
+                untrusted::Input::from(&pkcs8_bytes),
+            ).expect("well-formed PKCS#8 key"),
         }
     }
 
@@ -46,16 +52,11 @@ impl<'a> KeyPair {
         // Ed25519 is the only signature algorithm we presently support
         assert_eq!(signature_alg, SignatureAlg::Ed25519);
 
-        let (keypair, serializable_keypair) =
-            signature_impl::Ed25519KeyPair::generate_serializable(rng)?;
+        let pkcs8_bytes = ring::signature::Ed25519KeyPair::generate_pkcs8(rng)?;
+        let keypair =
+            ring::signature::Ed25519KeyPair::from_pkcs8(untrusted::Input::from(&pkcs8_bytes))?;
 
-
-        let ciphertext = crypto::symmetric::seal(
-            encryption_alg,
-            sealing_key,
-            nonce,
-            &serializable_keypair.private_key,
-        )?;
+        let ciphertext = crypto::symmetric::seal(encryption_alg, sealing_key, nonce, &pkcs8_bytes)?;
 
         let result = KeyPair {
             algorithm: SignatureAlg::Ed25519,
@@ -82,7 +83,6 @@ impl<'a> KeyPair {
             EncryptionAlg::AES256GCM,
             symmetric_key_bytes,
             &credential.encrypted_value,
-            &credential.public_key,
         )
     }
 
@@ -92,15 +92,15 @@ impl<'a> KeyPair {
         encryption_alg: EncryptionAlg,
         sealing_key: &[u8],
         sealed_keypair: &[u8],
-        public_key: &[u8],
     ) -> Result<KeyPair> {
         // Ed25519 is the only signature algorithm we presently support
         assert_eq!(signature_alg, SignatureAlg::Ed25519);
 
-        let private_key = crypto::symmetric::unseal(encryption_alg, sealing_key, sealed_keypair)?;
+        let pkcs8_bytes = crypto::symmetric::unseal(encryption_alg, sealing_key, sealed_keypair)?;
 
-        let keypair = signature_impl::Ed25519KeyPair::from_bytes(&private_key, public_key)
-            .chain_err(|| "not a valid Ed25519 keypair")?;
+        let keypair = ring::signature::Ed25519KeyPair::from_pkcs8(
+            untrusted::Input::from(&pkcs8_bytes),
+        ).chain_err(|| "not a valid Ed25519 keypair")?;
 
         Ok(KeyPair {
             algorithm: SignatureAlg::Ed25519,
@@ -135,7 +135,7 @@ impl<'a> KeyPair {
 
         proto.set_algorithm(self.algorithm);
         proto.set_public_key(Vec::from(self.public_key_bytes()));
-        proto.set_value(Vec::from(self.keypair.sign(msg).as_slice()));
+        proto.set_value(Vec::from(self.keypair.sign(msg).as_ref()));
 
         proto
     }
@@ -168,7 +168,6 @@ pub mod tests {
             EncryptionAlg::AES256GCM,
             &ENCRYPTION_KEY,
             &sealed_keypair,
-            keypair.public_key_bytes(),
         ).unwrap();
 
         // *ring* verifies private key correctness when we call Ed25519KeyPair::from_bytes
