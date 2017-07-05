@@ -11,30 +11,30 @@ version     = "0.0.0"
 authors     = ["Tony Arcieri <bascule@gmail.com>"]
 
 [dependencies]
-byteorder       = "^0.5"
-clap            = "^2.22"
+byteorder       = "0.5"
+clap            = "2.22"
 data-encoding   = "2.0.0-rc.1"
-error-chain     = "^0.10"
-protobuf        = "^1.0"
-ring            = "^0.7"
-ring-pwhash     = "^0.1"
-rpassword       = "^0.4"
-time            = "^0.1"
+error-chain     = "0.10"
+protobuf        = "1.0"
+ring            = "0.7"
+ring-pwhash     = "0.1"
+rpassword       = "0.4"
+time            = "0.1"
 
 [dependencies.lmdb]
-version = "^0.6"
+version = "0.6"
 optional = true
 
 [dependencies.lmdb-sys]
-version = "^0.6"
+version = "0.6"
 optional = true
 
 [dependencies.objecthash]
-version = "^0.4"
+version = "0.4"
 features = ["octet-strings"]
 
 [dev-dependencies]
-tempdir = "^0.3"
+tempdir = "0.3"
 
 [features]
 default = ["lmdb-adapter"]
