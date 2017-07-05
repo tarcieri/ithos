@@ -9,13 +9,13 @@
 use alg::{EncryptionAlg, SignatureAlg};
 use block::{Block, Body};
 use crypto;
+use data_encoding::BASE64URL;
 use errors::*;
 use object::credential::{self, Credential};
 use objecthash;
 use protobuf::RepeatedField;
 use ring::rand::SecureRandom;
 use ring::signature as signature_impl;
-use rustc_serialize::base64::{self, ToBase64};
 use signature::Signature;
 use witness::Witness;
 
@@ -116,9 +116,7 @@ impl<'a> KeyPair {
     /// Sign the body of a block, returning a complete block with signature/witness data
     pub fn sign_block(&self, body: Body) -> Block {
         let mut message = String::from("ithos.block.body.ni:///sha-256;");
-        message.push_str(&objecthash::digest(&body).as_ref().to_base64(
-            base64::URL_SAFE,
-        ));
+        message.push_str(&BASE64URL.encode(objecthash::digest(&body).as_ref()));
 
         let signature = self.sign_raw_bytes(message.as_bytes());
         let mut witness = Witness::new();

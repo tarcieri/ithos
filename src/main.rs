@@ -12,6 +12,7 @@ extern crate clap;
 use clap::{App, Arg, SubCommand};
 
 extern crate byteorder;
+extern crate data_encoding;
 #[macro_use]
 extern crate error_chain;
 #[macro_use]
@@ -20,7 +21,6 @@ extern crate protobuf;
 extern crate ring;
 extern crate ring_pwhash as pwhash;
 extern crate rpassword;
-extern crate rustc_serialize;
 extern crate time;
 
 #[cfg(test)]

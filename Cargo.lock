@@ -4,6 +4,7 @@ version = "0.0.0"
 dependencies = [
  "byteorder 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.22.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "data-encoding 2.0.0-rc.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "error-chain 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lmdb 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lmdb-sys 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -12,7 +13,6 @@ dependencies = [
  "ring 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "ring-pwhash 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rpassword 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "rustc-serialize 0.3.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempdir 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.36 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -89,6 +89,11 @@ dependencies = [
  "unicode-width 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "vec_map 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "data-encoding"
+version = "2.0.0-rc.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "dbghelp-sys"
@@ -340,6 +345,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum byteorder 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)" = "0fc10e8cc6b2580fda3f36eb6dc5316657f812a3df879a44a66fc9f0fdbc4855"
 "checksum cfg-if 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "de1e760d7b6535af4241fca8bd8adf68e2e7edacc6b29f5d399050c5e48cf88c"
 "checksum clap 2.22.2 (registry+https://github.com/rust-lang/crates.io-index)" = "3cae8c5a1108961e9bafb1096b8cbb6a31c17ab1a276ce9b52334be99962f653"
+"checksum data-encoding 2.0.0-rc.1 (registry+https://github.com/rust-lang/crates.io-index)" = "c48768b270ab6458e2fba295bd3593f76d22058945afb5bdc6a1b1436511402b"
 "checksum dbghelp-sys 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "97590ba53bcb8ac28279161ca943a924d1fd4a8fb3fa63302591647c4fc5b850"
 "checksum deque 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "1614659040e711785ed8ea24219140654da1729f3ec8a47a9719d041112fe7bf"
 "checksum error-chain 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d9435d864e017c3c6afeac1654189b06cdb491cf2ff73dbf0d73b0f292f42ff8"
