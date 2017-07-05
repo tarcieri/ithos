@@ -3,8 +3,7 @@
 #![crate_name = "ithos"]
 #![crate_type = "bin"]
 
-#![deny(missing_docs, unsafe_code)]
-#![cfg_attr(test, feature(result_expect_err))]
+#![deny(missing_docs, unsafe_code, warnings)]
 
 // For error-chain
 #![recursion_limit = "1024"]
