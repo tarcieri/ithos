@@ -5,7 +5,7 @@
 //!
 
 use objecthash::{ObjectHash, ObjectHasher};
-use time;
+use chrono::offset::Utc;
 
 /// Number of seconds since the Unix epoch
 // TODO: better specification of exact semantics and relationship to UTC, TAI, etc.
@@ -20,7 +20,7 @@ impl Timestamp {
 
     /// Obtain a `Timestamp` for the current time
     pub fn now() -> Timestamp {
-        Timestamp(time::now_utc().to_timespec().sec as u64)
+        Timestamp(Utc::now().timestamp() as u64)
     }
 
     /// Obtain the `Timestamp` that's the given number of seconds from this one

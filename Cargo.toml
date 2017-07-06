@@ -11,16 +11,16 @@ version     = "0.0.0"
 authors     = ["Tony Arcieri <bascule@gmail.com>"]
 
 [dependencies]
-byteorder       = "1.0"
-clap            = "2.25"
-data-encoding   = "2.0.0-rc.1"
-error-chain     = "0.10"
-protobuf        = "1.4"
-ring            = "0.11.0"
-ring-pwhash     = "0.11.0"
-rpassword       = "0.4"
-time            = "0.1"
-untrusted       = "0.5"
+byteorder     = "1.0"
+chrono        = "0.4"
+clap          = "2.25"
+data-encoding = "2.0.0-rc.1"
+error-chain   = "0.10"
+protobuf      = "1.4"
+ring          = "0.11.0"
+ring-pwhash   = "0.11.0"
+rpassword     = "0.4"
+untrusted     = "0.5"
 
 [dependencies.lmdb]
 version = "0.6"
